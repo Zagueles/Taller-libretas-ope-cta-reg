@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 
 import { DocumentsRecordsPageComponent } from '../../../../../shared/components/documents-records-page/documents-records-page.component';
 import type { DocumentsRecordsConfig, DocumentsRecordsRow } from '../../../../../shared/types/documents-records.types';
-import { REGISTRO_ROUTE } from '../../config/registro-libretas.rutas';
+import { DOCUMENTO_ROUTE, REGISTRO_ROUTE } from '../../config/registro-libretas.rutas';
 import { REGISTRO_LIBRETAS_DOCUMENTS_CONFIG } from '../../config/registro-libretas-documents.config';
 import { MOVIMIENTOS_LIBRETA_REGISTRO, nombreBeneficiario, nombreTipoOperacion } from '../../models/registro-libretas.model';
 
@@ -47,6 +47,7 @@ export class RegistroLibretasDocumentsComponent {
         date: fechaVisible(m.fecha),
         entity: ENTIDAD,
         linkRoute: `/procesos/registro-libretas-cuentas-registro/consultas`,
+        detailRoute: `${DOCUMENTO_ROUTE}/${m.numeroDocumento}`,
       }),
     ),
     recordRows: MOVIMIENTOS_LIBRETA_REGISTRO.map(

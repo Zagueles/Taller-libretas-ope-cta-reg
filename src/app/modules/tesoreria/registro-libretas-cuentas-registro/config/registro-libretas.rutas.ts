@@ -1,6 +1,7 @@
 /** Rutas e ids del proceso. Los ids existen en `DEFAULT_PROCESS_TREE` (shared/utils/process-tree.util.ts). */
 export const PROCESS_ROUTE = '/procesos/registro-libretas-cuentas-registro';
 export const REGISTRO_ROUTE = `${PROCESS_ROUTE}/registro`;
+export const DOCUMENTO_ROUTE = `${PROCESS_ROUTE}/documento`;
 export const CONSULTAS_ROUTE = `${PROCESS_ROUTE}/consultas`;
 
 /** Hoja «Documentos y registros» del árbol de procesos: Figma nodo 241:21418. */

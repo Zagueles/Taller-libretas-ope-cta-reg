@@ -200,7 +200,8 @@ export class ReportTableComponent {
         continue;
       }
       let fin = i;
-      while (fin + 1 < this.columns.length && this.columns[fin + 1].group === columna.group) fin++;
+      // La columna fija lleva su propia celda de grupo: si compartiera la del grupo, esa celda entera quedaría fija y taparía las columnas que se desplazan.
+      while (fin + 1 < this.columns.length && this.columns[fin + 1].group === columna.group && !this.columns[fin + 1].fixed && !columna.fixed) fin++;
       const grupo = this.columns.slice(i, fin + 1);
       const anchos = grupo.map((c) => c.width);
       celdas.push({

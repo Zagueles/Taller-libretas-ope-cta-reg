@@ -30,7 +30,8 @@ export type DocumentsRecordsSelectionChange = {
  *   (Verificar) y Verificados para el aprobador (Aprobar).
  * - Con `headerGroup` en las columnas, la cabecera pasa a dos filas (grupo arriba, columna debajo), y con
  *   `recordSelectable` / `recordRowAction`, Registros suma casillas y cambia el ícono de la fila.
- * - Con `recordRoute` en una fila de Registros, la fila abre su detalle (emite `rowOpened`).
+ * - Con `recordRoute` en una fila de Registros, o `detailRoute` en una de Documentos, la fila abre su detalle (emite
+ *   `rowOpened`).
  * @evitar
  * - Para un listado de solo lectura con texto plano: `siaf-table`.
  * - Usarla sola, sin barra ni paginado: va dentro de la grilla estándar (`siaf-table-controls` arriba, con el
@@ -82,7 +83,7 @@ export type DocumentsRecordsSelectionChange = {
                   siafTooltip
                   [attr.colspan]="celda.colspan > 1 ? celda.colspan : null"
                   [attr.rowspan]="celda.rowspan > 1 ? celda.rowspan : null"
-                  [ngClass]="[celda.rowspan === 2 ? (celda.column?.widthClass || 'w-[180px]') : 'text-center', celda.column?.align === 'right' ? 'text-right' : celda.rowspan === 2 ? 'text-left' : '', celda.grupo && !celda.ultima ? 'border-r border-[var(--sys-color-divider-strong)]' : '']"
+                  [ngClass]="[celda.fija ? claseFijaCabecera : '', celda.rowspan === 2 ? (celda.column?.widthClass || 'w-[180px]') : 'text-center', celda.column?.align === 'right' ? 'text-right' : celda.rowspan === 2 ? 'text-left' : '', celda.grupo && !celda.ultima && !celda.fija ? 'border-r border-[var(--sys-color-divider-strong)]' : '']"
                 >{{ celda.label }}</th>
               }
             } @else {
@@ -99,7 +100,7 @@ export type DocumentsRecordsSelectionChange = {
                 <th
                   class="truncate px-siaf-md py-siaf-sm"
                   siafTooltip
-                  [ngClass]="[column.widthClass || 'w-[180px]', column.align === 'right' ? 'text-right' : 'text-left', finDeGrupo(i) && i < columnasConGrupo.length - 1 ? 'border-r border-[var(--sys-color-divider-strong)]' : '']"
+                  [ngClass]="[column.fixed ? claseFijaCabecera : '', column.widthClass || 'w-[180px]', column.align === 'right' ? 'text-right' : 'text-left', finDeGrupo(i) && !column.fixed && i < columnasConGrupo.length - 1 ? 'border-r border-[var(--sys-color-divider-strong)]' : '']"
                 >{{ column.label }}</th>
               }
             </tr>
@@ -126,7 +127,7 @@ export type DocumentsRecordsSelectionChange = {
                 </td>
               }
               @for (column of columns; track column.key) {
-                <td class="px-siaf-md py-siaf-sm" [ngClass]="[column.align === 'right' ? 'text-right' : column.align === 'center' ? 'text-center' : 'text-left', column.kind === 'document-link' ? 'max-w-[440px]' : '']">
+                <td class="px-siaf-md py-siaf-sm" [ngClass]="[column.fixed ? claseFija : '', column.align === 'right' ? 'text-right' : column.align === 'center' ? 'text-center' : 'text-left', column.kind === 'document-link' ? 'max-w-[440px]' : '']">
                   @if (column.kind === 'document-link') {
                     <span class="flex min-w-0 items-center gap-siaf-xs">
                       <a class="min-w-0 flex-1 truncate text-sm leading-normal text-text hover:text-brand-primary" siafTooltip [routerLink]="documentRoute(row)" (click)="onDocumentClick(row)">{{ row[column.key] }}</a>
@@ -173,12 +174,16 @@ export class DocumentsRecordsTableComponent {
 
   @Output() selectionChanged = new EventEmitter<DocumentsRecordsSelectionChange>();
   @Output() historyOpened = new EventEmitter<DocumentsRecordsRow>();
-  /** Clic en una fila de Registros que trae `recordRoute`: abre su detalle. */
+  /** Clic en una fila que trae `recordRoute` (Registros) o `detailRoute` (Documentos): abre su detalle. */
   @Output() rowOpened = new EventEmitter<DocumentsRecordsRow>();
 
   abreDetalle(row: DocumentsRecordsRow): boolean {
-    return this.activeTab === 'records' && typeof row['recordRoute'] === 'string' && !!row['recordRoute'];
+    const ruta = this.activeTab === 'records' ? row['recordRoute'] : row['detailRoute'];
+    return typeof ruta === 'string' && !!ruta;
   }
+
+  readonly claseFija = 'sticky right-14 z-[1] bg-surface shadow-siaf-elevation-6 [clip-path:inset(0_0_0_-16px)]';
+  readonly claseFijaCabecera = 'sticky right-14 z-[3] bg-surface-high shadow-siaf-elevation-6 [clip-path:inset(0_0_0_-16px)]';
 
   get mostrarCasilla(): boolean {
     return this.activeTab === 'documents' || this.recordSelectable;
@@ -208,17 +213,17 @@ export class DocumentsRecordsTableComponent {
     return indice === columnas.length - 1 || columnas[indice].headerGroup !== columnas[indice + 1].headerGroup;
   }
 
-  get filaSuperior(): { label: string; colspan: number; rowspan: 1 | 2; column?: DocumentsRecordsColumn; grupo: boolean; ultima: boolean }[] {
-    const celdas: { label: string; colspan: number; rowspan: 1 | 2; column?: DocumentsRecordsColumn; grupo: boolean; ultima: boolean }[] = [];
+  get filaSuperior(): { label: string; colspan: number; rowspan: 1 | 2; column?: DocumentsRecordsColumn; grupo: boolean; ultima: boolean; fija: boolean }[] {
+    const celdas: { label: string; colspan: number; rowspan: 1 | 2; column?: DocumentsRecordsColumn; grupo: boolean; ultima: boolean; fija: boolean }[] = [];
     for (let i = 0; i < this.columns.length; i++) {
       const columna = this.columns[i];
       if (!columna.headerGroup) {
-        celdas.push({ label: columna.label, colspan: 1, rowspan: 2, column: columna, grupo: false, ultima: false });
+        celdas.push({ label: columna.label, colspan: 1, rowspan: 2, column: columna, grupo: false, ultima: false, fija: !!columna.fixed });
         continue;
       }
       let fin = i;
       while (fin + 1 < this.columns.length && this.columns[fin + 1].headerGroup === columna.headerGroup) fin++;
-      celdas.push({ label: columna.headerGroup, colspan: fin - i + 1, rowspan: 1, grupo: true, ultima: fin === this.columns.length - 1 });
+      celdas.push({ label: columna.headerGroup, colspan: fin - i + 1, rowspan: 1, grupo: true, ultima: fin === this.columns.length - 1, fija: this.columns.slice(i, fin + 1).some((c) => c.fixed) });
       i = fin;
     }
     return celdas;

@@ -683,7 +683,7 @@ export class DocumentsRecordsPageComponent implements OnChanges {
 
   /** En Registros con `recordRowAction` el botón de la fila emite `recordActionClicked`; si no, abre el historial. */
   abrirDetalleRegistro(row: DocumentsRecordsRow): void {
-    const ruta = row['recordRoute'];
+    const ruta = row['recordRoute'] ?? row['detailRoute'];
     if (typeof ruta === 'string' && ruta) void this.router.navigateByUrl(ruta);
   }
 

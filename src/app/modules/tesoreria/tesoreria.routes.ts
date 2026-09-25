@@ -38,6 +38,13 @@ export const TESORERIA_ROUTES: Routes = [
       ),
   },
   {
+    path: 'procesos/registro-libretas-cuentas-registro/documento/:numero',
+    loadComponent: () =>
+      import('./registro-libretas-cuentas-registro/pages/documento/registro-libretas-documento.component').then(
+        (m) => m.RegistroLibretasDocumentoComponent,
+      ),
+  },
+  {
     path: 'procesos/registro-libretas-cuentas-registro/registro/:sec',
     loadComponent: () =>
       import('./registro-libretas-cuentas-registro/pages/registro/registro-libretas-registro.component').then(

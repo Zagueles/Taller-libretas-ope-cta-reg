@@ -41,7 +41,7 @@ const recordColumns: DocumentsRecordsColumn[] = [
   { key: 'status', label: 'Estado de registro', visibility: 'visible', group: 'default', widthClass: 'w-[130px]', kind: 'record-status' },
   { key: 'number', label: 'Número', headerGroup: 'Documento', visibility: 'visible', group: 'default', widthClass: 'w-[110px]' },
   { key: 'descripcionDocumento', label: 'Descripción', headerGroup: 'Documento', visibility: 'visible', group: 'default', widthClass: 'w-[300px]' },
-  { key: 'saldoFinal', label: 'Saldo final', headerGroup: 'Imp. m. cuenta', visibility: 'visible', group: 'default', align: 'right', widthClass: 'w-[135px]' },
+  { key: 'saldoFinal', label: 'Saldo final', headerGroup: 'Imp. m. cuenta', visibility: 'visible', group: 'default', align: 'right', widthClass: 'w-[135px]', fixed: true },
 ];
 
 const fieldsMenuOptions: DocumentsRecordsMenuOption[] = [

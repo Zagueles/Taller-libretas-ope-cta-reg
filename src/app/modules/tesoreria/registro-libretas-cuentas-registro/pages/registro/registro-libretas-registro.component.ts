@@ -45,7 +45,7 @@ const SIN_DATO = '-';
       heading="Detalle de registro de operaciones en las libretas de las cuentas de registro"
       [showReturn]="true"
       [showTag]="false"
-      [showButtonGroup]="false"
+      [customActions]="true"
       secondaryText=""
       (returned)="volver()"
     >
@@ -88,7 +88,7 @@ const SIN_DATO = '-';
               <div class="grid gap-siaf-md sm:grid-cols-2 lg:grid-cols-4">
                 @for (importe of r.importes; track importe.caption) {
                   <readonly-field
-                    class="block rounded-siaf-md bg-[var(--sys-color-bg-surfaces-surface-low)] [&_span.min-w-0]:ml-auto [&>div]:bg-transparent"
+                    class="block rounded-siaf-md bg-[var(--sys-color-bg-surfaces-highlight)] [&_span.min-w-0]:ml-auto [&>div]:bg-transparent"
                     [caption]="importe.caption"
                     [value]="importe.value"
                   />

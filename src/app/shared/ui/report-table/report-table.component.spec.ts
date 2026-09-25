@@ -44,6 +44,22 @@ describe('ReportTableComponent', () => {
     expect(Array.from(el().querySelectorAll('[data-cabecera-columna]')).map((c) => c.textContent!.trim())).toEqual(['Secuencia', 'Fecha', 'Saldo final']);
   });
 
+  it('la columna fija lleva su propia celda de grupo, para que el resto del grupo no quede fijo al desplazar', () => {
+    montar(
+      [
+        { key: 'inicial', label: 'Saldo inicial', group: 'Imp. m. cuenta' },
+        { key: 'credito', label: 'Crédito', group: 'Imp. m. cuenta' },
+        { key: 'saldo', label: 'Saldo final', group: 'Imp. m. cuenta', fixed: true },
+      ],
+      filas,
+    );
+    const superior = Array.from(el().querySelectorAll<HTMLTableCellElement>('[data-cabecera-superior]'));
+    expect(superior.map((c) => [c.textContent!.trim(), c.colSpan, c.classList.contains('sticky')])).toEqual([
+      ['Imp. m. cuenta', 2, false],
+      ['Imp. m. cuenta', 1, true],
+    ]);
+  });
+
   it('sin grupos, una sola fila de cabecera', () => {
     montar([{ key: 'secuencia', label: 'Secuencia' }, { key: 'saldo', label: 'Saldo', align: 'right' }], filas);
     expect(el().querySelectorAll('thead tr').length).toBe(1);

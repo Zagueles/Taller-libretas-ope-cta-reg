@@ -39,6 +39,8 @@ export type DocumentsRecordsColumn = {
   kind?: 'text' | 'document-link' | 'flow-status' | 'record-status';
   /** Grupo de la primera fila de la cabecera («Acreditación»): las columnas contiguas del mismo grupo lo comparten; sin grupo, la cabecera ocupa las dos filas. */
   headerGroup?: string;
+  /** Queda fija a la derecha, junto a la columna de acción, al desplazar horizontalmente (solo la última columna). */
+  fixed?: boolean;
 };
 
 export type DocumentsRecordsFilterOption = {
