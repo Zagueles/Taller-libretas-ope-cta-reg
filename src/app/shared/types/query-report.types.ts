@@ -157,6 +157,8 @@ export interface QueryReportFavorite {
  * textos, sus parámetros, sus columnas y el resultado de cada consulta.
  */
 export interface QueryReportConfig {
+  /** «Columnas visibles»: sin él, el botón Columnas solo emite `columnsRequested`. */
+  columnsPanel?: QueryReportColumnsConfig;
   title: string;
   breadcrumbs: BreadcrumbItem[];
   parameterFields: QueryReportParameterField[];
@@ -208,6 +210,14 @@ export interface QueryReportAdvancedFilterField extends QueryReportFilterField {
   groupLabelPrefix?: string;
   /** Columna de la fila que se muestra como segunda línea bajo el encabezado del grupo (Figma: la Cuenta de Registro bajo «Benef.»). */
   groupSubtitleColumn?: string;
+}
+
+/** Cómo se ofrecen las columnas en «Columnas visibles» de un reporte. */
+export interface QueryReportColumnsConfig {
+  /** Nombre en el panel de un grupo de cabecera cuando difiere (`'Imp. m. cuenta'` → «Importe en moneda de la cuenta»). */
+  groupLabels?: Record<string, string>;
+  /** Grupos que se mantienen si se ocultan todas las columnas. */
+  baseGroups: string[];
 }
 
 export interface QueryReportGroupAggregation {

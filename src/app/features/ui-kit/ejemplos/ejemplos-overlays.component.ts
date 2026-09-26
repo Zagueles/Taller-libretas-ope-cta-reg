@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, Input, computed, signal } from '@angular/core';
 
+import { ColumnasPanelGrupo, ReportColumnsPanelComponent } from '../../../shared/components/report-columns-panel/report-columns-panel.component';
 import { FavoritesPanelComponent, FavoritoResumen } from '../../../shared/components/favorites-panel/favorites-panel.component';
 import { AdvancedFiltersPanelComponent } from '../../../shared/components/advanced-filters-panel/advanced-filters-panel.component';
 import { QueryParametersPanelComponent } from '../../../shared/components/query-parameters-panel/query-parameters-panel.component';
@@ -32,6 +33,7 @@ interface CuentaEjemplo {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    ReportColumnsPanelComponent,
     FavoritesPanelComponent,
     AdvancedFiltersPanelComponent, AnnulmentModalComponent, ButtonComponent, ColumnVisibilityPanelComponent, FocoDirective, ModalComponent, QueryParametersPanelComponent,
     RequestApprovalModalsComponent, SelectionSideNavComponent, SideNavComponent, SidePanelComponent, TextFieldComponent, TimelineDetailPanelComponent,
@@ -193,6 +195,18 @@ interface CuentaEjemplo {
           Las dos fechas son obligatorias.@if (parametrosAplicados()) { Emitió «applied» con {{ resumenParametros() }}. }
         </p>
       }
+      @case ('siaf-report-columns-panel') {
+        <siaf-button variant="secondary" icon="view_column" (click)="panelColumnasVisibles.set(true)">Columnas visibles</siaf-button>
+        <siaf-report-columns-panel
+          [open]="panelColumnasVisibles()"
+          [grupos]="gruposColumnasMuestra"
+          [selected]="columnasElegidasMuestra()"
+          [defaults]="columnasDeFabricaMuestra"
+          [baseKeys]="columnasBaseMuestra"
+          (closed)="panelColumnasVisibles.set(false)"
+          (applied)="columnasElegidasMuestra.set($event); panelColumnasVisibles.set(false)"
+        />
+      }
       @case ('siaf-favorites-panel') {
         <siaf-button variant="secondary" icon="bookmark_border" (click)="favoritosAbierto.set(true)">Favoritos</siaf-button>
         <siaf-favorites-panel
@@ -231,13 +245,23 @@ export class EjemplosOverlaysComponent {
   static readonly selectores = [
     'siaf-modal', 'siaf-request-approval-modals', 'siaf-annulment-modal', 'siaf-side-nav', 'siaf-side-panel',
     'siaf-selection-side-nav', 'siaf-upload-side-nav', 'siaf-timeline-detail-panel', 'siaf-column-visibility-panel',
-    'siaf-query-parameters-panel', 'siaf-advanced-filters-panel', 'siaf-favorites-panel', '[siafFoco]',
+    'siaf-query-parameters-panel', 'siaf-advanced-filters-panel', 'siaf-favorites-panel', 'siaf-report-columns-panel', '[siafFoco]',
   ];
 
   readonly camposParametros = CAMPOS_PARAMETROS_DE_MUESTRA;
   readonly parametrosAbierto = signal(false);
   readonly parametrosAplicados = signal<QueryReportParameters | null>(null);
   readonly camposAvanzados = CAMPOS_FILTROS_AVANZADOS_DE_MUESTRA;
+  readonly panelColumnasVisibles = signal(false);
+  readonly gruposColumnasMuestra: ColumnasPanelGrupo[] = [
+    { id: 'acreditacion', label: 'Acreditación', suelta: false, columnas: [{ key: 'sec', label: 'Secuencia' }, { key: 'fecha', label: 'Fecha' }] },
+    { id: 'beneficiario', label: 'Beneficiario', suelta: false, columnas: [{ key: 'codigo', label: 'Código' }, { key: 'descripcion', label: 'Descripción' }] },
+    { id: 'tipo', label: 'Tipo de operación', suelta: true, columnas: [{ key: 'tipo', label: 'Tipo de operación' }] },
+    { id: 'cambio', label: 'Tipo de cambio', suelta: false, columnas: [{ key: 'cambio', label: 'Valor' }] },
+  ];
+  readonly columnasDeFabricaMuestra = new Set(['sec', 'fecha', 'codigo', 'descripcion', 'tipo']);
+  readonly columnasBaseMuestra = new Set(['sec', 'fecha', 'codigo', 'descripcion']);
+  readonly columnasElegidasMuestra = signal<ReadonlySet<string>>(this.columnasDeFabricaMuestra);
   readonly favoritosAbierto = signal(false);
   readonly favoritosMuestra = signal<FavoritoResumen[]>([
     { id: 'f1', description: 'Operaciones MINCETUR', isDefault: true, summary: '7 parámetros · 2 condiciones · 3 agrupados' },

@@ -10101,6 +10101,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       "siaf-pagination",
       "siaf-parametros-aplicados",
       "siaf-query-parameters-panel",
+      "siaf-report-columns-panel",
       "siaf-report-summary-card",
       "siaf-report-table",
       "siaf-table-skeleton",
@@ -10477,6 +10478,182 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     "tokens": [],
     "usa": [
       "siaf-tabs"
+    ],
+    "sinUso": false
+  },
+  {
+    "selector": "siaf-report-columns-panel",
+    "clase": "ReportColumnsPanelComponent",
+    "tipo": "componente",
+    "capa": "components",
+    "importacion": "@siaf/shared/components/report-columns-panel/report-columns-panel.component",
+    "archivo": "src/app/shared/components/report-columns-panel/report-columns-panel.component.ts",
+    "descripcion": "Panel lateral «Columnas visibles» de Consultas y reportes (Figma nodos 4397:61240 y 4397:61284): las columnas de la\ntabla en árbol, por grupo de cabecera, con casillas de tres estados (grupo completo, parcial o vacío), «Seleccionar\ntodas» y las flechas que pliegan cada grupo (por defecto abiertos). «Restablecer» vuelve a las columnas visibles de\nfábrica y «Aplicar» emite `applied` con las claves elegidas. Si se ocultan todas, quedan las columnas base\n(`baseKeys`: Acreditación, Beneficiario, Cuenta de registro e Importe en moneda de la cuenta), que van siempre\nmarcadas y con la casilla deshabilitada.\n\nTrabaja sobre un borrador: cerrar sin aplicar no cambia nada.",
+    "usaSesion": false,
+    "proyectaContenido": false,
+    "entradas": [
+      {
+        "nombre": "baseKeys",
+        "tipo": "ReadonlySet<string>",
+        "porDefecto": null,
+        "requerida": false,
+        "descripcion": "Columnas que quedan si se ocultan todas."
+      },
+      {
+        "nombre": "defaults",
+        "tipo": "ReadonlySet<string>",
+        "porDefecto": null,
+        "requerida": false,
+        "descripcion": "Columnas visibles de fábrica, a las que vuelve «Restablecer»."
+      },
+      {
+        "nombre": "grupos",
+        "tipo": "readonly ColumnasPanelGrupo[]",
+        "porDefecto": "[]",
+        "requerida": false,
+        "descripcion": null
+      },
+      {
+        "nombre": "open",
+        "tipo": "boolean",
+        "porDefecto": "false",
+        "requerida": false,
+        "descripcion": null
+      },
+      {
+        "nombre": "selected",
+        "tipo": "ReadonlySet<string>",
+        "porDefecto": null,
+        "requerida": false,
+        "descripcion": "Claves de las columnas visibles ahora; el borrador parte de ellas al abrir."
+      }
+    ],
+    "eventos": [
+      {
+        "nombre": "applied",
+        "tipo": "Set<string>",
+        "descripcion": null
+      },
+      {
+        "nombre": "closed",
+        "tipo": "void",
+        "descripcion": null
+      }
+    ],
+    "usar": "- Desde el botón «Columnas» (`view_column`) del buscador de `siaf-query-report-page`, que le pasa los grupos, lo\n  elegido, lo de fábrica y las columnas base.",
+    "evitar": "- Para las columnas de Documentos y registros: usar `siaf-column-visibility-panel`.",
+    "teclado": "- **Tab**: recorre «Seleccionar todas», la flecha y la casilla de cada grupo, cada columna, «Restablecer» y «Aplicar».\n- **Espacio**: marca o desmarca la casilla; **Enter / Espacio** en una flecha pliega o despliega el grupo.\n- **Escape**: cierra sin aplicar.",
+    "accesibilidad": "- **4.1.2 Nombre, función y valor (A)**: `role=\"dialog\"` con `aria-modal` y `aria-labelledby`; las flechas llevan\n  `aria-expanded` y su nombre, y las casillas de grupo usan el estado mixto (`indeterminate`).\n- **2.4.3 Orden del foco (A)**: con `siafFoco` el foco entra al abrir y vuelve al control que lo abrió.\n- **2.5.8 Tamaño del objetivo (AA)**: cada fila mide al menos 48 px de alto.",
+    "figma": [
+      {
+        "nodo": "4397:61240",
+        "nombre": "Columnas visibles (expandidas)"
+      },
+      {
+        "nodo": "4397:61284",
+        "nombre": "Columnas visibles (colapsadas)"
+      }
+    ],
+    "aria": {
+      "roles": [
+        "dialog"
+      ],
+      "atributos": [
+        "aria-expanded",
+        "aria-label",
+        "aria-labelledby",
+        "aria-modal"
+      ]
+    },
+    "tokens": [
+      {
+        "token": "--sys-color-bg-surfaces-surface",
+        "via": [
+          "bg-surface"
+        ]
+      },
+      {
+        "token": "--sys-color-bg-surfaces-surface-high",
+        "via": [
+          "bg-surface-muted"
+        ]
+      },
+      {
+        "token": "--sys-color-border-states-focus",
+        "via": [
+          "var()"
+        ]
+      },
+      {
+        "token": "--sys-color-divider-default",
+        "via": [
+          "var()"
+        ]
+      },
+      {
+        "token": "--sys-color-icon-states-enabled",
+        "via": [
+          "var()"
+        ]
+      },
+      {
+        "token": "--sys-color-text-neutral-high",
+        "via": [
+          "text-text",
+          "var()"
+        ]
+      },
+      {
+        "token": "--sys-color-text-neutral-medium",
+        "via": [
+          "var()"
+        ]
+      },
+      {
+        "token": "--sys-gap-base-md",
+        "via": [
+          "gap-siaf-md",
+          "pb-siaf-md",
+          "px-siaf-md"
+        ]
+      },
+      {
+        "token": "--sys-gap-base-sm",
+        "via": [
+          "gap-siaf-sm",
+          "pt-siaf-sm",
+          "py-siaf-sm"
+        ]
+      },
+      {
+        "token": "--sys-gap-base-xs",
+        "via": [
+          "gap-siaf-xs"
+        ]
+      },
+      {
+        "token": "--sys-radius-md",
+        "via": [
+          "rounded-siaf-md"
+        ]
+      },
+      {
+        "token": "--sys-radius-sm",
+        "via": [
+          "rounded-siaf-sm"
+        ]
+      },
+      {
+        "token": "--sys-shadow-elevation-8",
+        "via": [
+          "shadow-siaf-elevation-8"
+        ]
+      }
+    ],
+    "usa": [
+      "[siafFoco]",
+      "siaf-button",
+      "siaf-icon"
     ],
     "sinUso": false
   },

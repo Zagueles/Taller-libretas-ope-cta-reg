@@ -126,9 +126,9 @@ export { DEFAULT_PROCESS_TREE, findProcessPathById } from '../../shared/utils/pr
                   [size]="level === 0 ? 24 : 20"
                   [class.-rotate-90]="!isExpanded(node)"
                 />
-              } @else {
-                <!-- Nodos sin hijos (hojas o "Próximamente") muestran la misma flecha que Figma,
-                     solo decorativa: no expanden nada y no cambian con el estado del nodo. -->
+              } @else if (!node.moduleRoute) {
+                <!-- Los nodos «Próximamente» (sin hijos ni pantalla) muestran la misma flecha que Figma, solo
+                     decorativa. Una hoja con pantalla (con moduleRoute) es el último nivel y va sin ícono inicial. -->
                 <siaf-icon
                   class="mr-siaf-md shrink-0 text-[var(--sys-color-text-neutral-activated)]"
                   name="arrow_right"

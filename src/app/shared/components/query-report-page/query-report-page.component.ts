@@ -31,6 +31,7 @@ import { TableSkeletonComponent } from '../../ui/table-skeleton/table-skeleton.c
 import { TabsComponent } from '../../ui/tabs/tabs.component';
 import { TagComponent } from '../../ui/tag/tag.component';
 import { AdvancedFiltersPanelComponent } from '../advanced-filters-panel/advanced-filters-panel.component';
+import { ColumnasPanelGrupo, ReportColumnsPanelComponent } from '../report-columns-panel/report-columns-panel.component';
 import { FavoritesPanelComponent, FavoritoActual, FavoritoNuevo, FavoritoResumen } from '../favorites-panel/favorites-panel.component';
 import { FilterPillComponent } from '../filter-pill/filter-pill.component';
 import { FormTableSearchComponent } from '../form-table-search/form-table-search.component';
@@ -180,6 +181,7 @@ let siguienteId = 0;
     PaginationComponent,
     ParametrosAplicadosComponent,
     QueryParametersPanelComponent,
+    ReportColumnsPanelComponent,
     ReportSummaryCardComponent,
     ReportTableComponent,
     TableSkeletonComponent,
@@ -421,7 +423,7 @@ let siguienteId = 0;
                   />
                 } @else {
                   <siaf-report-table
-                    [columns]="configuracion().columns"
+                    [columns]="columnasMostradas()"
                     [rows]="filasPagina()"
                     [rowKey]="configuracion().rowKey"
                     [ariaLabel]="configuracion().tableLabel ?? configuracion().title"
@@ -462,7 +464,7 @@ let siguienteId = 0;
                   ariaLabel="Buscar en el resultado"
                   (valueChange)="buscar($event)"
                   (filter)="abrirFiltrosAvanzados()"
-                  (columns)="columnsRequested.emit()"
+                  (columns)="abrirColumnas()"
                 />
 
                 @if (configuracion().presetFilters?.length || conteoFiltrosAvanzados()) {
@@ -520,6 +522,18 @@ let siguienteId = 0;
       (removed)="quitarFavorito($event)"
       (defaultToggled)="alternarPredeterminado($event)"
     />
+
+    @if (configuracion().columnsPanel) {
+      <siaf-report-columns-panel
+        [open]="panelColumnasAbierto()"
+        [grupos]="gruposColumnas()"
+        [selected]="columnasActivas()"
+        [defaults]="columnasDeFabrica()"
+        [baseKeys]="columnasBase()"
+        (closed)="panelColumnasAbierto.set(false)"
+        (applied)="aplicarColumnas($event)"
+      />
+    }
 
     <siaf-advanced-filters-panel
       [open]="panelAvanzadoAbierto()"
@@ -582,6 +596,9 @@ export class QueryReportPageComponent {
   readonly campoEnfocado = signal<string | null>(null);
   readonly panelAvanzadoAbierto = signal(false);
   readonly panelFavoritosAbierto = signal(false);
+  readonly panelColumnasAbierto = signal(false);
+  /** Columnas elegidas en «Columnas visibles»; `null` = las de fábrica de la configuración. */
+  private readonly columnasElegidas = signal<ReadonlySet<string> | null>(null);
   readonly favoritos = signal<QueryReportFavorite[]>([]);
   /** Favorito con el que se armó la consulta actual; deja de serlo si se cambian los parámetros o los filtros avanzados. */
   readonly favoritoAplicadoId = signal<string | null>(null);
@@ -884,6 +901,44 @@ export class QueryReportPageComponent {
       .join(' ▶ ');
   }
 
+  /** Columnas visibles de fábrica: todas menos las `hiddenByDefault`. */
+  readonly columnasDeFabrica = computed<ReadonlySet<string>>(() => new Set(this.configuracion().columns.filter((c) => !c.hiddenByDefault).map((c) => c.key)));
+
+  readonly columnasActivas = computed<ReadonlySet<string>>(() => this.columnasElegidas() ?? this.columnasDeFabrica());
+
+  /** Las que quedan si se ocultan todas: las de los grupos base. */
+  readonly columnasBase = computed<ReadonlySet<string>>(() => {
+    const base = this.configuracion().columnsPanel?.baseGroups ?? [];
+    return new Set(this.configuracion().columns.filter((c) => c.group && base.includes(c.group)).map((c) => c.key));
+  });
+
+  /** Columnas de la configuración que se ven ahora. */
+  readonly columnasMostradas = computed<ReportTableColumn[]>(() => this.configuracion().columns.filter((c) => this.columnasActivas().has(c.key)));
+
+  /** El árbol del panel: un grupo por cabecera (los no contiguos con el mismo nombre se juntan) y las columnas sueltas aparte. */
+  readonly gruposColumnas = computed<ColumnasPanelGrupo[]>(() => {
+    const nombres = this.configuracion().columnsPanel?.groupLabels ?? {};
+    const grupos: ColumnasPanelGrupo[] = [];
+    for (const c of this.configuracion().columns) {
+      const columna = { key: c.key, label: c.panelLabel ?? c.label };
+      const id = c.group ?? `col-${c.key}`;
+      const existente = grupos.find((g) => g.id === id);
+      if (existente) existente.columnas.push(columna);
+      else grupos.push({ id, label: c.group ? (nombres[c.group] ?? c.group) : c.label, suelta: !c.group, columnas: [columna] });
+    }
+    return grupos;
+  });
+
+  abrirColumnas(): void {
+    this.columnsRequested.emit();
+    if (this.configuracion().columnsPanel) this.panelColumnasAbierto.set(true);
+  }
+
+  aplicarColumnas(claves: Set<string>): void {
+    this.columnasElegidas.set(claves);
+    this.panelColumnasAbierto.set(false);
+  }
+
   /**
    * Columnas de la tabla con los niveles aplicados: cada nivel oculta sus columnas (`hidesColumns`) y los grupos de
    * cabecera que le corresponden (`hidesGroups`), salvo las columnas que siguen visibles sin grupo.
@@ -892,8 +947,8 @@ export class QueryReportPageComponent {
     const campos = (this.configuracion().advancedFilterFields ?? []).filter((c) => niveles.includes(c.key));
     const columnas = new Set([...extraOcultas, ...campos.flatMap((c) => c.hidesColumns ?? [])]);
     const grupos = new Set(campos.flatMap((c) => c.hidesGroups ?? []));
-    return this.configuracion()
-      .columns.filter((c) => !columnas.has(c.key) && !(c.group && grupos.has(c.group) && !c.ungroupWhenGroupHidden))
+    return this.columnasMostradas()
+      .filter((c) => !columnas.has(c.key) && !(c.group && grupos.has(c.group) && !c.ungroupWhenGroupHidden))
       .map((c) => (c.group && grupos.has(c.group) ? { ...c, group: undefined } : c));
   }
 

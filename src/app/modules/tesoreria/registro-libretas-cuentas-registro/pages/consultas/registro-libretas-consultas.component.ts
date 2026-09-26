@@ -137,7 +137,7 @@ export class RegistroLibretasConsultasComponent {
     ],
     groupAggregation: { runningBalance: { startColumn: 'saldoInicial', endColumn: 'saldoFinal' }, hiddenColumns: ['sec', 'fecha', 'tipoOperacion', 'entidad', 'unidadEjecutora', 'grupo', 'numeroDocumento', 'descripcionDocumento'] },
     columns: [
-      { key: 'sec', label: 'Sec.', group: 'Acreditación', width: 90 },
+      { key: 'sec', label: 'Sec.', panelLabel: 'Secuencia', group: 'Acreditación', width: 90 },
       { key: 'fecha', label: 'Fecha', group: 'Acreditación', width: 130 },
       { key: 'beneficiarioCodigo', label: 'Código', group: 'Beneficiario', width: 90 },
       { key: 'beneficiario', label: 'Descripción', group: 'Beneficiario', width: 230 },
@@ -148,13 +148,22 @@ export class RegistroLibretasConsultasComponent {
       { key: 'entidad', label: 'Entidad', group: 'Ámbito institucional', width: 110 },
       { key: 'unidadEjecutora', label: 'Unidad ejecutora', group: 'Ámbito institucional', width: 190 },
       { key: 'grupo', label: 'Grupo', group: 'Ámbito institucional', width: 160 },
+      { key: 'tipoCambio', label: 'Tipo de cambio', panelLabel: 'Valor', group: 'Tipo de cambio', hiddenByDefault: true, align: 'right', width: 130 },
       { key: 'saldoInicial', label: 'Saldo inicial', group: 'Imp. m. cuenta', align: 'right', width: 120 },
       { key: 'debito', label: 'Débito', group: 'Imp. m. cuenta', align: 'right', width: 110 },
       { key: 'credito', label: 'Crédito', group: 'Imp. m. cuenta', align: 'right', width: 110 },
+      { key: 'saldoInicialMN', label: 'Saldo inicial', group: 'Imp. m. nacional', hiddenByDefault: true, align: 'right', width: 130 },
+      { key: 'debitoMN', label: 'Débito', group: 'Imp. m. nacional', hiddenByDefault: true, align: 'right', width: 120 },
+      { key: 'creditoMN', label: 'Crédito', group: 'Imp. m. nacional', hiddenByDefault: true, align: 'right', width: 130 },
+      { key: 'saldoFinalMN', label: 'Saldo final', group: 'Imp. m. nacional', hiddenByDefault: true, align: 'right', width: 140 },
       { key: 'numeroDocumento', label: 'Número', group: 'Documento', width: 110, kind: 'link' },
       { key: 'descripcionDocumento', label: 'Descripción', group: 'Documento', width: 300 },
       { key: 'saldoFinal', label: 'Saldo final', group: 'Imp. m. cuenta', align: 'right', width: 135, fixed: true },
     ],
+    columnsPanel: {
+      baseGroups: ['Acreditación', 'Beneficiario', 'Cuenta de registro', 'Imp. m. cuenta'],
+      groupLabels: { 'Imp. m. cuenta': 'Importe en moneda de la cuenta', 'Imp. m. nacional': 'Importe en moneda nacional' },
+    },
     rowKey: 'sec',
     resultTitle: 'Resultado de reporte',
     tableLabel: TITULO,
@@ -236,6 +245,8 @@ export class RegistroLibretasConsultasComponent {
   }
 
   private aFila(m: MovimientoLibretaRegistro): QueryReportRow {
+    // Cuentas en dólares: el importe en moneda nacional es el importe por el tipo de cambio (dato de ejemplo).
+    const tipoCambio = CUENTAS_BANCARIAS_INFO.find((c) => c.id === m.cuentaBancariaId)?.moneda === 'USD' ? 3.75 : 1;
     return {
       sec: m.sec,
       fecha: fechaHoraVisible(m.fecha),
@@ -259,6 +270,11 @@ export class RegistroLibretasConsultasComponent {
       documentoId: m.documentoId,
       descripcionDocumento: m.descripcionDocumento,
       saldoFinal: monto(m.saldoFinal),
+      tipoCambio: tipoCambio.toFixed(4),
+      saldoInicialMN: monto(m.saldoInicial * tipoCambio),
+      debitoMN: monto(m.debito * tipoCambio),
+      creditoMN: monto(m.credito * tipoCambio),
+      saldoFinalMN: monto(m.saldoFinal * tipoCambio),
     };
   }
 }

@@ -11,6 +11,10 @@ export interface ReportTableColumn {
   width?: number;
   /** Queda fija a la derecha al desplazar la tabla (Figma «Fixed»). Solo la última columna. */
   fixed?: boolean;
+  /** No se ve hasta que se marque en «Columnas visibles» (p. ej. las de moneda nacional, que son para cuentas en dólares). */
+  hiddenByDefault?: boolean;
+  /** Nombre en el panel «Columnas visibles» cuando difiere del de la cabecera («Secuencia» por «Sec.»). */
+  panelLabel?: string;
   /** Si su grupo de cabecera se oculta por un nivel de agrupación, la columna sigue visible, sin grupo (con su propio título). */
   ungroupWhenGroupHidden?: boolean;
   /** `link` pinta el valor como enlace y emite `linkClicked` al pulsarlo. */
