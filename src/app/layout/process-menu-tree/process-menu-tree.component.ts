@@ -45,8 +45,8 @@ export { DEFAULT_PROCESS_TREE, findProcessPathById } from '../../shared/utils/pr
  *   (sangría y línea a la izquierda): los nodos son botones en `div` anidados, sin `ul`/`li` ni `role="tree"`, y el
  *   lector no anuncia nivel ni cantidad. Además, el `aria-label` del `aside` es fijo («Menu de procesos») y también se
  *   lee en Ajustes.
- * - **Pendiente · 1.4.1 Uso del color (A)**: el nodo elegido (y su ancestro de primer nivel) se distingue solo por el
- *   fondo `bg-states-light-selected` y el color del texto; el peso de la fuente no cambia.
+ * - **1.4.1 Uso del color (A)**: el nodo elegido se distingue por el fondo `bg-states-light-selected`, el color de
+ *   texto e ícono y, además, la negrita — no solo por el color.
  * - **1.4.3 Contraste mínimo (AA)**: en claro, título `text-neutral-high` 16.29:1 y nodos `text-neutral-medium` 14.53:1
  *   sobre blanco; en oscuro el panel usa `bg-surfaces-field` y falta medirlo.
  * - **1.4.11 Contraste no textual (AA)**: el contorno de foco es el azul del kit (`border-states-focus`, 5.35:1 claro
@@ -110,9 +110,9 @@ export { DEFAULT_PROCESS_TREE, findProcessPathById } from '../../shared/utils/pr
               type="button"
               [class.min-h-12]="level === 0"
               [class.min-h-8]="level > 0"
-              [class.bg-[var(--sys-color-bg-states-light-selected)]]="isNodeHighlighted(node, level)"
-              [class.hover:bg-[var(--sys-color-bg-states-light-hover)]]="!isNodeHighlighted(node, level)"
-              [class.active:bg-[var(--sys-color-bg-states-light-pressed)]]="!isNodeHighlighted(node, level)"
+              [class.bg-[var(--sys-color-bg-states-light-selected)]]="isNodeHighlighted(node)"
+              [class.hover:bg-[var(--sys-color-bg-states-light-hover)]]="!isNodeHighlighted(node)"
+              [class.active:bg-[var(--sys-color-bg-states-light-pressed)]]="!isNodeHighlighted(node)"
               [class.px-siaf-md]="true"
               [class.py-siaf-sm]="level === 0"
               [class.py-siaf-xxs]="level > 0"
@@ -121,7 +121,9 @@ export { DEFAULT_PROCESS_TREE, findProcessPathById } from '../../shared/utils/pr
             >
               @if (hasChildren(node)) {
                 <siaf-icon
-                  class="mr-siaf-md shrink-0 text-[var(--sys-color-text-neutral-activated)] transition-transform duration-150"
+                  class="mr-siaf-md shrink-0 transition-transform duration-150"
+                  [class.text-[var(--sys-color-icon-states-active)]]="isNodeHighlighted(node)"
+                  [class.text-[var(--sys-color-icon-states-enabled)]]="!isNodeHighlighted(node)"
                   name="arrow_drop_down"
                   [size]="level === 0 ? 24 : 20"
                   [class.-rotate-90]="!isExpanded(node)"
@@ -130,7 +132,9 @@ export { DEFAULT_PROCESS_TREE, findProcessPathById } from '../../shared/utils/pr
                 <!-- Los nodos «Próximamente» (sin hijos ni pantalla) muestran la misma flecha que Figma, solo
                      decorativa. Una hoja con pantalla (con moduleRoute) es el último nivel y va sin ícono inicial. -->
                 <siaf-icon
-                  class="mr-siaf-md shrink-0 text-[var(--sys-color-text-neutral-activated)]"
+                  class="mr-siaf-md shrink-0"
+                  [class.text-[var(--sys-color-icon-states-active)]]="isNodeHighlighted(node)"
+                  [class.text-[var(--sys-color-icon-states-enabled)]]="!isNodeHighlighted(node)"
                   name="arrow_right"
                   [size]="level === 0 ? 24 : 20"
                 />
@@ -138,12 +142,12 @@ export { DEFAULT_PROCESS_TREE, findProcessPathById } from '../../shared/utils/pr
 
               <span
                 class="min-w-0 flex-1 text-sm leading-normal"
-                [class.font-bold]="level === 0"
-                [class.font-normal]="level > 0"
+                [class.font-bold]="isNodeHighlighted(node)"
+                [class.font-normal]="!isNodeHighlighted(node)"
                 [class.tracking-[-0.02px]]="level === 0"
                 [class.tracking-[0.0249px]]="level > 0"
-                [class.text-[var(--sys-color-text-neutral-activated)]]="isNodeHighlighted(node, level)"
-                [class.text-[var(--sys-color-text-neutral-medium)]]="!isNodeHighlighted(node, level)"
+                [class.text-[var(--sys-color-text-neutral-activated)]]="isNodeHighlighted(node)"
+                [class.text-[var(--sys-color-text-neutral-medium)]]="!isNodeHighlighted(node)"
               >
                 {{ node.label }}
               </span>
@@ -171,8 +175,6 @@ export class ProcessMenuTreeComponent implements OnChanges, OnInit {
   query = '';
   selectedId = '';
   private readonly expandedIds = new Set<string>();
-  private readonly parentById = new Map<string, string>();
-  private readonly activeAncestorIds = new Set<string>();
 
   ngOnInit(): void {
     this.initializeState();
@@ -206,7 +208,6 @@ export class ProcessMenuTreeComponent implements OnChanges, OnInit {
     }
 
     this.selectedId = node.id;
-    this.updateActivePath(node.id);
 
     if (this.hasChildren(node)) {
       this.toggle(node);
@@ -223,8 +224,9 @@ export class ProcessMenuTreeComponent implements OnChanges, OnInit {
     return Boolean(this.query) || this.expandedIds.has(node.id);
   }
 
-  isNodeHighlighted(node: ProcessMenuNode, level: number): boolean {
-    return this.selectedId === node.id || (level === 0 && this.activeAncestorIds.has(node.id));
+  /** Solo el último nivel elegido queda resaltado (fondo, texto e ícono en azul y negrita): nunca sus ancestros. */
+  isNodeHighlighted(node: ProcessMenuNode): boolean {
+    return this.selectedId === node.id;
   }
 
   onQuery(value: string): void {
@@ -246,22 +248,12 @@ export class ProcessMenuTreeComponent implements OnChanges, OnInit {
 
   private initializeState(): void {
     this.expandedIds.clear();
-    this.parentById.clear();
-    this.activeAncestorIds.clear();
     this.selectedId = '';
     this.collectState(this.nodes);
-
-    if (this.selectedId) {
-      this.updateActivePath(this.selectedId);
-    }
   }
 
   private collectState(nodes: ProcessMenuNode[], parentId = ''): void {
     for (const node of nodes) {
-      if (parentId) {
-        this.parentById.set(node.id, parentId);
-      }
-
       // Evita que hijos profundos arranquen abiertos aunque alguien agregue expanded por error.
       if (node.expanded && !parentId) {
         this.expandedIds.add(node.id);
@@ -274,16 +266,6 @@ export class ProcessMenuTreeComponent implements OnChanges, OnInit {
       if (node.children?.length) {
         this.collectState(node.children, node.id);
       }
-    }
-  }
-
-  private updateActivePath(nodeId: string): void {
-    this.activeAncestorIds.clear();
-
-    let parentId = this.parentById.get(nodeId);
-    while (parentId) {
-      this.activeAncestorIds.add(parentId);
-      parentId = this.parentById.get(parentId);
     }
   }
 
