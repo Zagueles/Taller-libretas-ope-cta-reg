@@ -91,7 +91,7 @@ Interaction.modes.siafTramo = (grafico, evento, _opciones, posicionFinal): Inter
     <!-- Relleno del Figma («Progress»): 24 px arriba y a los lados, también dentro de siaf-chart-section. -->
     <figure class="m-0 flex flex-col gap-siaf-md px-siaf-lg pt-siaf-lg">
       @if (categories.length) {
-        <siaf-chart-legend [items]="leyenda" />
+        <siaf-chart-legend [items]="leyenda" align="start" />
       }
       <div class="relative w-full" [style.height.px]="height">
         <canvas

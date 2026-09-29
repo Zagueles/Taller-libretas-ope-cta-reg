@@ -53,7 +53,8 @@ export type QueryReportColumn = ReportTableColumn;
 export type QueryReportRow = ReportTableRow;
 
 /** `sum` suma una columna de importes («1,031,200.00»); `count` cuenta filas. */
-export type QueryReportAggregate = 'sum' | 'count';
+/** `first`/`last` toman el valor de la primera o última fila del grupo (p. ej. el saldo inicial o final de un período), sin sumarlas. */
+export type QueryReportAggregate = 'sum' | 'count' | 'first' | 'last';
 
 /** Solo las filas cuya columna tiene exactamente ese valor. */
 export interface QueryReportRowFilter {
@@ -86,6 +87,9 @@ export interface QueryReportChart {
   groupBy: string;
   /** Con una columna de fecha dd/mm/aaaa, agrupa por mes («ENE», «FEB»…) en orden cronológico. */
   byMonth?: boolean;
+  /** Con una columna de fecha dd/mm/aaaa hh:mm:ss, agrupa por hora («18:00», «19:00»…) en orden cronológico: para un
+   *  período de un solo día, donde agrupar por mes dejaría una única categoría. */
+  byHour?: boolean;
   column?: string;
   aggregate?: QueryReportAggregate;
   where?: QueryReportRowFilter;

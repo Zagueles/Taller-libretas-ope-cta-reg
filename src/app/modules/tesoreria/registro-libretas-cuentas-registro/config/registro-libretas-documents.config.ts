@@ -29,7 +29,7 @@ const recordColumns: DocumentsRecordsColumn[] = [
   { key: 'fecha', label: 'Fecha', headerGroup: 'Acreditación', visibility: 'visible', group: 'default', widthClass: 'w-[130px]' },
   { key: 'beneficiarioCodigo', label: 'Código', headerGroup: 'Beneficiario', visibility: 'visible', group: 'default', widthClass: 'w-[90px]' },
   { key: 'beneficiario', label: 'Descripción', headerGroup: 'Beneficiario', visibility: 'visible', group: 'default', widthClass: 'w-[230px]' },
-  { key: 'numeroCuentaRegistro', label: 'Número', headerGroup: 'Cuenta de registro', visibility: 'visible', group: 'default', widthClass: 'w-[230px]' },
+  { key: 'numeroCuentaRegistro', label: 'Número', headerGroup: 'Cuenta de registro', visibility: 'visible', group: 'default', widthClass: 'w-[300px]' },
   { key: 'descripcionCuentaRegistro', label: 'Descripción', headerGroup: 'Cuenta de registro', visibility: 'visible', group: 'default', widthClass: 'w-[320px]' },
   { key: 'tipoOperacion', label: 'Tipo de operación', visibility: 'visible', group: 'default', widthClass: 'w-[190px]' },
   { key: 'entidad', label: 'Entidad', headerGroup: 'Ámbito institucional', visibility: 'visible', group: 'default', widthClass: 'w-[110px]' },
@@ -39,7 +39,7 @@ const recordColumns: DocumentsRecordsColumn[] = [
   { key: 'debito', label: 'Débito', headerGroup: 'Imp. m. cuenta', visibility: 'visible', group: 'default', align: 'right', widthClass: 'w-[110px]' },
   { key: 'credito', label: 'Crédito', headerGroup: 'Imp. m. cuenta', visibility: 'visible', group: 'default', align: 'right', widthClass: 'w-[110px]' },
   { key: 'status', label: 'Estado de registro', visibility: 'visible', group: 'default', widthClass: 'w-[130px]', kind: 'record-status' },
-  { key: 'number', label: 'Número', headerGroup: 'Documento', visibility: 'visible', group: 'default', widthClass: 'w-[110px]' },
+  { key: 'number', label: 'Número', headerGroup: 'Documento', visibility: 'visible', group: 'default', widthClass: 'w-[150px]' },
   { key: 'descripcionDocumento', label: 'Descripción', headerGroup: 'Documento', visibility: 'visible', group: 'default', widthClass: 'w-[300px]' },
   { key: 'saldoFinal', label: 'Saldo final', headerGroup: 'Imp. m. cuenta', visibility: 'visible', group: 'default', align: 'right', widthClass: 'w-[135px]', fixed: true },
 ];

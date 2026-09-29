@@ -2570,10 +2570,17 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     "capa": "ui",
     "importacion": "@siaf/ui/chart-legend/chart-legend.component",
     "archivo": "src/app/shared/ui/chart-legend/chart-legend.component.ts",
-    "descripcion": "Leyenda de los gráficos del kit (Figma UI KIT, página «Graphics», «Leyenda»): un punto de 15 px con el color de\ncada serie y su nombre, alineados a la derecha sobre el gráfico.",
+    "descripcion": "Leyenda de los gráficos del kit (Figma UI KIT, página «Graphics», «Leyenda»): un punto de 15 px con el color de\n\ncada serie y su nombre. Van alineados a la derecha sobre el gráfico por defecto; con `align=\"start\"`, a la\nizquierda (el donut, con pocas series y su leyenda encima, se lee mejor así).",
     "usaSesion": false,
     "proyectaContenido": false,
     "entradas": [
+      {
+        "nombre": "align",
+        "tipo": "'start' | 'end'",
+        "porDefecto": "'end'",
+        "requerida": false,
+        "descripcion": null
+      },
       {
         "nombre": "items",
         "tipo": "readonly ChartLegendItem[]",
@@ -2583,7 +2590,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       }
     ],
     "eventos": [],
-    "usar": "- Dentro de los gráficos del kit: `siaf-bar-chart` y `siaf-line-chart` la arman solos con los nombres de sus\n  series; `siaf-diverging-chart`, con los de sus dos lados, y `siaf-donut-chart`, con los de sus partes.\n- En un gráfico propio que use la paleta del kit (`TOKENS_SERIES`), para que colores y nombres coincidan.",
+    "usar": "- Dentro de los gráficos del kit: `siaf-bar-chart` y `siaf-line-chart` la arman solos con los nombres de sus\n  series; `siaf-diverging-chart`, con los de sus dos lados, y `siaf-donut-chart`, con los de sus partes.\n\n- En un gráfico propio que use la paleta del kit (`TOKENS_SERIES`), para que colores y nombres coincidan.\n- `align=\"start\"` cuando el gráfico tiene pocas series y conviene leerlas de corrido desde la izquierda, como en\n  `siaf-donut-chart`.",
     "evitar": "- Como única forma de leer los datos: el gráfico debe traer además su tooltip y su tabla de datos.\n- Para filtros o selección de series: no es interactiva.",
     "teclado": "- No recibe foco: no es interactiva.",
     "accesibilidad": "- **1.3.1 Información y relaciones (A)**: es una lista (`ul` y `li`); el punto de color va con `aria-hidden` y el\n  nombre de la serie queda en texto.\n- **1.4.1 Uso del color (A)**: el color solo relaciona la leyenda con las barras; los valores de cada serie también\n  están en el tooltip y en la tabla de datos del gráfico.\n- **1.4.3 Contraste mínimo (AA)**: nombres en `text-neutral-medium` sobre la superficie (14.53:1 claro / 12.87:1\n  oscuro).\n- **Pendiente · 1.4.11 Contraste no textual (AA)**: en oscuro los puntos de las series 1 y 2 (`bg-brand-primary`,\n  2.66:1, y `bg-brand-secondary`, 2.99:1) no llegan a 3:1 sobre la superficie y la 2 y la 3 quedan del mismo tono;\n  la paleta oscura de los gráficos está por definir con diseño.",
@@ -9492,7 +9499,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     "usar": "- Para el panel Procesos del armazón: `siaf-app-shell` lo abre desde el rail y navega a la `moduleRoute` o\n  `createRoute` del nodo emitido (plan de cuentas contables, catálogo de eventos, asientos de ajuste, apertura\n  contable…).\n- Para el menú Ajustes: el mismo componente con `ADMIN_MENU_TREE` y sus textos (`title`, `subtitle`, `placeholder`,\n  `searchLabel`), con gestión de usuarios, entidades y auditoría.\n- Para cualquier menú jerárquico nuevo del armazón: basta otro arreglo de `ProcessMenuNode`.",
     "evitar": "- Para envolverlo o copiarlo en otro componente de menú: por eso se retiró `siaf-admin-menu`; basta pasarle otros\n  `nodes` y textos.\n- Para mostrar datos jerárquicos de solo lectura dentro de una pantalla: usar `siaf-tree-view`.\n- Para buscar registros en el servidor: usar `siaf-form-table-search` (en Documentos y registros y la bandeja, su\n  variante `siaf-records-search-toolbar`); este buscador solo filtra la navegación en memoria.",
     "teclado": "- **Tab**: pasa por el buscador y su lupa, y luego por los nodos visibles en orden. La lupa no hace nada: el filtro\n  se aplica al escribir.\n- **Escribir en el buscador**: filtra el árbol en vivo, sin distinguir tildes ni mayúsculas, y abre las ramas con\n  coincidencias.\n- **Enter / Espacio** en un nodo: lo marca y emite `nodeSelected`; si tiene hijos, además los muestra u oculta. Los\n  nodos `comingSoon` solo expanden.",
-    "accesibilidad": "- **Pendiente · 1.3.1 Información y relaciones (A)**: es un `<aside>` con `h2` y `h3`, pero la jerarquía solo se ve\n  (sangría y línea a la izquierda): los nodos son botones en `div` anidados, sin `ul`/`li` ni `role=\"tree\"`, y el\n  lector no anuncia nivel ni cantidad. Además, el `aria-label` del `aside` es fijo («Menu de procesos») y también se\n  lee en Ajustes.\n- **Pendiente · 1.4.1 Uso del color (A)**: el nodo elegido (y su ancestro de primer nivel) se distingue solo por el\n  fondo `bg-states-light-selected` y el color del texto; el peso de la fuente no cambia.\n- **1.4.3 Contraste mínimo (AA)**: en claro, título `text-neutral-high` 16.29:1 y nodos `text-neutral-medium` 14.53:1\n  sobre blanco; en oscuro el panel usa `bg-surfaces-field` y falta medirlo.\n- **1.4.11 Contraste no textual (AA)**: el contorno de foco es el azul del kit (`border-states-focus`, 5.35:1 claro\n  / 10.15:1 oscuro sobre la superficie).\n- **Pendiente · 2.4.3 Orden del foco (A)**: no toma el foco al abrirse ni cierra con Escape. El armazón lo pinta\n  después del rail: desde Procesos el Tab pasa antes por Ayuda y Ajustes, y si lo pide una página\n  (`ShellNavigationService`) queda antes que el botón que lo abrió.\n- **2.4.7 Foco visible (AA)**: cada nodo muestra un contorno azul de 2 px con `focus-visible`.\n- **Pendiente · 4.1.2 Nombre, función y valor (A)**: los nodos con hijos publican `aria-expanded`, pero el elegido no\n  publica `aria-current`.\n- **Pendiente · 4.1.3 Mensajes de estado (AA)**: al filtrar no se anuncia cuántos nodos quedan y, sin coincidencias,\n  el árbol queda vacío y sin mensaje.",
+    "accesibilidad": "- **Pendiente · 1.3.1 Información y relaciones (A)**: es un `<aside>` con `h2` y `h3`, pero la jerarquía solo se ve\n  (sangría y línea a la izquierda): los nodos son botones en `div` anidados, sin `ul`/`li` ni `role=\"tree\"`, y el\n  lector no anuncia nivel ni cantidad. Además, el `aria-label` del `aside` es fijo («Menu de procesos») y también se\n  lee en Ajustes.\n- **1.4.1 Uso del color (A)**: el nodo elegido se distingue por el fondo `bg-states-light-selected`, el color de\n  texto e ícono y, además, la negrita — no solo por el color.\n- **1.4.3 Contraste mínimo (AA)**: en claro, título `text-neutral-high` 16.29:1 y nodos `text-neutral-medium` 14.53:1\n  sobre blanco; en oscuro el panel usa `bg-surfaces-field` y falta medirlo.\n- **1.4.11 Contraste no textual (AA)**: el contorno de foco es el azul del kit (`border-states-focus`, 5.35:1 claro\n  / 10.15:1 oscuro sobre la superficie).\n- **Pendiente · 2.4.3 Orden del foco (A)**: no toma el foco al abrirse ni cierra con Escape. El armazón lo pinta\n  después del rail: desde Procesos el Tab pasa antes por Ayuda y Ajustes, y si lo pide una página\n  (`ShellNavigationService`) queda antes que el botón que lo abrió.\n- **2.4.7 Foco visible (AA)**: cada nodo muestra un contorno azul de 2 px con `focus-visible`.\n- **Pendiente · 4.1.2 Nombre, función y valor (A)**: los nodos con hijos publican `aria-expanded`, pero el elegido no\n  publica `aria-current`.\n- **Pendiente · 4.1.3 Mensajes de estado (AA)**: al filtrar no se anuncia cuántos nodos quedan y, sin coincidencias,\n  el árbol queda vacío y sin mensaje.",
     "figma": [],
     "aria": {
       "roles": [],
@@ -9546,6 +9553,18 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       },
       {
         "token": "--sys-color-divider-strong",
+        "via": [
+          "var()"
+        ]
+      },
+      {
+        "token": "--sys-color-icon-states-active",
+        "via": [
+          "var()"
+        ]
+      },
+      {
+        "token": "--sys-color-icon-states-enabled",
         "via": [
           "var()"
         ]

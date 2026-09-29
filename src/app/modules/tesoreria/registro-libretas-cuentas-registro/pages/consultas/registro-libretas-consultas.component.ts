@@ -21,6 +21,7 @@ import {
   nombreBeneficiario,
   nombreCuentaBancaria,
   nombreTipoOperacion,
+  nombreTipoOperacionCorto,
 } from '../../models/registro-libretas.model';
 
 /** Cuentas de registro (FF/SUB FF) distintas entre los movimientos, para el filtro predeterminado. */
@@ -141,7 +142,7 @@ export class RegistroLibretasConsultasComponent {
       { key: 'fecha', label: 'Fecha', group: 'Acreditación', width: 130 },
       { key: 'beneficiarioCodigo', label: 'Código', group: 'Beneficiario', width: 90 },
       { key: 'beneficiario', label: 'Descripción', group: 'Beneficiario', width: 230 },
-      { key: 'numeroCuentaRegistro', label: 'Número', group: 'Cuenta de registro', width: 230 },
+      { key: 'numeroCuentaRegistro', label: 'Número', group: 'Cuenta de registro', width: 300 },
       { key: 'descripcionCuentaRegistro', label: 'Descripción', group: 'Cuenta de registro', width: 320 },
       { key: 'ffSubFf', label: 'FF/SUB FF', group: 'Cuenta de registro', width: 260, ungroupWhenGroupHidden: true },
       { key: 'tipoOperacion', label: 'Tipo de operación', width: 190 },
@@ -156,7 +157,7 @@ export class RegistroLibretasConsultasComponent {
       { key: 'debitoMN', label: 'Débito', group: 'Imp. m. nacional', hiddenByDefault: true, align: 'right', width: 120 },
       { key: 'creditoMN', label: 'Crédito', group: 'Imp. m. nacional', hiddenByDefault: true, align: 'right', width: 130 },
       { key: 'saldoFinalMN', label: 'Saldo final', group: 'Imp. m. nacional', hiddenByDefault: true, align: 'right', width: 140 },
-      { key: 'numeroDocumento', label: 'Número', group: 'Documento', width: 110, kind: 'link' },
+      { key: 'numeroDocumento', label: 'Número', group: 'Documento', width: 150, kind: 'link' },
       { key: 'descripcionDocumento', label: 'Descripción', group: 'Documento', width: 300 },
       { key: 'saldoFinal', label: 'Saldo final', group: 'Imp. m. cuenta', align: 'right', width: 135, fixed: true },
     ],
@@ -171,6 +172,36 @@ export class RegistroLibretasConsultasComponent {
       { key: 'numeroCuentaRegistro', label: 'Cuenta de registro', options: CUENTAS_REGISTRO_DISTINTAS },
       { key: 'entidad', label: 'Entidad', options: ENTIDADES },
     ],
+    /** Vista de gráficas (Figma nodo 6091:81845), con las filas que quedan tras buscar y filtrar en la vista de datos. */
+    charts: {
+      kpis: [
+        { title: 'Total créditos', icon: 'add_circle', tone: 'success', column: 'credito', prefix: 'S/ ' },
+        { title: 'Total débitos', icon: 'remove_circle', tone: 'danger', column: 'debito', prefix: 'S/ ' },
+        { title: 'Saldo inicial', icon: 'account_balance_wallet', tone: 'warning', column: 'saldoInicial', aggregate: 'first', prefix: 'S/ ' },
+        { title: 'Saldo final', icon: 'account_balance', tone: 'informative', column: 'saldoFinal', aggregate: 'last', prefix: 'S/ ' },
+      ],
+      charts: [
+        {
+          title: 'Evolución del saldo por período',
+          description: 'Saldo final de la cuenta, por hora de acreditación',
+          type: 'line',
+          groupBy: 'fecha',
+          byHour: true,
+          column: 'saldoFinal',
+          aggregate: 'last',
+          seriesName: 'Saldo final',
+        },
+        {
+          title: 'Distribución por tipo de operación',
+          description: 'Cantidad de movimientos de cada tipo de operación',
+          type: 'donut',
+          groupBy: 'tipoOperacionCorto',
+          aggregate: 'count',
+          seriesName: 'Movimientos',
+          width: 'narrow',
+        },
+      ],
+    },
   });
 
   consultar(parametros: QueryReportParameters): void {
@@ -260,6 +291,7 @@ export class RegistroLibretasConsultasComponent {
       cuentaRegistroResumen: `CR: ${m.numeroCuentaRegistro} - ${m.descripcionCuentaRegistro}`,
       ffSubFf: m.ffSubFf,
       tipoOperacion: nombreTipoOperacion(m.tipoOperacionCodigo),
+      tipoOperacionCorto: nombreTipoOperacionCorto(m.tipoOperacionCodigo),
       entidad: m.entidad,
       unidadEjecutora: m.unidadEjecutora,
       grupo: m.grupo,

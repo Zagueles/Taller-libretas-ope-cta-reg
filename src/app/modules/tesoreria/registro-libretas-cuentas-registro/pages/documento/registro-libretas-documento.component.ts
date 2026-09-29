@@ -33,7 +33,7 @@ const COLUMNAS: ReportTableColumn[] = [
   { key: 'fecha', label: 'Fecha', group: 'Acreditación', width: 130 },
   { key: 'codigo', label: 'Código', group: 'Beneficiario', width: 90 },
   { key: 'beneficiario', label: 'Descripción', group: 'Beneficiario', width: 230 },
-  { key: 'numeroCuenta', label: 'Número', group: 'Cuenta de registro', width: 230 },
+  { key: 'numeroCuenta', label: 'Número', group: 'Cuenta de registro', width: 300 },
   { key: 'descripcionCuenta', label: 'Descripción', group: 'Cuenta de registro', width: 320 },
   { key: 'saldoInicial', label: 'Saldo inicial', group: 'Imp. m. cuenta', align: 'right', width: 120 },
   { key: 'debito', label: 'Débito', group: 'Imp. m. cuenta', align: 'right', width: 110 },
