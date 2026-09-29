@@ -199,7 +199,13 @@ export const MAX_NIVELES = 3;
                         [class.border-[var(--sys-color-border-states-enabled)]]="tipoResultado() !== opcion.value"
                         (click)="cambiarTipo(opcion.value)"
                       >
-                        <siaf-icon [name]="tipoResultado() === opcion.value ? 'radio_button_checked' : 'radio_button_unchecked'" [size]="24" class="shrink-0 text-[var(--sys-color-text-neutral-activated)]" />
+                        <siaf-icon
+                          [name]="tipoResultado() === opcion.value ? 'radio_button_checked' : 'radio_button_unchecked'"
+                          [size]="24"
+                          class="shrink-0"
+                          [class.text-[var(--sys-color-text-neutral-activated)]]="tipoResultado() === opcion.value"
+                          [class.text-[var(--sys-color-icon-states-enabled)]]="tipoResultado() !== opcion.value"
+                        />
                         <span
                           class="text-sm tracking-[-0.02px]"
                           [class.font-bold]="tipoResultado() === opcion.value"
