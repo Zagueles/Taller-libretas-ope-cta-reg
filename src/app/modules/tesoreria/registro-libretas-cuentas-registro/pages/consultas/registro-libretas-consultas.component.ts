@@ -24,6 +24,10 @@ import {
   nombreTipoOperacionCorto,
 } from '../../models/registro-libretas.model';
 
+/** Columnas que solo interesan en la cuenta en dólares (tipo de cambio e importe en moneda nacional): visibles por
+ *  defecto solo en esa pestaña (Figma nodo 6094:125648); en soles quedan disponibles en «Columnas visibles». */
+const COLUMNAS_MONEDA_EXTRANJERA = new Set(['tipoCotizacion', 'tipoCambioCompra', 'tipoCambioVenta', 'saldoInicialMN', 'debitoMN', 'creditoMN', 'saldoFinalMN']);
+
 /** Cuentas de registro (FF/SUB FF) distintas entre los movimientos, para el filtro predeterminado. */
 const CUENTAS_REGISTRO_DISTINTAS = [...new Map(MOVIMIENTOS_LIBRETA_REGISTRO.map((m) => [m.numeroCuentaRegistro, m.descripcionCuentaRegistro])).entries()].map(
   ([value, label]) => ({ value, label }),
@@ -149,7 +153,9 @@ export class RegistroLibretasConsultasComponent {
       { key: 'entidad', label: 'Entidad', group: 'Ámbito institucional', width: 110 },
       { key: 'unidadEjecutora', label: 'Unidad ejecutora', group: 'Ámbito institucional', width: 190 },
       { key: 'grupo', label: 'Grupo', group: 'Ámbito institucional', width: 160 },
-      { key: 'tipoCambio', label: 'Tipo de cambio', panelLabel: 'Valor', group: 'Tipo de cambio', hiddenByDefault: true, align: 'right', width: 130 },
+      { key: 'tipoCotizacion', label: 'Tipo de cotiz.', group: 'Tipo de cambio', hiddenByDefault: true, width: 160 },
+      { key: 'tipoCambioCompra', label: 'Compra', group: 'Tipo de cambio', hiddenByDefault: true, align: 'right', width: 110 },
+      { key: 'tipoCambioVenta', label: 'Venta', group: 'Tipo de cambio', hiddenByDefault: true, align: 'right', width: 110 },
       { key: 'saldoInicial', label: 'Saldo inicial', group: 'Imp. m. cuenta', align: 'right', width: 120 },
       { key: 'debito', label: 'Débito', group: 'Imp. m. cuenta', align: 'right', width: 110 },
       { key: 'credito', label: 'Crédito', group: 'Imp. m. cuenta', align: 'right', width: 110 },
@@ -245,6 +251,14 @@ export class RegistroLibretasConsultasComponent {
     const filas = this.filasPorCuenta.get(cuentaId) ?? [];
     const cuenta = CUENTAS_BANCARIAS_INFO.find((c) => c.id === cuentaId);
 
+    // Tipo de cambio e importe en moneda nacional solo interesan en la cuenta en dólares: en soles no hay nada que
+    // convertir. Se muestran solos al entrar a esa pestaña, sin que el usuario tenga que ir a «Columnas visibles».
+    const enDolares = cuenta?.moneda === 'USD';
+    this.config.update((actual) => ({
+      ...actual,
+      columns: actual.columns.map((c) => (COLUMNAS_MONEDA_EXTRANJERA.has(c.key) ? { ...c, hiddenByDefault: !enDolares } : c)),
+    }));
+
     this.resultado.set({
       rows: filas.map((m) => this.aFila(m)),
       summary: cuenta
@@ -277,7 +291,11 @@ export class RegistroLibretasConsultasComponent {
 
   private aFila(m: MovimientoLibretaRegistro): QueryReportRow {
     // Cuentas en dólares: el importe en moneda nacional es el importe por el tipo de cambio (dato de ejemplo).
-    const tipoCambio = CUENTAS_BANCARIAS_INFO.find((c) => c.id === m.cuentaBancariaId)?.moneda === 'USD' ? 3.75 : 1;
+    // Tipo de cambio SUNAT del día (Compra/Venta), solo relevante para la cuenta en dólares; el sol se convierte 1 a 1.
+    const enDolares = CUENTAS_BANCARIAS_INFO.find((c) => c.id === m.cuentaBancariaId)?.moneda === 'USD';
+    const tipoCambioCompra = enDolares ? 3.35 : 1;
+    const tipoCambioVenta = enDolares ? 3.32 : 1;
+    const tipoCambio = tipoCambioVenta;
     return {
       sec: m.sec,
       fecha: fechaHoraVisible(m.fecha),
@@ -302,7 +320,9 @@ export class RegistroLibretasConsultasComponent {
       documentoId: m.documentoId,
       descripcionDocumento: m.descripcionDocumento,
       saldoFinal: monto(m.saldoFinal),
-      tipoCambio: tipoCambio.toFixed(4),
+      tipoCotizacion: '1. Compra / Venta',
+      tipoCambioCompra: tipoCambioCompra.toFixed(2),
+      tipoCambioVenta: tipoCambioVenta.toFixed(2),
       saldoInicialMN: monto(m.saldoInicial * tipoCambio),
       debitoMN: monto(m.debito * tipoCambio),
       creditoMN: monto(m.credito * tipoCambio),
