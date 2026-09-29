@@ -2927,7 +2927,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       }
     ],
     "usa": [],
-    "sinUso": false
+    "sinUso": true
   },
   {
     "selector": "siaf-collapsible-card",
@@ -5951,6 +5951,12 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         ]
       },
       {
+        "token": "--sys-color-text-neutral-low",
+        "via": [
+          "var()"
+        ]
+      },
+      {
         "token": "--sys-color-text-neutral-medium",
         "via": [
           "var()"
@@ -5961,6 +5967,12 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "via": [
           "gap-siaf-md",
           "p-siaf-md"
+        ]
+      },
+      {
+        "token": "--sys-gap-base-sm",
+        "via": [
+          "gap-siaf-sm"
         ]
       },
       {
@@ -5987,7 +5999,6 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     ],
     "usa": [
       "siaf-button",
-      "siaf-checkbox",
       "siaf-expansion-panel",
       "siaf-icon",
       "siaf-input",

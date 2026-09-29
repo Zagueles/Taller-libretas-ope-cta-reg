@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, signal } from '@angular/core';
 
 import { ButtonComponent } from '../../ui/button/button.component';
-import { CheckboxComponent } from '../../ui/checkbox/checkbox.component';
 import { ExpansionPanelComponent } from '../../ui/expansion-panel/expansion-panel.component';
 import { IconComponent } from '../../ui/icon/icon.component';
 import { SideNavComponent } from '../../ui/side-nav/side-nav.component';
@@ -66,7 +65,7 @@ const plural = (n: number, singular: string, pluralTexto: string): string => `${
 @Component({
   selector: 'siaf-favorites-panel',
   standalone: true,
-  imports: [ButtonComponent, CheckboxComponent, ExpansionPanelComponent, IconComponent, SideNavComponent, TextFieldComponent],
+  imports: [ButtonComponent, ExpansionPanelComponent, IconComponent, SideNavComponent, TextFieldComponent],
   template: `
     <siaf-side-nav
       [open]="open"
@@ -81,14 +80,19 @@ const plural = (n: number, singular: string, pluralTexto: string): string => `${
         <div class="flex flex-col gap-siaf-md" data-favorito-formulario>
           <siaf-input label="Descripción" [value]="descripcion()" (valueChange)="descripcion.set('' + $event)" />
 
-          <div class="flex flex-col gap-siaf-xs px-siaf-xs">
-            <siaf-checkbox
-              label="Favorito predeterminado"
-              description="Se aplicará automáticamente la próxima vez que ingreses a este reporte."
+          <!-- Nativo, no siaf-checkbox: no tiene consumidores en la app ni estilo propio. -->
+          <label class="flex items-start gap-siaf-sm px-siaf-xs text-sm text-[var(--sys-color-text-neutral-high)]">
+            <input
+              class="mt-0.5 size-4 shrink-0"
+              type="checkbox"
               [checked]="predeterminado()"
-              (checkedChange)="predeterminado.set($event)"
+              (change)="predeterminado.set($any($event.target).checked)"
             />
-          </div>
+            <span>
+              <span class="block font-medium">Favorito predeterminado</span>
+              <span class="block text-[var(--sys-color-text-neutral-low)]">Se aplicará automáticamente la próxima vez que ingreses a este reporte.</span>
+            </span>
+          </label>
 
           <siaf-expansion-panel title="Parámetros" [subtitle]="plural(actual.parametros.length, 'campo', 'campos')">
             <ul class="m-0 flex list-none flex-col gap-siaf-md p-0">
