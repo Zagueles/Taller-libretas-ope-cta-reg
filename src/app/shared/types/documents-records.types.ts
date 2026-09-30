@@ -100,6 +100,19 @@ export type DocumentsRecordsConfig = {
   // Filtros para tab Documentos
   statusFilterOptions: string[];
   actionTypeFilterOptions: string[];
+  /** Reemplaza el filtro rápido de Estado por otro (p. ej. Documento), cuando Estado no distingue nada en el proceso. */
+  documentFilter1Options?: string[];
+  documentFilter1Label?: string;
+  documentFilter1Key?: string;
+  /** Reemplaza el filtro rápido de Tipo de acción por otro (p. ej. Fecha de registro). */
+  documentFilter2Options?: string[];
+  documentFilter2Label?: string;
+  documentFilter2Key?: string;
+  /**
+   * `dateRange` cambia el segundo filtro rápido por `siaf-date-range-filter-pill` (Hoy, Últimos 7/30 días, período
+   * personalizado): `documentFilter2Key` debe apuntar a una columna aaaa-mm-dd y `documentFilter2Options` no hace falta.
+   */
+  documentFilter2Type?: 'select' | 'dateRange';
   filterCampoOptions: DocumentsRecordsFilterOption[];
   filterValorOptions: DocumentsRecordsFilterOption[];
   fieldsMenuOptions: DocumentsRecordsMenuOption[];

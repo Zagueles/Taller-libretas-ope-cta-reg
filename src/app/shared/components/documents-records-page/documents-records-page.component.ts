@@ -8,6 +8,7 @@ import { SolicitudesFacadeService } from '../../../core/state/solicitudes-facade
 
 import { BreadcrumbComponent } from '../../components/breadcrumb/breadcrumb.component';
 import { CustomFilterApplyEvent, CustomFilterComponent, FilterRow } from '../../components/custom-filter/custom-filter.component';
+import { DateRangeFilterPillComponent, DateRangeFilterValue } from '../date-range-filter-pill/date-range-filter-pill.component';
 import { FilterPillComponent } from '../../components/filter-pill/filter-pill.component';
 import { PaginationComponent } from '../../components/pagination/pagination.component';
 import { RecordsSearchToolbarComponent } from '../../components/records-search-toolbar/records-search-toolbar.component';
@@ -98,7 +99,7 @@ type DocumentsRecordsRoleMode = 'creator' | 'approver' | 'readOnly';
   standalone: true,
   imports: [FocoDirective, 
     AccountHistoryPanelComponent, AsientoHistoryPanelComponent, BreadcrumbComponent, ButtonComponent, ColumnVisibilityPanelComponent,
-    CreateDocumentComponent, CustomFilterComponent, DocumentHistoryPanelComponent,
+    CreateDocumentComponent, CustomFilterComponent, DateRangeFilterPillComponent, DocumentHistoryPanelComponent,
     DocumentsRecordsTableComponent, FilterPillComponent, IconComponent, IconDropdownMenuComponent,
     ModalComponent, PaginationComponent, RecordsSearchToolbarComponent, RecordsTabsComponent,
     SnackbarComponent, TableControlsComponent, TableSkeletonComponent,
@@ -267,17 +268,26 @@ type DocumentsRecordsRoleMode = 'creator' | 'approver' | 'readOnly';
                 <div class="flex flex-wrap items-center gap-siaf-xs">
                   @if (activeTab === 'documents') {
                     <siaf-filter-pill
-                      label="Estado"
-                      [options]="effectiveConfig.statusFilterOptions"
-                      [selectedValue]="selectedStatusFilter"
-                      (selectedValueChange)="onStatusFilterChange($event)"
+                      [label]="effectiveConfig.documentFilter1Label ?? 'Estado'"
+                      [options]="effectiveConfig.documentFilter1Options ?? effectiveConfig.statusFilterOptions"
+                      [selectedValue]="selectedDocumentFilter1"
+                      (selectedValueChange)="onDocumentFilter1Change($event)"
                     />
-                    <siaf-filter-pill
-                      label="Tipo de acción"
-                      [options]="effectiveConfig.actionTypeFilterOptions"
-                      [selectedValue]="selectedActionTypeFilter"
-                      (selectedValueChange)="onActionTypeFilterChange($event)"
-                    />
+                    @if (effectiveConfig.documentFilter2Type === 'dateRange') {
+                      <siaf-date-range-filter-pill
+                        [label]="effectiveConfig.documentFilter2Label ?? 'Fecha'"
+                        [selectedLabel]="selectedDocumentDateLabel"
+                        (applied)="onDocumentDateFilterChange($event)"
+                        (cleared)="onDocumentDateFilterChange(null)"
+                      />
+                    } @else if ((effectiveConfig.documentFilter2Options ?? effectiveConfig.actionTypeFilterOptions).length) {
+                      <siaf-filter-pill
+                        [label]="effectiveConfig.documentFilter2Label ?? 'Tipo de acción'"
+                        [options]="effectiveConfig.documentFilter2Options ?? effectiveConfig.actionTypeFilterOptions"
+                        [selectedValue]="selectedDocumentFilter2"
+                        (selectedValueChange)="onDocumentFilter2Change($event)"
+                      />
+                    }
                   } @else if (activeTab === 'records' && effectiveConfig.recordFilter1Options?.length) {
                     <siaf-filter-pill
                       [label]="effectiveConfig.recordFilter1Label ?? ''"
@@ -489,8 +499,11 @@ export class DocumentsRecordsPageComponent implements OnChanges {
   createDocumentPopoverOpen = false;
   customFilterOpen = false;
   columnPanelOpen = false;
-  selectedStatusFilter = '';
-  selectedActionTypeFilter = '';
+  selectedDocumentFilter1 = '';
+  selectedDocumentFilter2 = '';
+  /** Rango vigente del filtro de fecha (`documentFilter2Type: 'dateRange'`); `null` sin filtro. */
+  selectedDocumentDateRange: { desde: string; hasta: string } | null = null;
+  selectedDocumentDateLabel = '';
   // Filtros específicos del tab Registros
   selectedRecordFilter1 = '';
   selectedRecordFilter2 = '';
@@ -611,13 +624,22 @@ export class DocumentsRecordsPageComponent implements OnChanges {
     // Tab Documentos: filtros originales (Estado / Tipo de acción). En modo
     // servidor el texto ya vino filtrado del backend: no se re-filtra acá
     // (volver a filtrar sobre la página cargada ocultaría filas legítimas).
+    const documentKey1 = this.effectiveConfig.documentFilter1Key ?? 'status';
+    const documentKey2 = this.effectiveConfig.documentFilter2Key ?? 'actionType';
+    const esRangoFecha = this.effectiveConfig.documentFilter2Type === 'dateRange';
     const normalizedSearch = this.esModoServidor ? '' : this.normalize(this.searchTerm);
     return this.documentRows.filter((row) => {
       const matchesSearch = !normalizedSearch || this.normalize(Object.values(row).join(' ')).includes(normalizedSearch);
-      const matchesStatus = !this.selectedStatusFilter || row['status'] === this.selectedStatusFilter;
-      const matchesActionType = !this.selectedActionTypeFilter || row['actionType'] === this.selectedActionTypeFilter;
+      const matchesFilter1 = !this.selectedDocumentFilter1 || String(row[documentKey1 as keyof DocumentsRecordsRow] ?? '') === this.selectedDocumentFilter1;
+      const matchesFilter2 = esRangoFecha
+        ? !this.selectedDocumentDateRange
+          || (() => {
+            const valor = String(row[documentKey2 as keyof DocumentsRecordsRow] ?? '');
+            return valor >= this.selectedDocumentDateRange!.desde && valor <= this.selectedDocumentDateRange!.hasta;
+          })()
+        : !this.selectedDocumentFilter2 || String(row[documentKey2 as keyof DocumentsRecordsRow] ?? '') === this.selectedDocumentFilter2;
       const matchesCustomFilters = this.appliedCustomFilters.every((filter) => this.matchesCustomFilter(row, filter));
-      return matchesSearch && matchesStatus && matchesActionType && matchesCustomFilters;
+      return matchesSearch && matchesFilter1 && matchesFilter2 && matchesCustomFilters;
     });
   }
 
@@ -1096,13 +1118,18 @@ export class DocumentsRecordsPageComponent implements OnChanges {
   // ── Handlers para los nuevos siaf-filter-pill (Estado / Tipo acción / record1 / record2) ──
   // El componente emite `''` al limpiar y el valor seleccionado al elegir.
 
-  onStatusFilterChange(value: string): void {
-    this.selectedStatusFilter = value;
+  onDocumentFilter1Change(value: string): void {
+    this.selectedDocumentFilter1 = value;
     this.page = 1;
   }
 
-  onActionTypeFilterChange(value: string): void {
-    this.selectedActionTypeFilter = value;
+  onDocumentDateFilterChange(valor: DateRangeFilterValue | null): void {
+    this.selectedDocumentDateRange = valor ? { desde: valor.desde, hasta: valor.hasta } : null;
+    this.selectedDocumentDateLabel = valor?.label ?? '';
+  }
+
+  onDocumentFilter2Change(value: string): void {
+    this.selectedDocumentFilter2 = value;
     this.page = 1;
   }
 

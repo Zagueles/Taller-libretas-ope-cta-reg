@@ -1,10 +1,12 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 
 import { DocumentsRecordsPageComponent } from '../../../../../shared/components/documents-records-page/documents-records-page.component';
+import { PdfViewerModalComponent } from '../../../../../shared/components/pdf-viewer-modal/pdf-viewer-modal.component';
 import type { DocumentsRecordsConfig, DocumentsRecordsRow } from '../../../../../shared/types/documents-records.types';
 import { DOCUMENTO_ROUTE, REGISTRO_ROUTE } from '../../config/registro-libretas.rutas';
 import { REGISTRO_LIBRETAS_DOCUMENTS_CONFIG } from '../../config/registro-libretas-documents.config';
 import { MOVIMIENTOS_LIBRETA_REGISTRO, nombreBeneficiario, nombreTipoOperacion } from '../../models/registro-libretas.model';
+import { generarPdfRegistro } from '../../utils/registro-libretas-export.util';
 
 const NOMBRE_DOCUMENTO = 'Registro de operaciones en las libretas de las cuentas de registro';
 const ENTIDAD = '009 - Ministerio de Economía y Finanzas';
@@ -29,13 +31,28 @@ const fechaVisible = (iso: string): string => iso.slice(0, 10).split('-').revers
 @Component({
   selector: 'siaf-registro-libretas-documents',
   standalone: true,
-  imports: [DocumentsRecordsPageComponent],
-  template: `<siaf-documents-records-page [config]="pageConfig" />`,
+  imports: [DocumentsRecordsPageComponent, PdfViewerModalComponent],
+  template: `
+    <siaf-documents-records-page [config]="pageConfig" (recordActionClicked)="verDocumentoPdf($event)" />
+    <siaf-pdf-viewer-modal [open]="pdfAbierto()" [blob]="pdfBlob()" [nombre]="pdfNombre()" (closed)="cerrarPdf()" />
+  `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RegistroLibretasDocumentsComponent {
+  readonly pdfAbierto = signal(false);
+  readonly pdfBlob = signal<Blob | null>(null);
+  readonly pdfNombre = signal('documento.pdf');
+
   readonly pageConfig: DocumentsRecordsConfig = {
     ...REGISTRO_LIBRETAS_DOCUMENTS_CONFIG,
+    // Estado y tipo de acción no distinguen nada acá (todos los documentos quedan «Procesado»/«Creación»): los
+    // filtros rápidos de la pestaña Documentos son, en su lugar, el número de documento y la fecha de registro.
+    documentFilter1Label: 'Documento',
+    documentFilter1Key: 'document',
+    documentFilter1Options: [NOMBRE_DOCUMENTO],
+    documentFilter2Label: 'Fecha de registro',
+    documentFilter2Key: 'dateIso',
+    documentFilter2Type: 'dateRange',
     documentRows: DOCUMENTOS.map(
       (m): DocumentsRecordsRow => ({
         document: NOMBRE_DOCUMENTO,
@@ -45,6 +62,7 @@ export class RegistroLibretasDocumentsComponent {
         status: 'Procesado',
         system: 'Tesorería',
         date: fechaVisible(m.fecha),
+        dateIso: m.fecha.slice(0, 10),
         entity: ENTIDAD,
         linkRoute: `/procesos/registro-libretas-cuentas-registro/consultas`,
         detailRoute: `${DOCUMENTO_ROUTE}/${m.numeroDocumento}`,
@@ -82,4 +100,18 @@ export class RegistroLibretasDocumentsComponent {
       ],
     }),
   };
+
+  /** «Ver documento PDF» de una fila de Registros: arma el PDF del registro (jsPDF) y lo abre en el visor nativo. */
+  async verDocumentoPdf(row: DocumentsRecordsRow): Promise<void> {
+    const sec = String(row['sec'] ?? '');
+    const generado = await generarPdfRegistro(sec);
+    if (!generado) return;
+    this.pdfBlob.set(generado.blob);
+    this.pdfNombre.set(generado.nombre);
+    this.pdfAbierto.set(true);
+  }
+
+  cerrarPdf(): void {
+    this.pdfAbierto.set(false);
+  }
 }

@@ -3820,6 +3820,127 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     "sinUso": false
   },
   {
+    "selector": "siaf-date-range-filter-pill",
+    "clase": "DateRangeFilterPillComponent",
+    "tipo": "componente",
+    "capa": "components",
+    "importacion": "@siaf/shared/components/date-range-filter-pill/date-range-filter-pill.component",
+    "archivo": "src/app/shared/components/date-range-filter-pill/date-range-filter-pill.component.ts",
+    "descripcion": "Píldora de filtro por fecha con rangos relativos (Figma «Fecha de registro selected» y «Calendar form»): Hoy,\nÚltimos 7 días y Últimos 30 días aplican solos; «Período personalizado» abre un segundo panel con Desde y Hasta,\ny Cancelar / Aplicar. Se ve como `siaf-filter-pill` (mismo `siaf-tag` variante `filter`), pero en vez de una lista\nplana de valores resuelve un rango de fechas aaaa-mm-dd.",
+    "usaSesion": false,
+    "proyectaContenido": false,
+    "entradas": [
+      {
+        "nombre": "label",
+        "tipo": "string",
+        "porDefecto": "'Fecha'",
+        "requerida": false,
+        "descripcion": null
+      },
+      {
+        "nombre": "selectedLabel",
+        "tipo": "string",
+        "porDefecto": "''",
+        "requerida": false,
+        "descripcion": "Lo que se ve en la píldora; vacío, sin filtro aplicado."
+      }
+    ],
+    "eventos": [
+      {
+        "nombre": "applied",
+        "tipo": "DateRangeFilterValue",
+        "descripcion": null
+      },
+      {
+        "nombre": "cleared",
+        "tipo": "void",
+        "descripcion": null
+      }
+    ],
+    "usar": "- Para un filtro rápido de fecha sobre una grilla, cuando además de un valor puntual conviene ofrecer atajos\n  relativos (Documentos y registros, Consultas y reportes).",
+    "evitar": "- Para un valor exacto entre pocas opciones fijas: `siaf-filter-pill`.\n- Para un rango de fechas dentro de un formulario (no un filtro rápido): `siaf-date-time-picker` directo, dos\n  campos Desde/Hasta.",
+    "teclado": "- **Tab / Enter / Espacio**: igual que `siaf-filter-pill` para abrir, y recorre las opciones del primer panel; en\n  «Período personalizado», entra a Desde, Hasta, Cancelar y Aplicar.\n- **Escape**: cierra cualquiera de los dos paneles y devuelve el foco a la píldora.",
+    "accesibilidad": "- **4.1.2 Nombre, función y valor (A)**: el tag es un `<button>` con `aria-haspopup=\"dialog\"` y `aria-expanded`,\n  como `siaf-filter-pill`; el panel de período personalizado es un `role=\"dialog\"` con `aria-label`.\n- **2.4.3 Orden del foco (A)**: con `siafFoco`, al abrir el foco entra en la primera opción y, al aplicar,\n  cancelar o cerrar con Escape, vuelve a la píldora.",
+    "figma": [],
+    "aria": {
+      "roles": [
+        "dialog"
+      ],
+      "atributos": [
+        "aria-expanded",
+        "aria-hidden",
+        "aria-label"
+      ]
+    },
+    "tokens": [
+      {
+        "token": "--sys-color-bg-surfaces-surface",
+        "via": [
+          "bg-surface"
+        ]
+      },
+      {
+        "token": "--sys-color-bg-surfaces-surface-high",
+        "via": [
+          "bg-surface-muted"
+        ]
+      },
+      {
+        "token": "--sys-color-border-states-focus",
+        "via": [
+          "var()"
+        ]
+      },
+      {
+        "token": "--sys-color-divider-strong",
+        "via": [
+          "var()"
+        ]
+      },
+      {
+        "token": "--sys-color-text-neutral-high",
+        "via": [
+          "var()"
+        ]
+      },
+      {
+        "token": "--sys-gap-base-md",
+        "via": [
+          "gap-siaf-md",
+          "p-siaf-md",
+          "px-siaf-md"
+        ]
+      },
+      {
+        "token": "--sys-gap-base-xs",
+        "via": [
+          "gap-siaf-xs",
+          "py-siaf-xs"
+        ]
+      },
+      {
+        "token": "--sys-radius-md",
+        "via": [
+          "rounded-siaf-md"
+        ]
+      },
+      {
+        "token": "--sys-shadow-elevation-8",
+        "via": [
+          "shadow-siaf-elevation-8"
+        ]
+      }
+    ],
+    "usa": [
+      "[siafFoco]",
+      "siaf-button",
+      "siaf-date-time-picker",
+      "siaf-icon",
+      "siaf-tag"
+    ],
+    "sinUso": false
+  },
+  {
     "selector": "siaf-date-time-picker",
     "clase": "DateTimePickerComponent",
     "tipo": "componente",
@@ -5164,6 +5285,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       "siaf-column-visibility-panel",
       "siaf-create-document",
       "siaf-custom-filter",
+      "siaf-date-range-filter-pill",
       "siaf-document-history-panel",
       "siaf-documents-records-table",
       "siaf-filter-pill",
@@ -9282,6 +9404,91 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     "usa": [
       "siaf-button",
       "siaf-list"
+    ],
+    "sinUso": false
+  },
+  {
+    "selector": "siaf-pdf-viewer-modal",
+    "clase": "PdfViewerModalComponent",
+    "tipo": "componente",
+    "capa": "components",
+    "importacion": "@siaf/shared/components/pdf-viewer-modal/pdf-viewer-modal.component",
+    "archivo": "src/app/shared/components/pdf-viewer-modal/pdf-viewer-modal.component.ts",
+    "descripcion": "Visor de PDF nativo, superpuesto a toda la pantalla (Figma nodo 429:83188): una barra oscura propia con el nombre\ndel archivo, «Descargar» e «Imprimir», y debajo el PDF, que dibuja el propio motor del navegador (`<embed>` con el\nBlob del PDF), sin reimplementar página, zoom ni desplazamiento.\n\nEl padre genera el Blob (por ejemplo con jsPDF) y se lo pasa por `blob`; este componente arma la URL, la revoca al\ncerrar o cambiar de archivo, y no guarda nada.",
+    "usaSesion": false,
+    "proyectaContenido": false,
+    "entradas": [
+      {
+        "nombre": "blob",
+        "tipo": "Blob | null",
+        "porDefecto": "null",
+        "requerida": false,
+        "descripcion": null
+      },
+      {
+        "nombre": "nombre",
+        "tipo": "string",
+        "porDefecto": "'documento.pdf'",
+        "requerida": false,
+        "descripcion": null
+      },
+      {
+        "nombre": "open",
+        "tipo": "boolean",
+        "porDefecto": "false",
+        "requerida": false,
+        "descripcion": null
+      }
+    ],
+    "eventos": [
+      {
+        "nombre": "closed",
+        "tipo": "void",
+        "descripcion": null
+      }
+    ],
+    "usar": "- Para «Ver documento PDF» de una fila (Registros de Documentos y registros, o cualquier acción que arme un PDF al\n  vuelo) en vez de descargarlo directo: se ve antes de decidir descargarlo o imprimirlo.",
+    "evitar": "- Para un documento que ya vive en el servidor con su propia URL pública: un `<a target=\"_blank\">` directo alcanza.\n- Para contenido que no es un PDF: `siaf-side-panel` o `siaf-modal`.",
+    "teclado": "- **Escape**: cierra el visor (emite `closed`).\n- **Tab**: recorre Cerrar, Descargar e Imprimir; el PDF embebido sigue el teclado propio del visor del navegador.",
+    "accesibilidad": "- **4.1.2 Nombre, función y valor (A)**: `role=\"dialog\"` con `aria-modal` y `aria-label` con el nombre del archivo.\n- **Pendiente · 1.1.1 Contenido no textual (A)**: el `<embed>` no tiene texto alternativo; el navegador no lo\n  permite. El nombre del archivo en la barra es la única descripción para quien no ve el PDF.",
+    "figma": [
+      {
+        "nodo": "429:83188",
+        "nombre": "Visor PDF"
+      }
+    ],
+    "aria": {
+      "roles": [
+        "dialog"
+      ],
+      "atributos": [
+        "aria-label",
+        "aria-modal"
+      ]
+    },
+    "tokens": [
+      {
+        "token": "--sys-color-bg-on-surfaces-medium",
+        "via": [
+          "var()"
+        ]
+      },
+      {
+        "token": "--sys-gap-base-md",
+        "via": [
+          "gap-siaf-md",
+          "px-siaf-md"
+        ]
+      },
+      {
+        "token": "--sys-radius-md",
+        "via": [
+          "rounded-siaf-md"
+        ]
+      }
+    ],
+    "usa": [
+      "siaf-icon"
     ],
     "sinUso": false
   },

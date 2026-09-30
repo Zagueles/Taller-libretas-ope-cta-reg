@@ -153,6 +153,8 @@ export const CATEGORIA_POR_SELECTOR: Readonly<Record<string, CategoriaId>> = {
   'siaf-advanced-filters-panel': 'overlays',
   'siaf-favorites-panel': 'overlays',
   'siaf-report-columns-panel': 'overlays',
+  'siaf-date-range-filter-pill': 'overlays',
+  'siaf-pdf-viewer-modal': 'overlays',
   '[siafFoco]': 'overlays',
   // Layouts de página
   'siaf-solicitude-page-layout': 'paginas',

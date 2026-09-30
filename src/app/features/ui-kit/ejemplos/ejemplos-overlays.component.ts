@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, Input, computed, signal } from '@angular/core';
 
+import { DateRangeFilterPillComponent, DateRangeFilterValue } from '../../../shared/components/date-range-filter-pill/date-range-filter-pill.component';
+import { PdfViewerModalComponent } from '../../../shared/components/pdf-viewer-modal/pdf-viewer-modal.component';
 import { ColumnasPanelGrupo, ReportColumnsPanelComponent } from '../../../shared/components/report-columns-panel/report-columns-panel.component';
 import { FavoritesPanelComponent, FavoritoResumen } from '../../../shared/components/favorites-panel/favorites-panel.component';
 import { AdvancedFiltersPanelComponent } from '../../../shared/components/advanced-filters-panel/advanced-filters-panel.component';
@@ -33,6 +35,8 @@ interface CuentaEjemplo {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    DateRangeFilterPillComponent,
+    PdfViewerModalComponent,
     ReportColumnsPanelComponent,
     FavoritesPanelComponent,
     AdvancedFiltersPanelComponent, AnnulmentModalComponent, ButtonComponent, ColumnVisibilityPanelComponent, FocoDirective, ModalComponent, QueryParametersPanelComponent,
@@ -195,6 +199,18 @@ interface CuentaEjemplo {
           Las dos fechas son obligatorias.@if (parametrosAplicados()) { Emitió «applied» con {{ resumenParametros() }}. }
         </p>
       }
+      @case ('siaf-date-range-filter-pill') {
+        <siaf-date-range-filter-pill
+          label="Fecha de registro"
+          [selectedLabel]="fechaFiltroMuestra()"
+          (applied)="fechaFiltroMuestra.set($event.label)"
+          (cleared)="fechaFiltroMuestra.set('')"
+        />
+      }
+      @case ('siaf-pdf-viewer-modal') {
+        <siaf-button variant="secondary" icon="description" (click)="pdfMuestraAbierto.set(true)">Ver documento PDF</siaf-button>
+        <siaf-pdf-viewer-modal [open]="pdfMuestraAbierto()" [blob]="pdfMuestraBlob" nombre="documento-de-muestra.pdf" (closed)="pdfMuestraAbierto.set(false)" />
+      }
       @case ('siaf-report-columns-panel') {
         <siaf-button variant="secondary" icon="view_column" (click)="panelColumnasVisibles.set(true)">Columnas visibles</siaf-button>
         <siaf-report-columns-panel
@@ -245,13 +261,16 @@ export class EjemplosOverlaysComponent {
   static readonly selectores = [
     'siaf-modal', 'siaf-request-approval-modals', 'siaf-annulment-modal', 'siaf-side-nav', 'siaf-side-panel',
     'siaf-selection-side-nav', 'siaf-upload-side-nav', 'siaf-timeline-detail-panel', 'siaf-column-visibility-panel',
-    'siaf-query-parameters-panel', 'siaf-advanced-filters-panel', 'siaf-favorites-panel', 'siaf-report-columns-panel', '[siafFoco]',
+    'siaf-query-parameters-panel', 'siaf-advanced-filters-panel', 'siaf-favorites-panel', 'siaf-report-columns-panel', 'siaf-date-range-filter-pill', 'siaf-pdf-viewer-modal', '[siafFoco]',
   ];
 
   readonly camposParametros = CAMPOS_PARAMETROS_DE_MUESTRA;
   readonly parametrosAbierto = signal(false);
   readonly parametrosAplicados = signal<QueryReportParameters | null>(null);
   readonly camposAvanzados = CAMPOS_FILTROS_AVANZADOS_DE_MUESTRA;
+  readonly fechaFiltroMuestra = signal('');
+  readonly pdfMuestraAbierto = signal(false);
+  readonly pdfMuestraBlob = new Blob(['%PDF-1.4 documento de muestra'], { type: 'application/pdf' });
   readonly panelColumnasVisibles = signal(false);
   readonly gruposColumnasMuestra: ColumnasPanelGrupo[] = [
     { id: 'acreditacion', label: 'Acreditación', suelta: false, columnas: [{ key: 'sec', label: 'Secuencia' }, { key: 'fecha', label: 'Fecha' }] },
