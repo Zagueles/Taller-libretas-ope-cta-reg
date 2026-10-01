@@ -128,3 +128,4 @@ Antes de escribir markup, busquen el componente en `/ui-kit`: casi todo ya exist
 | `npm run ui-kit:check` | Verificar que el catálogo está al día |
 | `npm run icons:check` | Verificar que los íconos existen en Material Icons |
 | `npm run tokens:build` | Regenerar los tokens de color desde `src/tokens/` |
+# Taller-libretas-ope-cta-reg
