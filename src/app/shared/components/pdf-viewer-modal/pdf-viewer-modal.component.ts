@@ -33,7 +33,7 @@ import { IconComponent } from '../../ui/icon/icon.component';
   template: `
     @if (open) {
       <section
-        class="fixed inset-0 z-50 flex flex-col bg-[var(--sys-color-bg-on-surfaces-medium)]"
+        class="fixed inset-0 z-50 flex flex-col bg-transparent"
         role="dialog"
         aria-modal="true"
         [attr.aria-label]="nombre"

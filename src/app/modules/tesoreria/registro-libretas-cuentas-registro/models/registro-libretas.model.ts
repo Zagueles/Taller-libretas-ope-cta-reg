@@ -52,7 +52,7 @@ export interface CuentaBancariaRegistroInfo {
 
 export const CUENTAS_BANCARIAS_INFO: CuentaBancariaRegistroInfo[] = [
   { id: 'mef-dgtp-cut', nombre: 'MEF - DGTP - CUT', numeroCuenta: '1104010357020000000', moneda: 'PEN', saldoInicial: 1_028_000, saldoFinal: 1_170_753 },
-  { id: 'mef-dgtp', nombre: 'MEF - DGTP', numeroCuenta: '12073303572000000003', moneda: 'USD', saldoInicial: 500_000, saldoFinal: 4_185_000 },
+  { id: 'mef-dgtp', nombre: 'MEF - DGTP', numeroCuenta: '12073303572000000003', moneda: 'USD', saldoInicial: 3_500_000, saldoFinal: 3_560_000 },
 ];
 
 /** Un movimiento (cargo o abono) en la libreta de una cuenta de registro. */

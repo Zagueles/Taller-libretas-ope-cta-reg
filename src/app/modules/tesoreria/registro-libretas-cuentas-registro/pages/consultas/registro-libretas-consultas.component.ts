@@ -28,6 +28,9 @@ import {
  *  defecto solo en esa pestaña (Figma nodo 6094:125648); en soles quedan disponibles en «Columnas visibles». */
 const COLUMNAS_MONEDA_EXTRANJERA = new Set(['tipoCotizacion', 'tipoCambioCompra', 'tipoCambioVenta', 'saldoInicialMN', 'debitoMN', 'creditoMN', 'saldoFinalMN']);
 
+/** Prefijo de los montos en los KPI de la vista de gráficas, según la moneda de la cuenta bancaria de la pestaña activa. */
+const SIMBOLO_MONEDA: Record<'PEN' | 'USD', string> = { PEN: 'S/ ', USD: 'US$ ' };
+
 /** Cuentas de registro (FF/SUB FF) distintas entre los movimientos, para el filtro predeterminado. */
 const CUENTAS_REGISTRO_DISTINTAS = [...new Map(MOVIMIENTOS_LIBRETA_REGISTRO.map((m) => [m.numeroCuentaRegistro, m.descripcionCuentaRegistro])).entries()].map(
   ([value, label]) => ({ value, label }),
@@ -181,10 +184,10 @@ export class RegistroLibretasConsultasComponent {
     /** Vista de gráficas (Figma nodo 6091:81845), con las filas que quedan tras buscar y filtrar en la vista de datos. */
     charts: {
       kpis: [
-        { title: 'Total créditos', icon: 'add_circle', tone: 'success', column: 'credito', prefix: 'S/ ' },
-        { title: 'Total débitos', icon: 'remove_circle', tone: 'danger', column: 'debito', prefix: 'S/ ' },
-        { title: 'Saldo inicial', icon: 'account_balance_wallet', tone: 'warning', column: 'saldoInicial', aggregate: 'first', prefix: 'S/ ' },
-        { title: 'Saldo final', icon: 'account_balance', tone: 'informative', column: 'saldoFinal', aggregate: 'last', prefix: 'S/ ' },
+        { title: 'Total créditos', icon: 'add_circle', tone: 'success', column: 'credito', prefix: SIMBOLO_MONEDA.PEN },
+        { title: 'Total débitos', icon: 'remove_circle', tone: 'danger', column: 'debito', prefix: SIMBOLO_MONEDA.PEN },
+        { title: 'Saldo inicial', icon: 'account_balance_wallet', tone: 'warning', column: 'saldoInicial', aggregate: 'first', prefix: SIMBOLO_MONEDA.PEN },
+        { title: 'Saldo final', icon: 'account_balance', tone: 'informative', column: 'saldoFinal', aggregate: 'last', prefix: SIMBOLO_MONEDA.PEN },
       ],
       charts: [
         {
@@ -254,9 +257,14 @@ export class RegistroLibretasConsultasComponent {
     // Tipo de cambio e importe en moneda nacional solo interesan en la cuenta en dólares: en soles no hay nada que
     // convertir. Se muestran solos al entrar a esa pestaña, sin que el usuario tenga que ir a «Columnas visibles».
     const enDolares = cuenta?.moneda === 'USD';
+    const simbolo = SIMBOLO_MONEDA[enDolares ? 'USD' : 'PEN'];
     this.config.update((actual) => ({
       ...actual,
       columns: actual.columns.map((c) => (COLUMNAS_MONEDA_EXTRANJERA.has(c.key) ? { ...c, hiddenByDefault: !enDolares } : c)),
+      charts: actual.charts && {
+        ...actual.charts,
+        kpis: actual.charts.kpis.map((kpi) => (kpi.prefix ? { ...kpi, prefix: simbolo } : kpi)),
+      },
     }));
 
     this.resultado.set({

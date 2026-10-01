@@ -9468,12 +9468,6 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     },
     "tokens": [
       {
-        "token": "--sys-color-bg-on-surfaces-medium",
-        "via": [
-          "var()"
-        ]
-      },
-      {
         "token": "--sys-gap-base-md",
         "via": [
           "gap-siaf-md",
