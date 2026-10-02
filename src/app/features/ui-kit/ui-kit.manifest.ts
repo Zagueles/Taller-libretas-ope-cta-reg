@@ -9414,7 +9414,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     "capa": "components",
     "importacion": "@siaf/shared/components/pdf-viewer-modal/pdf-viewer-modal.component",
     "archivo": "src/app/shared/components/pdf-viewer-modal/pdf-viewer-modal.component.ts",
-    "descripcion": "Visor de PDF nativo, superpuesto a toda la pantalla (Figma nodo 429:83188): una barra oscura propia con el nombre\ndel archivo, «Descargar» e «Imprimir», y debajo el PDF, que dibuja el propio motor del navegador (`<embed>` con el\nBlob del PDF), sin reimplementar página, zoom ni desplazamiento.\n\nEl padre genera el Blob (por ejemplo con jsPDF) y se lo pasa por `blob`; este componente arma la URL, la revoca al\ncerrar o cambiar de archivo, y no guarda nada.",
+    "descripcion": "Visor de PDF superpuesto a toda la pantalla (Figma nodo 6152:60726, «Controles header»): la barra de arriba ocupa\ntodo el ancho (Cerrar y el nombre del archivo a la izquierda, Descargar e Imprimir a la derecha) y, debajo, el PDF\nocupa el resto, dibujado por el propio motor del navegador (`<iframe>` con el Blob, sin su barra: ya está la de\narriba) — sin márgenes ni bordes propios alrededor, así el único scroll que aparece es el del visor nativo del PDF,\nno uno doble. Sin reimplementar página ni zoom.\n\nEl padre genera el Blob (por ejemplo con jsPDF) y se lo pasa por `blob`; este componente arma la URL, la revoca al\ncerrar o cambiar de archivo, y no guarda nada.",
     "usaSesion": false,
     "proyectaContenido": false,
     "entradas": [
@@ -9438,6 +9438,13 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "porDefecto": "false",
         "requerida": false,
         "descripcion": null
+      },
+      {
+        "nombre": "totalPaginas",
+        "tipo": "number",
+        "porDefecto": "1",
+        "requerida": false,
+        "descripcion": "Para el paginador del footer; sin más de una hoja, no aparece."
       }
     ],
     "eventos": [
@@ -9448,12 +9455,12 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       }
     ],
     "usar": "- Para «Ver documento PDF» de una fila (Registros de Documentos y registros, o cualquier acción que arme un PDF al\n  vuelo) en vez de descargarlo directo: se ve antes de decidir descargarlo o imprimirlo.",
-    "evitar": "- Para un documento que ya vive en el servidor con su propia URL pública: un `<a target=\"_blank\">` directo alcanza.\n- Para contenido que no es un PDF: `siaf-side-panel` o `siaf-modal`.",
-    "teclado": "- **Escape**: cierra el visor (emite `closed`).\n- **Tab**: recorre Cerrar, Descargar e Imprimir; el PDF embebido sigue el teclado propio del visor del navegador.",
-    "accesibilidad": "- **4.1.2 Nombre, función y valor (A)**: `role=\"dialog\"` con `aria-modal` y `aria-label` con el nombre del archivo.\n- **Pendiente · 1.1.1 Contenido no textual (A)**: el `<embed>` no tiene texto alternativo; el navegador no lo\n  permite. El nombre del archivo en la barra es la única descripción para quien no ve el PDF.",
+    "evitar": "- Para un documento que ya vive en el servidor con su propia URL pública: un `<a target=\"_blank\">` directo alcanza.\n- Para contenido que no es un PDF: `siaf-side-panel` o `siaf-modal`.\nAbajo, centrados (Figma «Controles footer»), el paginador (con `totalPaginas`) y el zoom: cambian la página o el\nzoom reconstruyendo la URL del `<iframe>` con `#page=N&zoom=N`, el fragmento que entiende el visor nativo.",
+    "teclado": "- **Escape**: cierra el visor (emite `closed`).\n- **Tab**: recorre Cerrar, Descargar e Imprimir, el campo de página y los botones de zoom; el PDF embebido sigue\n  además su propio teclado (flechas, Ctrl+rueda).",
+    "accesibilidad": "- **4.1.2 Nombre, función y valor (A)**: `role=\"dialog\"` con `aria-modal` y `aria-label` con el nombre del archivo.\n- **Pendiente · 1.1.1 Contenido no textual (A)**: el `<iframe>` no tiene texto alternativo; el navegador no lo\n  permite. El nombre del archivo en la barra es la única descripción para quien no ve el PDF.",
     "figma": [
       {
-        "nodo": "429:83188",
+        "nodo": "6152:60726",
         "nombre": "Visor PDF"
       }
     ],
@@ -9468,6 +9475,12 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     },
     "tokens": [
       {
+        "token": "--sys-gap-base-lg",
+        "via": [
+          "bottom-siaf-lg"
+        ]
+      },
+      {
         "token": "--sys-gap-base-md",
         "via": [
           "gap-siaf-md",
@@ -9475,9 +9488,33 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         ]
       },
       {
+        "token": "--sys-gap-base-sm",
+        "via": [
+          "py-siaf-sm"
+        ]
+      },
+      {
+        "token": "--sys-gap-base-xs",
+        "via": [
+          "gap-siaf-xs"
+        ]
+      },
+      {
         "token": "--sys-radius-md",
         "via": [
           "rounded-siaf-md"
+        ]
+      },
+      {
+        "token": "--sys-radius-sm",
+        "via": [
+          "rounded-siaf-sm"
+        ]
+      },
+      {
+        "token": "--sys-shadow-elevation-8",
+        "via": [
+          "shadow-siaf-elevation-8"
         ]
       }
     ],

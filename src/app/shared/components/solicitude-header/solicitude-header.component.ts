@@ -288,7 +288,7 @@ const MOBILE_PRIMARY_ACTION_CLASS =
       class="flex w-full flex-col gap-siaf-lg bg-surface px-siaf-lg py-siaf-md lg:flex-row lg:items-start lg:justify-between"
       [ngClass]="containerClass"
     >
-      <div class="flex min-w-0 flex-1 items-start gap-siaf-xs">
+      <div class="flex min-w-0 flex-1 items-center gap-siaf-xs">
         @if (showReturn) {
           <button
             class="inline-flex size-10 shrink-0 items-center justify-center rounded-siaf-md text-text-muted transition hover:bg-surface-muted hover:text-text focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sys-color-border-states-focus)]"

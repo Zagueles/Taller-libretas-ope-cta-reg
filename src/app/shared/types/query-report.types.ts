@@ -192,6 +192,8 @@ export interface QueryReportConfig {
    * Agrupado/Agregado no calculan totales por grupo.
    */
   groupAggregation?: QueryReportGroupAggregation;
+  /** Formatos que ofrece «Exportar»; por defecto los tres (Excel, CSV, PDF). */
+  exportFormats?: QueryReportExportFormat[];
 }
 
 export interface QueryReportAdvancedFilterField extends QueryReportFilterField {

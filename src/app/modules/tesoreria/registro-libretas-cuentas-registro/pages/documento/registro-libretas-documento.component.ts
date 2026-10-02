@@ -12,9 +12,21 @@ import { ButtonComponent } from '../../../../../shared/ui/button/button.componen
 import { DocumentSummaryCardComponent } from '../../../../../shared/ui/document-summary-card/document-summary-card.component';
 import { ReadonlyFieldComponent } from '../../../../../shared/ui/readonly-field/readonly-field.component';
 import { ReportTableColumn, ReportTableComponent, ReportTableRow } from '../../../../../shared/ui/report-table/report-table.component';
+import { SnackbarComponent } from '../../../../../shared/ui/snackbar/snackbar.component';
 import { buildProcessBreadcrumbs } from '../../../../../shared/utils/breadcrumbs.util';
 import { PROCESS_ID, PROCESS_ROUTE } from '../../config/registro-libretas.rutas';
 import { MOVIMIENTOS_LIBRETA_REGISTRO, nombreBeneficiario } from '../../models/registro-libretas.model';
+import { generarPdfDocumento } from '../../utils/registro-libretas-export.util';
+
+/** Descarga un Blob como archivo. */
+function descargarArchivo(blob: Blob, nombre: string): void {
+  const url = URL.createObjectURL(blob);
+  const enlace = document.createElement('a');
+  enlace.href = url;
+  enlace.download = nombre;
+  enlace.click();
+  URL.revokeObjectURL(url);
+}
 
 const formatoMonto = new Intl.NumberFormat('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const monto = (valor: number): string => formatoMonto.format(valor);
@@ -58,6 +70,7 @@ const COLUMNAS: ReportTableColumn[] = [
     FormTableSearchComponent,
     ReadonlyFieldComponent,
     ReportTableComponent,
+    SnackbarComponent,
     SolicitudeFormCardComponent,
     SolicitudeInfoCardComponent,
     SolicitudePageLayoutComponent,
@@ -72,7 +85,7 @@ const COLUMNAS: ReportTableColumn[] = [
       [customActions]="true"
       (returned)="volver()"
     >
-      <siaf-button actions variant="filled" icon="download">Descargar</siaf-button>
+      <siaf-button actions variant="filled" icon="download" (click)="descargar()">Descargar</siaf-button>
 
       @if (documento(); as d) {
         <siaf-alert
@@ -136,6 +149,10 @@ const COLUMNAS: ReportTableColumn[] = [
         />
       }
     </siaf-solicitude-page-layout>
+
+    <div class="fixed bottom-siaf-lg left-1/2 z-50 w-[min(430px,calc(100vw-32px))] -translate-x-1/2">
+      <siaf-snackbar [open]="preparandoDescarga()" tone="neutral" [dismissible]="false" message="Preparando archivo para descargar" />
+    </div>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -148,6 +165,7 @@ export class RegistroLibretasDocumentoComponent {
   readonly columnas = COLUMNAS;
   readonly cuentaElegida = signal('mef-dgtp-cut');
   readonly busqueda = signal('');
+  readonly preparandoDescarga = signal(false);
 
   private readonly movimientos = computed(() => {
     const numero = this.ruta.snapshot.paramMap.get('numero');
@@ -182,6 +200,23 @@ export class RegistroLibretasDocumentoComponent {
       }))
       .filter((f) => !termino || Object.values(f).some((v) => normalizar(v).includes(termino)));
   });
+
+  /** Descarga el PDF del documento (Figma nodo 4990:17215): una hoja apaisada por cada cuenta bancaria referenciada.
+   *  Mientras arma el PDF, muestra el snackbar «Preparando archivo para descargar» (Figma nodo 5420:54420); armar el
+   *  PDF es casi instantáneo, así que se le pone un mínimo de tiempo visible para que alcance a leerse antes de que
+   *  aparezca el diálogo «Guardar como» del navegador. */
+  async descargar(): Promise<void> {
+    const numero = this.ruta.snapshot.paramMap.get('numero');
+    if (!numero) return;
+    this.preparandoDescarga.set(true);
+    try {
+      const minimoVisible = new Promise((resuelve) => setTimeout(resuelve, 1200));
+      const [generado] = await Promise.all([generarPdfDocumento(numero), minimoVisible]);
+      if (generado) descargarArchivo(generado.blob, generado.nombre);
+    } finally {
+      this.preparandoDescarga.set(false);
+    }
+  }
 
   volver(): void {
     this.location.back();

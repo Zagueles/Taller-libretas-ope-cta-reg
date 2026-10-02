@@ -35,7 +35,7 @@ const SIMBOLO_MONEDA: Record<'PEN' | 'USD', string> = { PEN: 'S/ ', USD: 'US$ ' 
 const CUENTAS_REGISTRO_DISTINTAS = [...new Map(MOVIMIENTOS_LIBRETA_REGISTRO.map((m) => [m.numeroCuentaRegistro, m.descripcionCuentaRegistro])).entries()].map(
   ([value, label]) => ({ value, label }),
 );
-import { exportarLibretasRegistro } from '../../utils/registro-libretas-export.util';
+import { exportarConsultaExcel } from '../../utils/registro-libretas-export.util';
 
 /** Beneficiario y Cuenta de registro van asociados: elegir cualquiera como nivel oculta los dos grupos de cabecera. */
 const GRUPOS_ASOCIADOS = ['Beneficiario', 'Cuenta de registro'];
@@ -177,6 +177,8 @@ export class RegistroLibretasConsultasComponent {
     rowKey: 'sec',
     resultTitle: 'Resultado de reporte',
     tableLabel: TITULO,
+    // Este reporte solo se exporta a Excel: CSV y PDF no distinguen los grupos de columnas de la tabla.
+    exportFormats: ['excel'],
     presetFilters: [
       { key: 'numeroCuentaRegistro', label: 'Cuenta de registro', options: CUENTAS_REGISTRO_DISTINTAS },
       { key: 'entidad', label: 'Entidad', options: ENTIDADES },
@@ -289,8 +291,11 @@ export class RegistroLibretasConsultasComponent {
     guardarFavoritos(PROCESS_ROUTE, lista);
   }
 
+  /** Esta pantalla solo exporta a Excel (`exportFormats: ['excel']`): la plantilla «Resumen» + «Resultado N», una
+   *  pestaña por cada cuenta bancaria consultada, con todas sus filas (no solo las de la pestaña activa). */
   exportar(evento: QueryReportExportEvent): void {
-    void exportarLibretasRegistro(evento.format, this.config().columns, evento.rows);
+    const cuentas = [...this.filasPorCuenta.entries()].map(([id, movimientos]) => ({ id, movimientos }));
+    void exportarConsultaExcel(evento.parameters, cuentas);
   }
 
   abrirDocumento(fila: QueryReportRow): void {

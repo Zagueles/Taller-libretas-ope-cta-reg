@@ -241,7 +241,7 @@ let siguienteId = 0;
                   label="Exportar"
                   icon="open_in_new"
                   density="standard"
-                  [items]="opcionesExportacion"
+                  [items]="opcionesExportacion()"
                   [menuWidth]="200"
                   [disabled]="loading || !filasFiltradas().length"
                   (selected)="exportar($event)"
@@ -625,12 +625,17 @@ export class QueryReportPageComponent {
   /**
    * Figma «Opciones de tabla» (22402:16485). Material Icons no trae los archivos XLS y PDF del Figma: Excel usa
    * `table_view`, como el resto del kit, y PDF `picture_as_pdf`; CSV es el `table_chart` del Figma.
+   * Sin `exportFormats` en la configuración, aparecen los tres.
    */
-  readonly opcionesExportacion: IconDropdownMenuItem[] = [
-    { label: 'Excel', value: 'excel', icon: 'table_view' },
-    { label: 'CSV', value: 'csv', icon: 'table_chart' },
-    { label: 'PDF', value: 'pdf', icon: 'picture_as_pdf' },
-  ];
+  private readonly ICONOS_EXPORTACION: Record<QueryReportExportFormat, { label: string; icon: string }> = {
+    excel: { label: 'Excel', icon: 'table_view' },
+    csv: { label: 'CSV', icon: 'table_chart' },
+    pdf: { label: 'PDF', icon: 'picture_as_pdf' },
+  };
+
+  readonly opcionesExportacion = computed<IconDropdownMenuItem[]>(() =>
+    (this.configuracion().exportFormats ?? FORMATOS_EXPORTACION).map((formato) => ({ value: formato, ...this.ICONOS_EXPORTACION[formato] })),
+  );
 
   /** Sin `charts` en la configuración no hay selector y siempre se ve la tabla. */
   readonly vistaActiva = computed<QueryReportView>(() => (this.configuracion().charts ? this.vista() : 'datos'));

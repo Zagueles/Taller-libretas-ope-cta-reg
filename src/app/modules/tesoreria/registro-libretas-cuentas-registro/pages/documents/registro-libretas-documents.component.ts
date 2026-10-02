@@ -34,7 +34,7 @@ const fechaVisible = (iso: string): string => iso.slice(0, 10).split('-').revers
   imports: [DocumentsRecordsPageComponent, PdfViewerModalComponent],
   template: `
     <siaf-documents-records-page [config]="pageConfig" (recordActionClicked)="verDocumentoPdf($event)" />
-    <siaf-pdf-viewer-modal [open]="pdfAbierto()" [blob]="pdfBlob()" [nombre]="pdfNombre()" (closed)="cerrarPdf()" />
+    <siaf-pdf-viewer-modal [open]="pdfAbierto()" [blob]="pdfBlob()" [nombre]="pdfNombre()" [totalPaginas]="pdfPaginas()" (closed)="cerrarPdf()" />
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -42,6 +42,7 @@ export class RegistroLibretasDocumentsComponent {
   readonly pdfAbierto = signal(false);
   readonly pdfBlob = signal<Blob | null>(null);
   readonly pdfNombre = signal('documento.pdf');
+  readonly pdfPaginas = signal(1);
 
   readonly pageConfig: DocumentsRecordsConfig = {
     ...REGISTRO_LIBRETAS_DOCUMENTS_CONFIG,
@@ -108,6 +109,7 @@ export class RegistroLibretasDocumentsComponent {
     if (!generado) return;
     this.pdfBlob.set(generado.blob);
     this.pdfNombre.set(generado.nombre);
+    this.pdfPaginas.set(generado.paginas);
     this.pdfAbierto.set(true);
   }
 
