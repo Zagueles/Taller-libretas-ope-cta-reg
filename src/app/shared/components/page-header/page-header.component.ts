@@ -46,7 +46,7 @@ import { TooltipDirective } from '../../ui/tooltip/tooltip.directive';
   standalone: true,
   imports: [TooltipDirective],
   template: `
-    <header class="flex items-center justify-between gap-siaf-lg bg-surface px-siaf-lg py-siaf-md">
+    <header class="flex flex-col gap-siaf-md bg-surface px-siaf-lg py-siaf-md sm:flex-row sm:items-center sm:justify-between sm:gap-siaf-lg">
       <div class="flex min-w-0 flex-1 flex-col gap-siaf-xxs">
         <h1 class="m-0 min-h-6 text-base font-bold uppercase tracking-[0.02px] text-[var(--sys-color-text-neutral-high)] sm:truncate" siafTooltip>
           {{ title }}
@@ -57,7 +57,7 @@ import { TooltipDirective } from '../../ui/tooltip/tooltip.directive';
           </p>
         }
       </div>
-      <div class="flex shrink-0 items-center gap-siaf-sm">
+      <div class="flex items-center justify-end gap-siaf-sm sm:shrink-0">
         <ng-content select="[actions]" />
       </div>
     </header>

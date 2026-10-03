@@ -20,6 +20,7 @@ import type { ChartSeries } from '../../ui/charts/grafico-base';
 import { DivergingChartComponent } from '../../ui/diverging-chart/diverging-chart.component';
 import { DonutChartComponent } from '../../ui/donut-chart/donut-chart.component';
 import { EmptyStateComponent } from '../../ui/empty-state/empty-state.component';
+import { TooltipDirective } from '../../ui/tooltip/tooltip.directive';
 import { GroupedTableLevel, GroupedReportTableComponent } from '../../ui/grouped-report-table/grouped-report-table.component';
 import { IconDropdownMenuComponent, IconDropdownMenuItem } from '../../ui/icon-dropdown-menu/icon-dropdown-menu.component';
 import { KpiCardComponent } from '../../ui/kpi-card/kpi-card.component';
@@ -32,7 +33,7 @@ import { TabsComponent } from '../../ui/tabs/tabs.component';
 import { TagComponent } from '../../ui/tag/tag.component';
 import { AdvancedFiltersPanelComponent } from '../advanced-filters-panel/advanced-filters-panel.component';
 import { ColumnasPanelGrupo, ReportColumnsPanelComponent } from '../report-columns-panel/report-columns-panel.component';
-import { FavoritesPanelComponent, FavoritoActual, FavoritoNuevo, FavoritoResumen } from '../favorites-panel/favorites-panel.component';
+import { FavoritesPanelComponent, FavoritoActual, FavoritoDetalle, FavoritoNuevo, FavoritoResumen } from '../favorites-panel/favorites-panel.component';
 import { FilterPillComponent } from '../filter-pill/filter-pill.component';
 import { FormTableSearchComponent } from '../form-table-search/form-table-search.component';
 import { PageHeaderComponent } from '../page-header/page-header.component';
@@ -63,6 +64,16 @@ export interface QueryReportExportEvent {
   format: QueryReportExportFormat;
   parameters: QueryReportParameters;
   rows: QueryReportRow[];
+  /** Condiciones, tipo de resultado y niveles aplicados en «Filtros avanzados» (sin niveles, la tabla es detallada). */
+  advanced: QueryReportAdvancedFilters;
+  /** Los niveles de `advanced.levels` con su etiqueta, abreviatura y subtítulo, en el mismo orden. */
+  levels: GroupedTableLevel[];
+  /** Claves de las columnas que la tabla oculta con los niveles aplicados (las de cada nivel y las de `groupAggregation`). */
+  hiddenColumns: string[];
+  /** Grupos de cabecera que la tabla oculta con los niveles aplicados (Beneficiario y Cuenta de registro, por ejemplo). */
+  hiddenGroups: string[];
+  /** Aplica a cualquier lista de filas lo mismo que la tabla (condiciones, filtros rápidos y búsqueda): para exportar las cuentas de otras pestañas. */
+  filterRows: (rows: QueryReportRow[]) => QueryReportRow[];
 }
 
 export type QueryReportView = 'datos' | 'graficas';
@@ -158,7 +169,7 @@ let siguienteId = 0;
 @Component({
   selector: 'siaf-query-report-page',
   standalone: true,
-  imports: [
+  imports: [TooltipDirective, 
     AdvancedFiltersPanelComponent,
     BarChartComponent,
     ButtonComponent,
@@ -192,7 +203,10 @@ let siguienteId = 0;
     <siaf-page-shell [breadcrumbs]="configuracion().breadcrumbs" [stickyHeader]="true">
       <siaf-page-header pageHeader [title]="configuracion().title" [subtitle]="favoritoAplicado() ? 'Favorito: ' + favoritoAplicado()!.description : ''">
         <div actions class="flex flex-wrap items-center justify-end gap-siaf-sm">
-          <siaf-button variant="outline" icon="bookmark_border" [disabled]="!parametros() && !favoritos().length" (click)="abrirFavoritos()">Favoritos</siaf-button>
+          <!-- Sin consulta ni favoritos el botón está deshabilitado: el globo va en el contenedor, porque un botón deshabilitado no recibe el puntero. -->
+          <span class="inline-flex [&_button:disabled]:pointer-events-none" [siafTooltip]="!parametros() && !favoritos().length ? 'Aún no tienes favoritos' : null">
+            <siaf-button variant="outline" icon="bookmark_border" [disabled]="!parametros() && !favoritos().length" (click)="abrirFavoritos()">Favoritos</siaf-button>
+          </span>
           <siaf-button variant="filled" icon="manage_search" (click)="abrirParametros(null)">Parámetros</siaf-button>
         </div>
       </siaf-page-header>
@@ -406,7 +420,9 @@ let siguienteId = 0;
                           [rows]="vista.filas"
                           [levels]="vista.niveles"
                           [aggregation]="configuracion().groupAggregation ?? null"
+                          [footerInnermost]="true"
                           [ariaLabel]="configuracion().tableLabel ?? configuracion().title"
+                    [groupTooltips]="configuracion().columnsPanel?.groupLabels ?? {}"
                           (linkClicked)="linkClicked.emit($event)"
                         />
                       </div>
@@ -418,7 +434,9 @@ let siguienteId = 0;
                     [rows]="filasFiltradas()"
                     [levels]="nivelesGrupo()"
                     [aggregation]="configuracion().groupAggregation ?? null"
+                    [footerInnermost]="nivelesGrupo().length === 2"
                     [ariaLabel]="configuracion().tableLabel ?? configuracion().title"
+                    [groupTooltips]="configuracion().columnsPanel?.groupLabels ?? {}"
                     (linkClicked)="linkClicked.emit($event)"
                   />
                 } @else {
@@ -427,6 +445,7 @@ let siguienteId = 0;
                     [rows]="filasPagina()"
                     [rowKey]="configuracion().rowKey"
                     [ariaLabel]="configuracion().tableLabel ?? configuracion().title"
+                    [groupTooltips]="configuracion().columnsPanel?.groupLabels ?? {}"
                     (linkClicked)="linkClicked.emit($event)"
                   />
                 }
@@ -461,6 +480,8 @@ let siguienteId = 0;
                   variant="reports"
                   [value]="busqueda()"
                   [filterCount]="conteoFiltrosAvanzados()"
+                  filterLabel="Filtros avanzados"
+                  columnsLabel="Columnas visibles"
                   ariaLabel="Buscar en el resultado"
                   (valueChange)="buscar($event)"
                   (filter)="abrirFiltrosAvanzados()"
@@ -651,7 +672,14 @@ export class QueryReportPageComponent {
         conditions.length ? `${conditions.length} ${conditions.length === 1 ? 'condición' : 'condiciones'}` : '',
         levels.length ? `${levels.length} ${resultType === 'agrupado' ? (levels.length === 1 ? 'agrupado' : 'agrupados') : levels.length === 1 ? 'agregado' : 'agregados'}` : '',
       ].filter(Boolean);
-      return { id: f.id, description: f.description, isDefault: f.isDefault, summary: partes.join(' · ') };
+      const campos = this.configuracion().advancedFilterFields ?? [];
+      const detalle: FavoritoDetalle = {
+        parametros: this.describirParametros(f.parameters).map((p) => p.value).join(', '),
+        condiciones: conditions.map((c) => this.redactarCondicion(c)).join(', '),
+        niveles: levels.map((clave) => campos.find((c) => c.key === clave)?.label ?? clave).join(' ▶ '),
+        tipoResultado: resultType,
+      };
+      return { id: f.id, description: f.description, isDefault: f.isDefault, summary: partes.join(' · '), detalle };
     }),
   );
 
@@ -662,8 +690,9 @@ export class QueryReportPageComponent {
     tipoResultado: this.avanzados().resultType,
   }));
 
-  readonly filasFiltradas = computed<QueryReportRow[]>(() => {
-    const filas = this.resultado()?.rows ?? [];
+  readonly filasFiltradas = computed<QueryReportRow[]>(() => this.aplicarFiltros(this.resultado()?.rows ?? []));
+
+  private aplicarFiltros(filas: QueryReportRow[]): QueryReportRow[] {
     const termino = normalizar(this.busqueda().trim());
     const filtros = Object.entries(this.filtros()).filter(([, valor]) => !!valor);
     const condiciones = this.avanzados().conditions;
@@ -674,7 +703,7 @@ export class QueryReportPageComponent {
         condiciones.every((condicion) => cumpleCondicion(fila, condicion)) &&
         (!termino || columnas.some((c) => normalizar(fila[c.key] ?? '').includes(termino))),
     );
-  });
+  }
 
   readonly hayBusquedaOFiltros = computed(() => !!this.busqueda().trim() || Object.values(this.filtros()).some((valor) => !!valor));
 
@@ -899,6 +928,23 @@ export class QueryReportPageComponent {
     return `${campo}: ${simbolo} ${condicion.value}`;
   }
 
+  /** La condición en palabras, para la tarjeta de un favorito: «Entidad es igual a (MEF, MINCETUR)». */
+  redactarCondicion(condicion: QueryReportCondition): string {
+    const campo = this.configuracion().advancedFilterFields?.find((c) => c.key === condicion.field)?.label ?? condicion.field;
+    const valor = (condicion.value ?? '').includes(',') ? `(${condicion.value})` : (condicion.value ?? '');
+    switch (condicion.operator) {
+      case '=': return `${campo} es igual a ${valor}`;
+      case '!=': return `${campo} es distinto de ${valor}`;
+      case '>': return `${campo} mayor que ${valor}`;
+      case '>=': return `${campo} mayor o igual que ${valor}`;
+      case '<': return `${campo} menor que ${valor}`;
+      case '<=': return `${campo} menor o igual que ${valor}`;
+      case 'between': return `${campo} entre ${condicion.value} y ${condicion.valueTo}`;
+      case 'empty': return `${campo} está vacío`;
+      default: return `${campo} no está vacío`;
+    }
+  }
+
   etiquetaNiveles(): string {
     const campos = this.configuracion().advancedFilterFields ?? [];
     return this.avanzados()
@@ -993,6 +1039,29 @@ export class QueryReportPageComponent {
   exportar(formato: string): void {
     const format = FORMATOS_EXPORTACION.find((f) => f === formato);
     if (!format) return;
-    this.exported.emit({ format, parameters: this.parametros() ?? {}, rows: this.filasFiltradas() });
+    const avanzados = this.avanzados();
+    const niveles = avanzados.levels;
+    const campos = (this.configuracion().advancedFilterFields ?? []).filter((c) => niveles.includes(c.key));
+    const ocultas = new Set([
+      ...(avanzados.resultType === 'agregado' && niveles.length ? (this.configuracion().groupAggregation?.hiddenColumns ?? []) : []),
+      ...campos.flatMap((c) => c.hidesColumns ?? []),
+      ...niveles,
+    ]);
+    const gruposOcultos = niveles.length ? [...new Set(campos.flatMap((c) => c.hidesGroups ?? []))] : [];
+    const hiddenColumns = niveles.length
+      ? this.configuracion()
+          .columns.filter((c) => ocultas.has(c.key) || (c.group && gruposOcultos.includes(c.group) && !c.ungroupWhenGroupHidden))
+          .map((c) => c.key)
+      : [];
+    this.exported.emit({
+      format,
+      parameters: this.parametros() ?? {},
+      rows: this.filasFiltradas(),
+      advanced: avanzados,
+      levels: this.aNivelesTabla(niveles),
+      hiddenColumns,
+      hiddenGroups: gruposOcultos,
+      filterRows: (filas) => this.aplicarFiltros(filas),
+    });
   }
 }

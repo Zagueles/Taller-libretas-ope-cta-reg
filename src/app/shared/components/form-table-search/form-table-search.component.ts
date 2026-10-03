@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 
+import { TooltipDirective } from '../../ui/tooltip/tooltip.directive';
 import { IconComponent } from '../../ui/icon/icon.component';
 import { TextFieldComponent } from '../../ui/text-field/text-field.component';
 
@@ -54,7 +55,7 @@ import { TextFieldComponent } from '../../ui/text-field/text-field.component';
 @Component({
   selector: 'siaf-form-table-search',
   standalone: true,
-  imports: [IconComponent, TextFieldComponent],
+  imports: [IconComponent, TextFieldComponent, TooltipDirective],
   template: `
     <div class="flex w-full items-start gap-siaf-md">
       <!-- Campo del design system: etiqueta flotante y borde de éxito, igual
@@ -75,19 +76,21 @@ import { TextFieldComponent } from '../../ui/text-field/text-field.component';
         <button
           class="relative inline-flex size-10 items-center justify-center rounded-siaf-md text-text transition hover:bg-surface-muted active:bg-[var(--sys-color-bg-states-dark-pressed)] disabled:cursor-not-allowed disabled:text-[var(--sys-color-text-neutral-disabled)] disabled:hover:bg-transparent focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sys-color-border-states-focus)]"
           type="button"
+          [siafTooltip]="filterLabel"
           [attr.aria-label]="filterCount ? filterLabel + ' (' + filterCount + ' aplicados)' : filterLabel"
           [disabled]="disabled"
           (click)="filter.emit()"
         >
           <siaf-icon name="filter_list" [size]="24" />
           @if (filterCount > 0) {
-            <span class="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--sys-color-bg-brand-accent,#d13255)] px-1 text-[10px] font-bold leading-none text-white">{{ filterCount }}</span>
+            <span class="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--sys-color-bg-feedback-dark-info)] px-1 text-[10px] font-bold leading-none text-white">{{ filterCount }}</span>
           }
         </button>
         <!-- Segundo botón según la variante: Más opciones o, en Consultas y reportes, Columnas. -->
         <button
           class="inline-flex size-10 items-center justify-center rounded-siaf-md text-text transition hover:bg-surface-muted active:bg-[var(--sys-color-bg-states-dark-pressed)] disabled:cursor-not-allowed disabled:text-[var(--sys-color-text-neutral-disabled)] disabled:hover:bg-transparent focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sys-color-border-states-focus)]"
           type="button"
+          [siafTooltip]="variant === 'reports' ? columnsLabel : moreLabel"
           [attr.aria-label]="variant === 'reports' ? columnsLabel : moreLabel"
           [attr.data-accion]="variant === 'reports' ? 'columns' : 'more'"
           [disabled]="disabled"

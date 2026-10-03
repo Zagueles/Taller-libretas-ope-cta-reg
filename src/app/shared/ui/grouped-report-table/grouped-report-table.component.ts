@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 
 import { IconComponent } from '../icon/icon.component';
+import { TooltipDirective } from '../tooltip/tooltip.directive';
 import type { QueryReportGroupAggregation } from '../../types/query-report.types';
 import type { ReportTableColumn, ReportTableRow } from '../report-table/report-table.component';
 
@@ -25,6 +26,8 @@ interface CeldaCabecera {
   align: 'left' | 'right' | 'center';
   width: number | null;
   fixed: boolean;
+  /** Nombre completo de la abreviatura (Sec. → Secuencia), en un globo al pasar el puntero. */
+  tooltip?: string | null;
 }
 
 /** aaaa-mm-dd, dd/mm/aaaa o un monto con miles: se queda solo con dígitos, signo y punto decimal. */
@@ -69,7 +72,7 @@ let siguienteId = 0;
 @Component({
   selector: 'siaf-grouped-report-table',
   standalone: true,
-  imports: [IconComponent],
+  imports: [IconComponent, TooltipDirective],
   host: { class: 'block min-w-0' },
   template: `
     <div
@@ -95,7 +98,7 @@ let siguienteId = 0;
                 [style.width.px]="celda.width"
                 [style.min-width.px]="celda.width"
               >
-                <span class="block truncate">{{ celda.label }}</span>
+                <span class="block truncate" [siafTooltip]="celda.tooltip ?? null">{{ celda.label }}</span>
               </th>
             }
           </tr>
@@ -112,7 +115,7 @@ let siguienteId = 0;
                   [style.width.px]="columna.width ?? null"
                   [style.min-width.px]="columna.width ?? null"
                 >
-                  <span class="block truncate">{{ columna.label }}</span>
+                  <span class="block truncate" [siafTooltip]="tooltipColumna(columna)">{{ columna.label }}</span>
                 </th>
               }
             </tr>
@@ -222,6 +225,8 @@ export class GroupedReportTableComponent implements OnChanges {
   @Input() rows: readonly ReportTableRow[] = [];
   @Input() levels: readonly GroupedTableLevel[] = [];
   @Input() aggregation: QueryReportGroupAggregation | null = null;
+  /** El nivel más interno también cierra con su pie (el primer nivel es el «TOTAL» y los demás, «Subtotal»): en «Agregado» siempre y en «Agrupado» con dos niveles; con tres o más, el más interno solo lleva su saldo en el título. */
+  @Input() footerInnermost = false;
   @Input() ariaLabel = 'Resultado del reporte agrupado';
   @Input() emptyMessage = 'No se encontraron resultados con los filtros aplicados.';
 
@@ -257,19 +262,32 @@ export class GroupedReportTableComponent implements OnChanges {
   }
 
   /** Igual que `siaf-report-table`: agrupa columnas contiguas del mismo `group` en una celda; las sueltas ocupan las dos filas. */
+  /** Nombre completo de cada grupo de cabecera abreviado (`'Imp. m. cuenta'` → «Importe en moneda de la cuenta»). */
+  @Input() groupTooltips: Record<string, string> = {};
+
+  /** El nombre completo de una columna cuya etiqueta va abreviada (`panelLabel`), o nada si ya se lee completa. */
+  tooltipColumna(c: ReportTableColumn): string | null {
+    return c.panelLabel && c.panelLabel !== c.label ? c.panelLabel : null;
+  }
+
+  tooltipGrupo(grupo: string): string | null {
+    const completo = this.groupTooltips[grupo];
+    return completo && completo !== grupo ? completo : null;
+  }
+
   get hayGrupos(): boolean {
     return this.columnasVisibles.some((c) => !!c.group);
   }
 
   get filaSuperior(): CeldaCabecera[] {
     if (!this.hayGrupos) {
-      return this.columnasVisibles.map((c) => ({ label: c.label, colspan: 1, rowspan: 1, align: c.align ?? 'left', width: c.width ?? null, fixed: !!c.fixed }));
+      return this.columnasVisibles.map((c) => ({ label: c.label, colspan: 1, rowspan: 1, align: c.align ?? 'left', width: c.width ?? null, fixed: !!c.fixed, tooltip: this.tooltipColumna(c) }));
     }
     const celdas: CeldaCabecera[] = [];
     for (let i = 0; i < this.columnasVisibles.length; i++) {
       const columna = this.columnasVisibles[i];
       if (!columna.group) {
-        celdas.push({ label: columna.label, colspan: 1, rowspan: 2, align: columna.align ?? 'left', width: columna.width ?? null, fixed: !!columna.fixed });
+        celdas.push({ label: columna.label, colspan: 1, rowspan: 2, align: columna.align ?? 'left', width: columna.width ?? null, fixed: !!columna.fixed, tooltip: this.tooltipColumna(columna) });
         continue;
       }
       let fin = i;
@@ -283,6 +301,7 @@ export class GroupedReportTableComponent implements OnChanges {
         align: 'center' as const,
         width: anchos.every((a) => typeof a === 'number') ? (anchos as number[]).reduce((s, a) => s + a, 0) : null,
         fixed: grupo.some((c) => c.fixed),
+        tooltip: this.tooltipGrupo(columna.group),
       });
       i = fin;
     }
@@ -339,7 +358,7 @@ export class GroupedReportTableComponent implements OnChanges {
       }
 
       // Subtotal/TOTAL siempre se muestran, aunque el grupo esté colapsado: no dependen de ver el detalle.
-      if (!esUltimoNivel) {
+      if (!esUltimoNivel || this.footerInnermost) {
         const totales = this.totalizar(filasGrupo);
         const etiquetaPie = nivel === 0 ? `TOTAL ${prefijo}: ${valor}` : `Subtotal ${prefijo}: ${valor}`;
         nodos.push({ tipo: 'pie', id: `${id}-pie`, nivel, etiqueta: etiquetaPie, totales });

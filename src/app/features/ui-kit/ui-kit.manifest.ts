@@ -6016,9 +6016,12 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       }
     ],
     "aria": {
-      "roles": [],
+      "roles": [
+        "tooltip"
+      ],
       "atributos": [
         "aria-current",
+        "aria-describedby",
         "aria-label",
         "aria-pressed"
       ]
@@ -6034,6 +6037,12 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "token": "--sys-color-bg-surfaces-surface-high",
         "via": [
           "bg-surface-muted"
+        ]
+      },
+      {
+        "token": "--sys-color-bg-surfaces-surface-highest",
+        "via": [
+          "var()"
         ]
       },
       {
@@ -6085,6 +6094,12 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         ]
       },
       {
+        "token": "--sys-gap-base-lg",
+        "via": [
+          "left-siaf-lg"
+        ]
+      },
+      {
         "token": "--sys-gap-base-md",
         "via": [
           "gap-siaf-md",
@@ -6117,9 +6132,16 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "via": [
           "rounded-siaf-sm"
         ]
+      },
+      {
+        "token": "--sys-shadow-elevation-6",
+        "via": [
+          "shadow-siaf-elevation-6"
+        ]
       }
     ],
     "usa": [
+      "[siafTooltip]",
       "siaf-button",
       "siaf-expansion-panel",
       "siaf-icon",
@@ -6349,7 +6371,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     },
     "tokens": [
       {
-        "token": "--sys-color-bg-brand-accent",
+        "token": "--sys-color-bg-feedback-dark-info",
         "via": [
           "var()"
         ]
@@ -6404,6 +6426,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       }
     ],
     "usa": [
+      "[siafTooltip]",
       "siaf-icon",
       "siaf-input"
     ],
@@ -6447,6 +6470,20 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "porDefecto": "'No se encontraron resultados con los filtros aplicados.'",
         "requerida": false,
         "descripcion": null
+      },
+      {
+        "nombre": "footerInnermost",
+        "tipo": "boolean",
+        "porDefecto": "false",
+        "requerida": false,
+        "descripcion": "El nivel más interno también cierra con su pie (el primer nivel es el «TOTAL» y los demás, «Subtotal»): en «Agregado» siempre y en «Agrupado» con dos niveles; con tres o más, el más interno solo lleva su saldo en el título."
+      },
+      {
+        "nombre": "groupTooltips",
+        "tipo": "Record<string, string>",
+        "porDefecto": "{}",
+        "requerida": false,
+        "descripcion": "Nombre completo de cada grupo de cabecera abreviado (`'Imp. m. cuenta'` → «Importe en moneda de la cuenta»)."
       },
       {
         "nombre": "levels",
@@ -6583,6 +6620,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       }
     ],
     "usa": [
+      "[siafTooltip]",
       "siaf-icon"
     ],
     "sinUso": false
@@ -9020,6 +9058,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       {
         "token": "--sys-gap-base-md",
         "via": [
+          "gap-siaf-md",
           "py-siaf-md"
         ]
       },
@@ -10348,6 +10387,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       }
     ],
     "usa": [
+      "[siafTooltip]",
       "message-box",
       "siaf-advanced-filters-panel",
       "siaf-bar-chart",
@@ -11102,6 +11142,13 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "descripcion": null
       },
       {
+        "nombre": "groupTooltips",
+        "tipo": "Record<string, string>",
+        "porDefecto": "{}",
+        "requerida": false,
+        "descripcion": "Nombre completo de cada grupo de cabecera abreviado (`'Imp. m. cuenta'` → «Importe en moneda de la cuenta»)."
+      },
+      {
         "nombre": "rowKey",
         "tipo": "string",
         "porDefecto": "''",
@@ -11217,7 +11264,9 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         ]
       }
     ],
-    "usa": [],
+    "usa": [
+      "[siafTooltip]"
+    ],
     "sinUso": false
   },
   {

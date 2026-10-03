@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 
+import { TooltipDirective } from '../tooltip/tooltip.directive';
+
 export interface ReportTableColumn {
   key: string;
   label: string;
@@ -32,6 +34,8 @@ interface CeldaCabecera {
   align: 'left' | 'right' | 'center';
   width: number | null;
   fixed: boolean;
+  /** Nombre completo de la abreviatura (Sec. → Secuencia), en un globo al pasar el puntero. */
+  tooltip?: string | null;
 }
 
 /**
@@ -73,6 +77,7 @@ interface CeldaCabecera {
 @Component({
   selector: 'siaf-report-table',
   standalone: true,
+  imports: [TooltipDirective],
   host: { class: 'block min-w-0' },
   template: `
     <div
@@ -99,7 +104,7 @@ interface CeldaCabecera {
                 [style.min-width.px]="celda.width"
                 data-cabecera-superior
               >
-                <span class="block truncate">{{ celda.label }}</span>
+                <span class="block truncate" [siafTooltip]="celda.tooltip ?? null">{{ celda.label }}</span>
               </th>
             }
           </tr>
@@ -117,7 +122,7 @@ interface CeldaCabecera {
                   [style.min-width.px]="columna.width ?? null"
                   data-cabecera-columna
                 >
-                  <span class="block truncate">{{ columna.label }}</span>
+                  <span class="block truncate" [siafTooltip]="tooltipColumna(columna)">{{ columna.label }}</span>
                 </th>
               }
             </tr>
@@ -187,6 +192,19 @@ export class ReportTableComponent {
   readonly claseFijaCabecera =
     'sticky right-0 z-[3] border-b-0 shadow-[inset_0_-1px_0_var(--sys-color-divider-strong),var(--sys-shadow-elevation-6)] [clip-path:inset(0_0_0_-16px)]';
 
+  /** Nombre completo de cada grupo de cabecera abreviado (`'Imp. m. cuenta'` → «Importe en moneda de la cuenta»). */
+  @Input() groupTooltips: Record<string, string> = {};
+
+  /** El nombre completo de una columna cuya etiqueta va abreviada (`panelLabel`), o nada si ya se lee completa. */
+  tooltipColumna(c: ReportTableColumn): string | null {
+    return c.panelLabel && c.panelLabel !== c.label ? c.panelLabel : null;
+  }
+
+  tooltipGrupo(grupo: string): string | null {
+    const completo = this.groupTooltips[grupo];
+    return completo && completo !== grupo ? completo : null;
+  }
+
   get hayGrupos(): boolean {
     return this.columns.some((c) => !!c.group);
   }
@@ -194,13 +212,13 @@ export class ReportTableComponent {
   /** Grupos contiguos en una celda; con grupos, las columnas sueltas ocupan las dos filas. */
   get filaSuperior(): CeldaCabecera[] {
     if (!this.hayGrupos) {
-      return this.columns.map((c) => ({ label: c.label, colspan: 1, rowspan: 1, align: c.align ?? 'left', width: c.width ?? null, fixed: !!c.fixed }));
+      return this.columns.map((c) => ({ label: c.label, colspan: 1, rowspan: 1, align: c.align ?? 'left', width: c.width ?? null, fixed: !!c.fixed, tooltip: this.tooltipColumna(c) }));
     }
     const celdas: CeldaCabecera[] = [];
     for (let i = 0; i < this.columns.length; i++) {
       const columna = this.columns[i];
       if (!columna.group) {
-        celdas.push({ label: columna.label, colspan: 1, rowspan: 2, align: columna.align ?? 'left', width: columna.width ?? null, fixed: !!columna.fixed });
+        celdas.push({ label: columna.label, colspan: 1, rowspan: 2, align: columna.align ?? 'left', width: columna.width ?? null, fixed: !!columna.fixed, tooltip: this.tooltipColumna(columna) });
         continue;
       }
       let fin = i;
@@ -215,6 +233,7 @@ export class ReportTableComponent {
         align: 'center',
         width: anchos.every((a) => typeof a === 'number') ? anchos.reduce((s, a) => s + (a as number), 0) : null,
         fixed: grupo.some((c) => c.fixed),
+        tooltip: this.tooltipGrupo(columna.group),
       });
       i = fin;
     }

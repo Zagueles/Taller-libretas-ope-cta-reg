@@ -1,3 +1,4 @@
+import { Location } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 
@@ -8,7 +9,7 @@ import type { QueryReportConfig, QueryReportFavorite, QueryReportParameters, Que
 import type { TabItem } from '../../../../../shared/ui/tabs/tabs.component';
 import { buildProcessBreadcrumbs } from '../../../../../shared/utils/breadcrumbs.util';
 import { RegistroLibretasApiService } from '../../api/registro-libretas-api.service';
-import { CONSULTAS_PROCESS_ID, CONSULTAS_ROUTE, PROCESS_ROUTE } from '../../config/registro-libretas.rutas';
+import { CONSULTAS_PROCESS_ID, CONSULTAS_ROUTE, DOCUMENTO_ROUTE, PROCESS_ROUTE } from '../../config/registro-libretas.rutas';
 import {
   BENEFICIARIOS,
   CUENTAS_BANCARIAS_INFO,
@@ -102,6 +103,7 @@ const fechaHoraVisible = (iso: string): string => {
 export class RegistroLibretasConsultasComponent {
   private readonly api = inject(RegistroLibretasApiService);
   private readonly router = inject(Router);
+  private readonly location = inject(Location);
 
   private filasPorCuenta = new Map<string, MovimientoLibretaRegistro[]>();
 
@@ -156,7 +158,7 @@ export class RegistroLibretasConsultasComponent {
       { key: 'entidad', label: 'Entidad', group: 'Ámbito institucional', width: 110 },
       { key: 'unidadEjecutora', label: 'Unidad ejecutora', group: 'Ámbito institucional', width: 190 },
       { key: 'grupo', label: 'Grupo', group: 'Ámbito institucional', width: 160 },
-      { key: 'tipoCotizacion', label: 'Tipo de cotiz.', group: 'Tipo de cambio', hiddenByDefault: true, width: 160 },
+      { key: 'tipoCotizacion', label: 'Tipo de cotiz.', panelLabel: 'Tipo de cotización', group: 'Tipo de cambio', hiddenByDefault: true, width: 160 },
       { key: 'tipoCambioCompra', label: 'Compra', group: 'Tipo de cambio', hiddenByDefault: true, align: 'right', width: 110 },
       { key: 'tipoCambioVenta', label: 'Venta', group: 'Tipo de cambio', hiddenByDefault: true, align: 'right', width: 110 },
       { key: 'saldoInicial', label: 'Saldo inicial', group: 'Imp. m. cuenta', align: 'right', width: 120 },
@@ -292,14 +294,27 @@ export class RegistroLibretasConsultasComponent {
   }
 
   /** Esta pantalla solo exporta a Excel (`exportFormats: ['excel']`): la plantilla «Resumen» + «Resultado N», una
-   *  pestaña por cada cuenta bancaria consultada, con todas sus filas (no solo las de la pestaña activa). */
+   *  pestaña por cada cuenta bancaria consultada, con todas sus filas (no solo las de la pestaña activa) tras las
+   *  condiciones y filtros de la pantalla. Con un agrupado o agregado aplicado, cada pestaña sale con esa estructura. */
   exportar(evento: QueryReportExportEvent): void {
-    const cuentas = [...this.filasPorCuenta.entries()].map(([id, movimientos]) => ({ id, movimientos }));
-    void exportarConsultaExcel(evento.parameters, cuentas);
+    const todas = [...this.filasPorCuenta.values()].flat();
+    const permitidas = new Set(evento.filterRows(todas.map((m) => this.aFila(m))).map((fila) => fila['sec']));
+    const cuentas = [...this.filasPorCuenta.entries()]
+      .map(([id, movimientos]) => ({ id, movimientos: movimientos.filter((m) => permitidas.has(m.sec)) }))
+      .filter((cuenta) => cuenta.movimientos.length);
+    const { resultType, levels } = evento.advanced;
+    const agrupacion = levels.length
+      ? { tipo: resultType, niveles: evento.levels, columnasOcultas: evento.hiddenColumns, gruposOcultos: evento.hiddenGroups }
+      : undefined;
+    void exportarConsultaExcel(evento.parameters, cuentas, agrupacion);
   }
 
+  /** El número del documento del registro lleva a su documento (el de «Documentos y registros»), en una pestaña nueva. */
   abrirDocumento(fila: QueryReportRow): void {
-    if (fila['documentoId']) void this.router.navigate([`${PROCESS_ROUTE}/solicitud`, fila['documentoId']]);
+    const numero = fila['numeroDocumento'];
+    if (!numero) return;
+    const url = this.location.prepareExternalUrl(this.router.serializeUrl(this.router.createUrlTree([DOCUMENTO_ROUTE, numero])));
+    window.open(url, '_blank', 'noopener');
   }
 
   private aFila(m: MovimientoLibretaRegistro): QueryReportRow {

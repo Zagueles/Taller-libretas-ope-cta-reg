@@ -5,6 +5,7 @@ import { ExpansionPanelComponent } from '../../ui/expansion-panel/expansion-pane
 import { IconComponent } from '../../ui/icon/icon.component';
 import { SideNavComponent } from '../../ui/side-nav/side-nav.component';
 import { TextFieldComponent } from '../../ui/text-field/text-field.component';
+import { TooltipDirective } from '../../ui/tooltip/tooltip.directive';
 import type { ParametroAplicado } from '../parametros-aplicados/parametros-aplicados.component';
 
 /** Un favorito ya resumido para el listado: lo que dice su segunda línea. */
@@ -14,6 +15,16 @@ export interface FavoritoResumen {
   isDefault: boolean;
   /** «7 parámetros · 2 condiciones · 3 agrupados». */
   summary: string;
+  /** Lo que se guardó, redactado para la tarjeta que sale al pasar el puntero por el favorito (sin él no hay tarjeta). */
+  detalle?: FavoritoDetalle;
+}
+
+/** Los tres bloques de la tarjeta de un favorito: parámetros, condiciones y agrupado o agregado, ya en texto. */
+export interface FavoritoDetalle {
+  parametros: string;
+  condiciones: string;
+  niveles: string;
+  tipoResultado: 'agrupado' | 'agregado';
 }
 
 /** La consulta que se está viendo, descrita para el formulario «Agregar favorito». */
@@ -65,7 +76,7 @@ const plural = (n: number, singular: string, pluralTexto: string): string => `${
 @Component({
   selector: 'siaf-favorites-panel',
   standalone: true,
-  imports: [ButtonComponent, ExpansionPanelComponent, IconComponent, SideNavComponent, TextFieldComponent],
+  imports: [ButtonComponent, ExpansionPanelComponent, IconComponent, SideNavComponent, TextFieldComponent, TooltipDirective],
   template: `
     <siaf-side-nav
       [open]="open"
@@ -144,7 +155,7 @@ const plural = (n: number, singular: string, pluralTexto: string): string => `${
             <ul class="m-0 flex list-none flex-col gap-siaf-xs p-0">
               @for (favorito of favorites; track favorito.id) {
                 <li
-                  class="flex items-center gap-siaf-xs rounded-siaf-sm border pr-siaf-xs"
+                  class="relative flex items-center gap-siaf-xs rounded-siaf-sm border pr-siaf-xs"
                   [class.border-[var(--sys-color-border-states-active)]]="favorito.id === selectedId"
                   [class.bg-[var(--sys-color-bg-states-light-selected)]]="favorito.id === selectedId"
                   [class.border-[var(--sys-color-divider-strong)]]="favorito.id !== selectedId"
@@ -153,6 +164,7 @@ const plural = (n: number, singular: string, pluralTexto: string): string => `${
                     class="inline-flex size-10 shrink-0 items-center justify-center rounded-siaf-md focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sys-color-border-states-focus)]"
                     [class.text-[var(--sys-color-text-brand-primary)]]="favorito.isDefault"
                     type="button"
+                    [siafTooltip]="favorito.isDefault ? 'Quitar predeterminado' : 'Aplicar predeterminado'"
                     [attr.aria-pressed]="favorito.isDefault"
                     [attr.aria-label]="'Favorito predeterminado: ' + favorito.description"
                     (click)="defaultToggled.emit(favorito.id)"
@@ -163,19 +175,47 @@ const plural = (n: number, singular: string, pluralTexto: string): string => `${
                     class="flex min-h-[58px] min-w-0 flex-1 flex-col justify-center rounded-siaf-sm py-siaf-xs text-left focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sys-color-border-states-focus)]"
                     type="button"
                     [attr.aria-current]="favorito.id === selectedId ? 'true' : null"
+                    [attr.aria-describedby]="favorito.detalle ? 'favorito-detalle-' + favorito.id : null"
+                    (focus)="resaltado.set(favorito.id)"
+                    (blur)="resaltado.set(null)"
                     (click)="applied.emit(favorito.id)"
                   >
                     <span class="truncate text-sm font-bold text-[var(--sys-color-text-neutral-high)]">{{ favorito.description }}</span>
-                    <span class="truncate text-xs text-[var(--sys-color-text-neutral-medium)]">{{ favorito.summary }}</span>
+                    <span
+                      class="truncate text-xs text-[var(--sys-color-text-neutral-medium)]"
+                      (mouseenter)="resaltado.set(favorito.id)"
+                      (mouseleave)="resaltado.set(null)"
+                      >{{ favorito.summary }}</span
+                    >
                   </button>
                   <button
                     class="inline-flex size-10 shrink-0 items-center justify-center rounded-siaf-md text-[var(--sys-color-text-neutral-high)] hover:bg-surface-muted focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sys-color-border-states-focus)]"
                     type="button"
+                    siafTooltip="Borrar"
                     [attr.aria-label]="'Eliminar favorito ' + favorito.description"
                     (click)="removed.emit(favorito.id)"
                   >
                     <siaf-icon name="delete" [size]="24" />
                   </button>
+
+                  <!-- Tarjeta con lo guardado (mismo fondo y sombra que siaf-popover): sale al pasar el puntero por el texto del resumen («2 parámetros…») o al enfocar el favorito con el teclado. -->
+                  @if (favorito.detalle; as detalle) {
+                    <div
+                      class="pointer-events-none absolute left-siaf-lg right-0 top-full z-20 mt-1 flex flex-col gap-siaf-sm rounded-siaf-sm bg-[var(--sys-color-bg-surfaces-surface-highest)] p-siaf-md text-left text-sm leading-normal text-[var(--sys-color-text-neutral-high)] shadow-siaf-elevation-6"
+                      [class.hidden]="resaltado() !== favorito.id"
+                      [id]="'favorito-detalle-' + favorito.id"
+                      role="tooltip"
+                      data-favorito-detalle
+                    >
+                      <p class="m-0"><strong class="block">Parámetros:</strong>{{ detalle.parametros }}.</p>
+                      @if (detalle.condiciones) {
+                        <p class="m-0"><strong class="block">Condiciones:</strong>{{ detalle.condiciones }}</p>
+                      }
+                      @if (detalle.niveles) {
+                        <p class="m-0"><strong class="block">{{ detalle.tipoResultado === 'agrupado' ? 'Agrupados:' : 'Agregados:' }}</strong>{{ detalle.niveles }}</p>
+                      }
+                    </div>
+                  }
                 </li>
               }
             </ul>
@@ -205,6 +245,8 @@ export class FavoritesPanelComponent implements OnChanges {
   @Output() removed = new EventEmitter<string>();
   @Output() defaultToggled = new EventEmitter<string>();
 
+  /** Favorito cuyo resumen está bajo el puntero (o que tiene el foco): muestra su tarjeta. */
+  readonly resaltado = signal<string | null>(null);
   readonly nuevo = signal(false);
   readonly descripcion = signal('');
   readonly predeterminado = signal(false);
