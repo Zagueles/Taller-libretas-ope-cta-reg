@@ -637,6 +637,10 @@ const textoTrazabilidadQr = (numeroDocumento: string, fechaHora: string): string
     ].join('\n'),
   );
 
+/** Lado del QR de verificación y aire que se le deja a su izquierda, en mm. */
+const ANCHO_QR = 24;
+const MARGEN_QR = 6;
+
 /**
  * Arma el PDF de «Ver documento PDF» de un registro de Registros (Figma nodo 440:84666, «PDF 600»): las mismas
  * secciones que `siaf-registro-libretas-registro`, en hojas A4 con la cabecera y el pie de SIAF·RP. Devuelve el Blob
@@ -690,9 +694,9 @@ export async function generarPdfRegistro(sec: string): Promise<{ blob: Blob; nom
   };
 
   /** Etiquetas y valores en columnas, como `readonly-field`: 3 por fila (o `anchoCol` para una que ocupe dos). */
-  const campos = (filas: { caption: string; value: string; ancho?: 1 | 2 }[]): void => {
+  const campos = (filas: { caption: string; value: string; ancho?: 1 | 2 }[], anchoDisponible = anchoUtil): void => {
     const columnas = 3;
-    const anchoCol = anchoUtil / columnas;
+    const anchoCol = anchoDisponible / columnas;
     let col = 0;
     for (const campo of filas) {
       const x = margen + col * anchoCol;
@@ -746,14 +750,18 @@ export async function generarPdfRegistro(sec: string): Promise<{ blob: Blob; nom
   encabezado();
   // QR de verificación (Figma 440:84666): solo en la primera hoja, a la altura de «Información de operaciones financieras».
   const yQr = y;
-  if (qr) pdf.addImage(qr, 'PNG', 210 - margen - 24, yQr, 24, 24);
+  if (qr) pdf.addImage(qr, 'PNG', 210 - margen - ANCHO_QR, yQr, ANCHO_QR, ANCHO_QR);
   subtitulo('Información de operaciones financieras:');
-  campos([
-    { caption: 'Fecha registro', value: detalle.fechaRegistro },
-    { caption: 'Número de operación', value: detalle.numeroOperacion },
-    { caption: 'Tipo de operación', value: detalle.tipoOperacion },
-  ]);
-  if (qr) y = Math.max(y, yQr + 24 + 3);
+  // Área de seguridad: los campos de esta franja se reparten a la izquierda del QR, sin pasar por debajo de él.
+  campos(
+    [
+      { caption: 'Fecha registro', value: detalle.fechaRegistro },
+      { caption: 'Número de operación', value: detalle.numeroOperacion },
+      { caption: 'Tipo de operación', value: detalle.tipoOperacion },
+    ],
+    qr ? anchoUtil - ANCHO_QR - MARGEN_QR : anchoUtil,
+  );
+  if (qr) y = Math.max(y, yQr + ANCHO_QR + 3);
 
   subtitulo('Información de la cuenta bancaria:');
   campos([
