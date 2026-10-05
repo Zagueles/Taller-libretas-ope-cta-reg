@@ -11,6 +11,16 @@ import { exportarDocumentosExcel, exportarRegistrosExcel, generarPdfRegistro } f
 
 const NOMBRE_DOCUMENTO = 'Registro de operaciones en las libretas de las cuentas de registro';
 const ENTIDAD = '009 - Ministerio de Economía y Finanzas';
+const USUARIO_HISTORIAL = 'JUAN DOE PEREZ PEREZ';
+const UNIDAD_HISTORIAL = 'Dirección General del Tesoro Público';
+
+/** hh:mm:ss menos un minuto (el documento se registra justo antes de procesarse). */
+const unMinutoAntes = (hora: string): string => {
+  const [h, m, s] = hora.split(':').map(Number);
+  const total = Math.max(0, h * 60 + m - 1);
+  const dos = (n: number): string => String(n).padStart(2, '0');
+  return `${dos(Math.floor(total / 60))}:${dos(total % 60)}:${dos(s || 0)}`;
+};
 
 /** Un documento por cada número que los movimientos de la libreta referencian (datos simulados). */
 const DOCUMENTOS = [...new Map(MOVIMIENTOS_LIBRETA_REGISTRO.map((m) => [m.numeroDocumento, m])).values()].sort((a, b) =>
@@ -69,6 +79,7 @@ export class RegistroLibretasDocumentsComponent {
         system: 'Tesorería',
         date: fechaVisible(m.fecha),
         dateIso: m.fecha.slice(0, 10),
+        time: m.fecha.slice(11, 19),
         entity: ENTIDAD,
         linkRoute: `/procesos/registro-libretas-cuentas-registro/consultas`,
         detailRoute: `${DOCUMENTO_ROUTE}/${m.numeroDocumento}`,
@@ -100,11 +111,17 @@ export class RegistroLibretasDocumentsComponent {
         recordRoute: `${REGISTRO_ROUTE}/${m.sec}`,
       }),
     ),
-    buildDocumentHistory: (row) => ({
-      staticRows: [
-        { usuario: 'Sistema', rol: 'Motor de registro', fecha: String(row['date'] ?? ''), hora: '18:02:00', estado: 'Procesado', comentario: '' },
-      ],
-    }),
+    // Trazabilidad de todo documento existente: se Registró un minuto antes de quedar Procesado (más reciente arriba).
+    buildDocumentHistory: (row) => {
+      const fecha = String(row['date'] ?? '');
+      const procesado = String(row['time'] ?? '18:02:00');
+      return {
+        staticRows: [
+          { usuario: USUARIO_HISTORIAL, rol: UNIDAD_HISTORIAL, fecha, hora: procesado, estado: 'Procesado', comentario: '' },
+          { usuario: USUARIO_HISTORIAL, rol: UNIDAD_HISTORIAL, fecha, hora: unMinutoAntes(procesado), estado: 'Registrado', comentario: '' },
+        ],
+      };
+    },
   };
 
   /** «Ver documento PDF» de una fila de Registros: arma el PDF del registro (jsPDF) y lo abre en el visor nativo. */
