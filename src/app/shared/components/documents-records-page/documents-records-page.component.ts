@@ -423,6 +423,7 @@ type DocumentsRecordsRoleMode = 'creator' | 'approver' | 'readOnly';
         [defaultColumns]="defaultColumnOptions"
         [moreColumns]="moreColumnOptions"
         [internalColumns]="internalColumnOptions"
+        [defaultLocked]="!!effectiveConfig.lockDefaultColumns"
         [isColumnVisible]="isDraftColumnVisible"
         (closed)="closeColumnPanel()"
         (applied)="applyColumnPanel()"
@@ -590,6 +591,12 @@ export class DocumentsRecordsPageComponent implements OnChanges {
     }
 
     const cfg = this.effectiveConfig;
+    // Primera vez: si la URL trae `?tab=` (se volvió desde un detalle), se abre esa pestaña.
+    if (!this.pestanaRestaurada && cfg.rememberTab) {
+      this.pestanaRestaurada = true;
+      const tab = this.router.parseUrl(this.router.url).queryParams['tab'];
+      if (tab === 'records' || tab === 'documents') this.activeTab = tab;
+    }
     // Las bandejas refrescan por polling: cada re-emisión de config reconstruye
     // las filas. Preservar la selección del usuario casando por identidad
     // estable, o el checkbox se "des-selecciona solo" al llegar el refresh.
@@ -726,7 +733,7 @@ export class DocumentsRecordsPageComponent implements OnChanges {
             { label: cfg.recordFilter1Label ?? '', value: valor(this.selectedRecordFilter1) },
             { label: cfg.recordFilter2Label ?? '', value: valor(this.selectedRecordFilter2) },
           ];
-    this.selectionDownloaded.emit({ tab: this.activeTab, rows: this.selectedRowsActiveTab, filters });
+    this.selectionDownloaded.emit({ tab: this.activeTab, rows: this.selectedRowsActiveTab, filters, visibleColumns: this.visibleColumns.map((c) => c.key) });
   }
 
   get allVisibleRecordsSelected(): boolean {
@@ -790,7 +797,7 @@ export class DocumentsRecordsPageComponent implements OnChanges {
   }
 
   get allDraftColumnsSelected(): boolean {
-    return this.selectableColumnOptions.every((column) => !this.draftHiddenColumns.has(column.key));
+    return this.selectableColumnOptions.every((column) => this.columnaBloqueada(column) || !this.draftHiddenColumns.has(column.key));
   }
 
   get columnsPanelDirty(): boolean {
@@ -907,8 +914,13 @@ export class DocumentsRecordsPageComponent implements OnChanges {
     else this.recordsQueryChange.emit(query);
   }
 
+  private pestanaRestaurada = false;
+
   selectTab(tab: DocumentsRecordsTab): void {
     this.activeTab = tab;
+    if (this.effectiveConfig.rememberTab) {
+      void this.router.navigate([], { queryParams: { tab }, queryParamsHandling: 'merge', replaceUrl: true });
+    }
     this.page = 1;
     // Si la pestaña destino es de modo servidor, re-consulta con la búsqueda
     // vigente: el texto aplicado acompaña al usuario entre pestañas.
@@ -1200,6 +1212,7 @@ export class DocumentsRecordsPageComponent implements OnChanges {
 
   isColumnVisible(columnKey: string): boolean {
     const column = this.activeColumnOptions.find((option) => option.key === columnKey);
+    if (this.columnaBloqueada(column)) return true;
     return column?.visibility !== 'internal' && !this.currentHiddenColumns.has(columnKey);
   }
 
@@ -1212,12 +1225,23 @@ export class DocumentsRecordsPageComponent implements OnChanges {
     this.columnPanelOpen = false;
   }
 
+  /** Con `lockDefaultColumns`, las del grupo «Predeterminado» no se pueden ocultar. */
+  private columnaBloqueada(column: DocumentsRecordsColumn | undefined): boolean {
+    return !!this.effectiveConfig.lockDefaultColumns && column?.group === 'default' && column.visibility !== 'internal';
+  }
+
   isDraftColumnVisible = (columnKey: string): boolean => {
-    return !this.draftHiddenColumns.has(columnKey);
+    const column = this.activeColumnOptions.find((option) => option.key === columnKey);
+    return this.columnaBloqueada(column) || !this.draftHiddenColumns.has(columnKey);
   };
 
   toggleDraftColumnVisibility(columnKey: string, event: Event): void {
     event.stopPropagation();
+
+    if (this.columnaBloqueada(this.activeColumnOptions.find((option) => option.key === columnKey))) {
+      (event.target as HTMLInputElement).checked = true;
+      return;
+    }
 
     if (!this.draftHiddenColumns.has(columnKey) && this.selectableColumnOptions.filter((column) => !this.draftHiddenColumns.has(column.key)).length <= 1) {
       (event.target as HTMLInputElement).checked = true;
@@ -1232,8 +1256,15 @@ export class DocumentsRecordsPageComponent implements OnChanges {
   }
 
   toggleAllDraftColumns(event: Event): void {
+    // Las columnas bloqueadas (Predeterminado) no cuentan: «Seleccionar todo» solo mueve las demás.
+    const movibles = this.selectableColumnOptions.filter((column) => !this.columnaBloqueada(column));
     if ((event.target as HTMLInputElement).checked) {
       this.draftHiddenColumns = new Set<string>();
+      return;
+    }
+
+    if (this.effectiveConfig.lockDefaultColumns) {
+      this.draftHiddenColumns = new Set(movibles.map((column) => column.key));
       return;
     }
 

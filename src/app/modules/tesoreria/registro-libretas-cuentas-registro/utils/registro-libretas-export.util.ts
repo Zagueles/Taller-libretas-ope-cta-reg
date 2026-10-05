@@ -1095,32 +1095,71 @@ export async function exportarDocumentosExcel(documentos: DocumentoDescarga[], f
   await guardarLibro(libro, 'Documentos_existentes.xlsx');
 }
 
-/** Excel de los registros elegidos en la pestaña Registros (plantilla «Registros_existentes»): la tabla de dos filas de cabecera. */
-export async function exportarRegistrosExcel(secuencias: string[], filtros: FiltroDescarga[]): Promise<void> {
+interface ColumnaRegistro {
+  key: string;
+  grupo?: string;
+  rotulo: string;
+  ancho: number;
+  alinea: 'left' | 'center' | 'right';
+  valor: (m: MovimientoLibretaRegistro) => string | number;
+}
+
+const campoDetalleExcel = (sec: string, seccion: string, caption: string): string =>
+  construirDetalleRegistro(sec)?.secciones.find((x) => x.titulo === seccion)?.campos.find((c) => c.caption === caption)?.value ?? '-';
+const cuentaDe = (m: MovimientoLibretaRegistro) => CUENTAS_BANCARIAS_INFO.find((c) => c.id === m.cuentaBancariaId);
+
+/** Todas las columnas posibles de la pestaña Registros, en el orden del Excel; la descarga lleva las que están visibles. */
+const COLUMNAS_REGISTRO: ColumnaRegistro[] = [
+  { key: 'sec', grupo: 'Acreditación', rotulo: 'Secuencia', ancho: 12, alinea: 'left', valor: (m) => m.sec },
+  { key: 'fecha', grupo: 'Acreditación', rotulo: 'Fecha', ancho: 20.3, alinea: 'left', valor: (m) => fechaHoraVisible(m.fecha) },
+  { key: 'cuentaBancariaNumero', grupo: 'Cuenta bancaria', rotulo: 'Número', ancho: 24, alinea: 'left', valor: (m) => cuentaDe(m)?.numeroCuenta ?? '' },
+  { key: 'cuentaBancariaDenominacion', grupo: 'Cuenta bancaria', rotulo: 'Denominación', ancho: 24, alinea: 'left', valor: (m) => cuentaDe(m)?.nombre ?? '' },
+  { key: 'moneda', rotulo: 'Moneda', ancho: 12, alinea: 'center', valor: (m) => cuentaDe(m)?.moneda ?? '' },
+  { key: 'beneficiarioCodigo', grupo: 'Beneficiario', rotulo: 'Código', ancho: 12, alinea: 'left', valor: (m) => m.beneficiarioCodigo },
+  { key: 'beneficiario', grupo: 'Beneficiario', rotulo: 'Descripción', ancho: 37, alinea: 'left', valor: (m) => nombreBeneficiario(m.beneficiarioCodigo).toUpperCase() },
+  { key: 'tipoBeneficiario', grupo: 'Beneficiario', rotulo: 'Tipo', ancho: 14, alinea: 'left', valor: (m) => campoDetalleExcel(m.sec, 'Beneficiario', 'Tipo') },
+  { key: 'numeroCuentaRegistro', grupo: 'Cuenta de registro', rotulo: 'Número', ancho: 26.5, alinea: 'left', valor: (m) => m.numeroCuentaRegistro },
+  { key: 'descripcionCuentaRegistro', grupo: 'Cuenta de registro', rotulo: 'Descripción', ancho: 73.8, alinea: 'left', valor: (m) => m.descripcionCuentaRegistro },
+  { key: 'tipoOperacion', rotulo: 'Tipo de operación', ancho: 32, alinea: 'left', valor: (m) => nombreTipoOperacion(m.tipoOperacionCodigo) },
+  { key: 'entidad', grupo: 'Ámbito institucional', rotulo: 'Entidad', ancho: 13.2, alinea: 'left', valor: (m) => m.entidad },
+  { key: 'unidadEjecutora', grupo: 'Ámbito institucional', rotulo: 'Unidad ejecutora', ancho: 30.3, alinea: 'left', valor: (m) => (m.entidad === 'MEF' ? '-' : m.unidadEjecutora) },
+  { key: 'grupo', grupo: 'Ámbito institucional', rotulo: 'Grupo', ancho: 20.5, alinea: 'left', valor: (m) => m.grupo },
+  { key: 'saldoInicial', grupo: 'Importe en moneda de la cuenta', rotulo: 'Saldo inicial', ancho: 15, alinea: 'right', valor: (m) => m.saldoInicial },
+  { key: 'debito', grupo: 'Importe en moneda de la cuenta', rotulo: 'Débito', ancho: 13, alinea: 'right', valor: (m) => m.debito },
+  { key: 'credito', grupo: 'Importe en moneda de la cuenta', rotulo: 'Crédito', ancho: 13, alinea: 'right', valor: (m) => m.credito },
+  { key: 'saldoFinal', grupo: 'Importe en moneda de la cuenta', rotulo: 'Saldo final', ancho: 15, alinea: 'right', valor: (m) => m.saldoFinal },
+  { key: 'status', rotulo: 'Estado de registro', ancho: 14, alinea: 'center', valor: () => 'Activo' },
+  { key: 'number', grupo: 'Documento', rotulo: 'Número', ancho: 16.7, alinea: 'left', valor: (m) => m.numeroDocumento },
+  { key: 'descripcionDocumento', grupo: 'Documento', rotulo: 'Descripción', ancho: 59, alinea: 'left', valor: (m) => m.descripcionDocumento },
+  { key: 'fechaRegistro', rotulo: 'Fecha de registro', ancho: 22, alinea: 'left', valor: (m) => construirDetalleRegistro(m.sec)?.fechaRegistro ?? '-' },
+  { key: 'numeroOperacion', rotulo: 'Número de operación', ancho: 20, alinea: 'left', valor: (m) => construirDetalleRegistro(m.sec)?.numeroOperacion ?? '-' },
+  { key: 'entidadAdministradoraCodigo', grupo: 'Entidad administradora', rotulo: 'Código', ancho: 14, alinea: 'left', valor: (m) => campoDetalleExcel(m.sec, 'Entidad administradora', 'Código') },
+  { key: 'entidadAdministradoraSigla', grupo: 'Entidad administradora', rotulo: 'Sigla', ancho: 14, alinea: 'left', valor: (m) => campoDetalleExcel(m.sec, 'Entidad administradora', 'Sigla') },
+  { key: 'movimientoInternoCodigo', grupo: 'Movimiento interno', rotulo: 'Código', ancho: 14, alinea: 'left', valor: (m) => campoDetalleExcel(m.sec, 'Movimiento interno', 'Código') },
+  { key: 'movimientoInternoDescripcion', grupo: 'Movimiento interno', rotulo: 'Descripción', ancho: 32, alinea: 'left', valor: (m) => campoDetalleExcel(m.sec, 'Movimiento interno', 'Descripción') },
+  { key: 'movimientoInternoSigla', grupo: 'Movimiento interno', rotulo: 'Sigla', ancho: 12, alinea: 'left', valor: (m) => campoDetalleExcel(m.sec, 'Movimiento interno', 'Sigla') },
+  { key: 'movimientoExternoCodigo', grupo: 'Movimiento externo', rotulo: 'Código', ancho: 14, alinea: 'left', valor: (m) => campoDetalleExcel(m.sec, 'Movimiento externo', 'Código') },
+  { key: 'movimientoExternoDescripcion', grupo: 'Movimiento externo', rotulo: 'Descripción', ancho: 24, alinea: 'left', valor: (m) => campoDetalleExcel(m.sec, 'Movimiento externo', 'Descripción') },
+  { key: 'documentoCutNumero', grupo: 'Documento CUT', rotulo: 'Número', ancho: 14, alinea: 'left', valor: (m) => campoDetalleExcel(m.sec, 'Documento CUT', 'Número') },
+  { key: 'documentoCutArchivo', grupo: 'Documento CUT', rotulo: 'Archivo', ancho: 14, alinea: 'left', valor: (m) => campoDetalleExcel(m.sec, 'Documento CUT', 'Archivo') },
+  { key: 'documentoCutSigla', grupo: 'Documento CUT', rotulo: 'Sigla', ancho: 12, alinea: 'left', valor: (m) => campoDetalleExcel(m.sec, 'Documento CUT', 'Sigla') },
+  { key: 'descripcionDetallada', rotulo: 'Descripción detallada', ancho: 32, alinea: 'left', valor: (m) => construirDetalleRegistro(m.sec)?.descripcionDetallada ?? '-' },
+];
+
+/**
+ * Excel de los registros elegidos en la pestaña Registros (plantilla «Registros_existentes»): la tabla de dos filas de
+ * cabecera. Lleva las columnas visibles en la tabla (`columnasVisibles`): las de siempre, la cuenta bancaria y las que
+ * la persona activó en «Más columnas». Sin ese dato, las predeterminadas.
+ */
+export async function exportarRegistrosExcel(secuencias: string[], filtros: FiltroDescarga[], columnasVisibles?: string[]): Promise<void> {
   const Workbook = await cargarWorkbook();
   const libro = new Workbook();
   resumenDescarga(libro, 'REGISTROS EXISTENTES', filtros, [10.7, 10.7, 10.7, 10.7, 10.7, 11.8]);
 
   const hoja: Hoja = libro.addWorksheet('Resultado', { pageSetup: { orientation: 'landscape' } });
-  const columnas: { grupo?: string; rotulo: string; ancho: number; alinea: 'left' | 'center' | 'right' }[] = [
-    { grupo: 'Acreditación', rotulo: 'Secuencia', ancho: 12, alinea: 'left' },
-    { grupo: 'Acreditación', rotulo: 'Fecha', ancho: 20.3, alinea: 'left' },
-    { grupo: 'Beneficiario', rotulo: 'Código', ancho: 12, alinea: 'left' },
-    { grupo: 'Beneficiario', rotulo: 'Descripción', ancho: 37, alinea: 'left' },
-    { grupo: 'Cuenta de registro', rotulo: 'Número', ancho: 26.5, alinea: 'left' },
-    { grupo: 'Cuenta de registro', rotulo: 'Descripción', ancho: 73.8, alinea: 'left' },
-    { rotulo: 'Tipo de operación', ancho: 32, alinea: 'left' },
-    { grupo: 'Ámbito institucional', rotulo: 'Entidad', ancho: 13.2, alinea: 'left' },
-    { grupo: 'Ámbito institucional', rotulo: 'Unidad ejecutora', ancho: 30.3, alinea: 'left' },
-    { grupo: 'Ámbito institucional', rotulo: 'Grupo', ancho: 20.5, alinea: 'left' },
-    { grupo: 'Importe en moneda de la cuenta', rotulo: 'Saldo inicial', ancho: 15, alinea: 'right' },
-    { grupo: 'Importe en moneda de la cuenta', rotulo: 'Débito', ancho: 13, alinea: 'right' },
-    { grupo: 'Importe en moneda de la cuenta', rotulo: 'Crédito', ancho: 13, alinea: 'right' },
-    { grupo: 'Importe en moneda de la cuenta', rotulo: 'Saldo final', ancho: 15, alinea: 'right' },
-    { rotulo: 'Estado de registro', ancho: 14, alinea: 'center' },
-    { grupo: 'Documento', rotulo: 'Número', ancho: 16.7, alinea: 'left' },
-    { grupo: 'Documento', rotulo: 'Descripción', ancho: 59, alinea: 'left' },
-  ];
+  const visibles = columnasVisibles ? new Set(columnasVisibles) : null;
+  const columnas = COLUMNAS_REGISTRO.filter((c) => (visibles ? visibles.has(c.key) : !EXTRAS_REGISTRO.has(c.key)));
+
   hoja.getRow(1).height = 21.75;
   hoja.getRow(2).height = 30;
   for (let i = 0; i < columnas.length; ) {
@@ -1147,33 +1186,22 @@ export async function exportarRegistrosExcel(secuencias: string[], filtros: Filt
     if (!m) return;
     const f = i + 3;
     hoja.getRow(f).height = 25.5;
-    const valores: Array<string | number> = [
-      m.sec,
-      fechaHoraVisible(m.fecha),
-      m.beneficiarioCodigo,
-      nombreBeneficiario(m.beneficiarioCodigo).toUpperCase(),
-      m.numeroCuentaRegistro,
-      m.descripcionCuentaRegistro,
-      nombreTipoOperacion(m.tipoOperacionCodigo),
-      m.entidad,
-      m.entidad === 'MEF' ? '-' : m.unidadEjecutora,
-      m.grupo,
-      m.saldoInicial,
-      m.debito,
-      m.credito,
-      m.saldoFinal,
-      'Activo',
-      m.numeroDocumento,
-      m.descripcionDocumento,
-    ];
-    valores.forEach((valor, c) => {
+    columnas.forEach((col, c) => {
+      const valor = col.valor(m);
       const celda = hoja.getCell(f, c + 1);
       celda.value = valor;
       celda.border = BORDES;
       celda.font = { name: 'Calibri', size: 11 };
-      celda.alignment = { horizontal: columnas[c].alinea, vertical: 'middle' };
+      celda.alignment = { horizontal: col.alinea, vertical: 'middle' };
       if (typeof valor === 'number') celda.numFmt = '#,##0.00';
     });
   });
   await guardarLibro(libro, 'Registros_existentes.xlsx');
 }
+
+/** Las que solo salen en el Excel si la persona las activó en «Más columnas». */
+const EXTRAS_REGISTRO = new Set([
+  'fechaRegistro', 'numeroOperacion', 'tipoBeneficiario', 'entidadAdministradoraCodigo', 'entidadAdministradoraSigla', 'movimientoInternoCodigo',
+  'movimientoInternoDescripcion', 'movimientoInternoSigla', 'movimientoExternoCodigo', 'movimientoExternoDescripcion', 'documentoCutNumero',
+  'documentoCutArchivo', 'documentoCutSigla', 'descripcionDetallada',
+]);

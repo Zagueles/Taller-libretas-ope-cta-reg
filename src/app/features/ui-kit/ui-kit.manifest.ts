@@ -3107,6 +3107,13 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "descripcion": null
       },
       {
+        "nombre": "defaultLocked",
+        "tipo": "boolean",
+        "porDefecto": "false",
+        "requerida": false,
+        "descripcion": "Las columnas «Predeterminado» se muestran marcadas y deshabilitadas (no se pueden ocultar)."
+      },
+      {
         "nombre": "dirty",
         "tipo": "boolean",
         "porDefecto": "false",

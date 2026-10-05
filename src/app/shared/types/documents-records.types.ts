@@ -41,6 +41,10 @@ export type DocumentsRecordsColumn = {
   headerGroup?: string;
   /** Queda fija a la derecha, junto a la columna de acción, al desplazar horizontalmente (solo la última columna). */
   fixed?: boolean;
+  /** Nombre en el panel «Ocultar o mostrar columnas» cuando la etiqueta de la cabecera es ambigua («Código» → «Movimiento interno · Código»). */
+  panelLabel?: string;
+  /** Línea divisoria a la derecha de la cabecera de una columna suelta (las de un grupo ya la llevan al cerrar el grupo). */
+  borderRight?: boolean;
 };
 
 export type DocumentsRecordsFilterOption = {
@@ -97,6 +101,10 @@ export type DocumentsRecordsConfig = {
   recordSelectable?: boolean;
   /** Documentos con casilla en cualquier estado (sin esto, solo los Elaborados o Verificados de la acción masiva). */
   documentSelectable?: boolean;
+  /** Las columnas «Predeterminado» del panel «Ocultar o mostrar columnas» quedan siempre visibles (casilla marcada y deshabilitada); solo se eligen las de «Más columnas». */
+  lockDefaultColumns?: boolean;
+  /** La pestaña activa queda en la URL (`?tab=records`): al volver desde un detalle con «Regresar», se vuelve a la misma pestaña. */
+  rememberTab?: boolean;
   /** Con filas elegidas, la barra de selección suma «Descargar» y la página emite `selectionDownloaded`. */
   selectionDownload?: boolean;
   /** Reemplaza el botón de historial de cada fila de Registros (p. ej. «Ver documento PDF»); emite `recordActionClicked`. */
@@ -156,4 +164,6 @@ export interface DocumentsRecordsDownloadEvent {
   rows: DocumentsRecordsRow[];
   /** Filtros rápidos de la pestaña con su valor («Todos» si no hay uno aplicado). */
   filters: { label: string; value: string }[];
+  /** Claves de las columnas visibles de la pestaña (las predeterminadas y las que se activaron en «Más columnas»). */
+  visibleColumns: string[];
 }

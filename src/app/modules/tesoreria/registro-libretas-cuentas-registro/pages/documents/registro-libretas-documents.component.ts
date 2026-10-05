@@ -6,7 +6,8 @@ import { SnackbarComponent } from '../../../../../shared/ui/snackbar/snackbar.co
 import type { DocumentsRecordsConfig, DocumentsRecordsDownloadEvent, DocumentsRecordsRow } from '../../../../../shared/types/documents-records.types';
 import { DOCUMENTO_ROUTE, REGISTRO_ROUTE } from '../../config/registro-libretas.rutas';
 import { REGISTRO_LIBRETAS_DOCUMENTS_CONFIG } from '../../config/registro-libretas-documents.config';
-import { DOCUMENTOS_RECHAZADOS, MOVIMIENTOS_LIBRETA_REGISTRO, MOVIMIENTOS_RECHAZADOS, nombreBeneficiario, nombreTipoOperacion } from '../../models/registro-libretas.model';
+import { CUENTAS_BANCARIAS_INFO, DOCUMENTOS_RECHAZADOS, MOVIMIENTOS_LIBRETA_REGISTRO, MOVIMIENTOS_RECHAZADOS, nombreBeneficiario, nombreTipoOperacion } from '../../models/registro-libretas.model';
+import { construirDetalleRegistro } from '../../utils/registro-libretas-detalle.util';
 import { exportarDocumentosExcel, exportarRegistrosExcel, generarPdfRegistro } from '../../utils/registro-libretas-export.util';
 
 const NOMBRE_DOCUMENTO = 'Registro de operaciones en las libretas de las cuentas de registro';
@@ -33,6 +34,10 @@ const monto = (valor: number): string => formatoMonto.format(valor);
 const fechaHoraVisible = (iso: string): string => `${fechaVisible(iso)} ${iso.slice(11, 19)}`;
 
 const fechaVisible = (iso: string): string => iso.slice(0, 10).split('-').reverse().join('/');
+
+/** El valor de un campo del detalle del registro (sección y rótulo), para las columnas de «Más columnas». */
+const campoDetalle = (sec: string, seccion: string, caption: string): string =>
+  construirDetalleRegistro(sec)?.secciones.find((s) => s.titulo === seccion)?.campos.find((c) => c.caption === caption)?.value ?? '-';
 
 /**
  * «Documentos y registros» de Registro de operaciones en las libretas de las cuentas de registro. La pantalla la
@@ -89,6 +94,23 @@ export class RegistroLibretasDocumentsComponent {
       (m): DocumentsRecordsRow => ({
         sec: m.sec,
         fecha: fechaHoraVisible(m.fecha),
+        cuentaBancariaNumero: CUENTAS_BANCARIAS_INFO.find((c) => c.id === m.cuentaBancariaId)?.numeroCuenta ?? '',
+        cuentaBancariaDenominacion: CUENTAS_BANCARIAS_INFO.find((c) => c.id === m.cuentaBancariaId)?.nombre ?? '',
+        moneda: CUENTAS_BANCARIAS_INFO.find((c) => c.id === m.cuentaBancariaId)?.moneda ?? '',
+        fechaRegistro: construirDetalleRegistro(m.sec)?.fechaRegistro ?? '-',
+        numeroOperacion: construirDetalleRegistro(m.sec)?.numeroOperacion ?? '-',
+        tipoBeneficiario: campoDetalle(m.sec, 'Beneficiario', 'Tipo'),
+        entidadAdministradoraCodigo: campoDetalle(m.sec, 'Entidad administradora', 'Código'),
+        entidadAdministradoraSigla: campoDetalle(m.sec, 'Entidad administradora', 'Sigla'),
+        movimientoInternoCodigo: campoDetalle(m.sec, 'Movimiento interno', 'Código'),
+        movimientoInternoDescripcion: campoDetalle(m.sec, 'Movimiento interno', 'Descripción'),
+        movimientoInternoSigla: campoDetalle(m.sec, 'Movimiento interno', 'Sigla'),
+        movimientoExternoCodigo: campoDetalle(m.sec, 'Movimiento externo', 'Código'),
+        movimientoExternoDescripcion: campoDetalle(m.sec, 'Movimiento externo', 'Descripción'),
+        documentoCutNumero: campoDetalle(m.sec, 'Documento CUT', 'Número'),
+        documentoCutArchivo: campoDetalle(m.sec, 'Documento CUT', 'Archivo'),
+        documentoCutSigla: campoDetalle(m.sec, 'Documento CUT', 'Sigla'),
+        descripcionDetallada: construirDetalleRegistro(m.sec)?.descripcionDetallada ?? '-',
         beneficiarioCodigo: m.beneficiarioCodigo,
         beneficiario: nombreBeneficiario(m.beneficiarioCodigo).toUpperCase(),
         numeroCuentaRegistro: m.numeroCuentaRegistro,
@@ -160,6 +182,7 @@ export class RegistroLibretasDocumentsComponent {
           : exportarRegistrosExcel(
               evento.rows.map((r) => String(r['sec'] ?? '')),
               evento.filters,
+              evento.visibleColumns,
             );
       await Promise.all([archivo, minimoVisible]);
     } finally {

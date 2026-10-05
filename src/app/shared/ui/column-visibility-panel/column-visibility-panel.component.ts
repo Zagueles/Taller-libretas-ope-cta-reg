@@ -68,9 +68,9 @@ import { FocoDirective } from '../foco/foco.directive';
               <section class="grid gap-siaf-xs">
                 <h3 class="m-0 px-[18px] text-xs font-normal uppercase text-[var(--sys-color-text-neutral-medium)]">Predeterminado</h3>
                 @for (column of defaultColumns; track column.key) {
-                  <label class="flex min-h-12 cursor-pointer items-center gap-siaf-md px-siaf-md py-siaf-sm text-sm text-[var(--sys-color-text-neutral-medium)] transition hover:bg-surface-muted">
-                    <input class="size-4 accent-[var(--sys-color-icon-states-enabled)]" type="checkbox" [checked]="isColumnVisible(column.key)" (change)="toggleColumn.emit({ key: column.key, event: $event })" />
-                    {{ column.label }}
+                  <label class="flex min-h-12 items-center gap-siaf-md px-siaf-md py-siaf-sm text-sm text-[var(--sys-color-text-neutral-medium)] transition hover:bg-surface-muted" [class.cursor-pointer]="!defaultLocked" [class.cursor-not-allowed]="defaultLocked">
+                    <input class="size-4 accent-[var(--sys-color-icon-states-enabled)]" type="checkbox" [checked]="isColumnVisible(column.key)" [disabled]="defaultLocked" (change)="toggleColumn.emit({ key: column.key, event: $event })" />
+                    {{ column.panelLabel ?? column.label }}
                   </label>
                 }
               </section>
@@ -79,7 +79,7 @@ import { FocoDirective } from '../foco/foco.directive';
                 @for (column of moreColumns; track column.key) {
                   <label class="flex min-h-12 cursor-pointer items-center gap-siaf-md px-siaf-md py-siaf-sm text-sm text-[var(--sys-color-text-neutral-medium)] transition hover:bg-surface-muted">
                     <input class="size-4 accent-[var(--sys-color-icon-states-enabled)]" type="checkbox" [checked]="isColumnVisible(column.key)" (change)="toggleColumn.emit({ key: column.key, event: $event })" />
-                    {{ column.label }}
+                    {{ column.panelLabel ?? column.label }}
                   </label>
                 }
               </section>
@@ -114,6 +114,8 @@ export class ColumnVisibilityPanelComponent {
   @Input() defaultColumns: DocumentsRecordsColumn[] = [];
   @Input() moreColumns: DocumentsRecordsColumn[] = [];
   @Input() internalColumns: DocumentsRecordsColumn[] = [];
+  /** Las columnas «Predeterminado» se muestran marcadas y deshabilitadas (no se pueden ocultar). */
+  @Input() defaultLocked = false;
   @Input() isColumnVisible: (columnKey: string) => boolean = () => false;
 
   @Output() closed = new EventEmitter<void>();

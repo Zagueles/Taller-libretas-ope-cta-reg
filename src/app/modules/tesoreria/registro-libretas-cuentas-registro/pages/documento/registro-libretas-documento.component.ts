@@ -1,6 +1,6 @@
 import { Location } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import { FormTableSearchComponent } from '../../../../../shared/components/form-table-search/form-table-search.component';
 import { SolicitudeFormCardComponent } from '../../../../../shared/components/solicitude-form-card/solicitude-form-card.component';
@@ -14,6 +14,7 @@ import { ReadonlyFieldComponent } from '../../../../../shared/ui/readonly-field/
 import { ReportTableColumn, ReportTableComponent, ReportTableRow } from '../../../../../shared/ui/report-table/report-table.component';
 import { TabsComponent, TabItem } from '../../../../../shared/ui/tabs/tabs.component';
 import { SnackbarComponent } from '../../../../../shared/ui/snackbar/snackbar.component';
+import { volverAlOrigen } from '../../../../../shared/utils/volver.util';
 import { buildProcessBreadcrumbs } from '../../../../../shared/utils/breadcrumbs.util';
 import { PROCESS_ID, PROCESS_ROUTE } from '../../config/registro-libretas.rutas';
 import { DOCUMENTOS_RECHAZADOS, movimientosDeDocumento, nombreBeneficiario } from '../../models/registro-libretas.model';
@@ -178,6 +179,7 @@ const COLUMNAS: ReportTableColumn[] = [
 export class RegistroLibretasDocumentoComponent {
   private readonly ruta = inject(ActivatedRoute);
   private readonly location = inject(Location);
+  private readonly router = inject(Router);
 
   readonly breadcrumbs = buildProcessBreadcrumbs(PROCESS_ID, PROCESS_ROUTE);
   readonly cuentas = CUENTAS;
@@ -262,6 +264,6 @@ export class RegistroLibretasDocumentoComponent {
   }
 
   volver(): void {
-    this.location.back();
+    volverAlOrigen(this.location, this.router, PROCESS_ROUTE);
   }
 }

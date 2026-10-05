@@ -83,7 +83,7 @@ export type DocumentsRecordsSelectionChange = {
                   siafTooltip
                   [attr.colspan]="celda.colspan > 1 ? celda.colspan : null"
                   [attr.rowspan]="celda.rowspan > 1 ? celda.rowspan : null"
-                  [ngClass]="[celda.fija ? claseFijaCabecera : '', celda.rowspan === 2 ? (celda.column?.widthClass || 'w-[180px]') : 'text-center', celda.column?.align === 'right' ? 'text-right' : celda.rowspan === 2 ? 'text-left' : '', celda.grupo && !celda.ultima && !celda.fija ? 'border-r border-[var(--sys-color-divider-strong)]' : '']"
+                  [ngClass]="[celda.fija ? claseFijaCabecera : '', celda.rowspan === 2 ? (celda.column?.widthClass || 'w-[180px]') : 'text-center', celda.column?.align === 'right' ? 'text-right' : celda.rowspan === 2 ? 'text-left' : '', celda.grupo && !celda.ultima && !celda.fija ? 'border-r border-[var(--sys-color-divider-strong)]' : '', !celda.grupo && celda.column?.borderRight ? 'border-r border-[var(--sys-color-divider-strong)]' : '']"
                 >{{ celda.label }}</th>
               }
             } @else {

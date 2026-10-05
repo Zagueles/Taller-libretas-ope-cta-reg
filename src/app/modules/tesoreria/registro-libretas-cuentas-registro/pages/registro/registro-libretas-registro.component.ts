@@ -1,11 +1,12 @@
 import { Location } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import { SolicitudePageLayoutComponent } from '../../../../../shared/components/solicitude-page-layout/solicitude-page-layout.component';
 import { SolicitudeFormCardComponent } from '../../../../../shared/components/solicitude-form-card/solicitude-form-card.component';
 import { ReadonlyFieldComponent } from '../../../../../shared/ui/readonly-field/readonly-field.component';
 import { RecordStatusTagComponent } from '../../../../../shared/ui/record-status-tag/record-status-tag.component';
+import { volverAlOrigen } from '../../../../../shared/utils/volver.util';
 import { buildProcessBreadcrumbs } from '../../../../../shared/utils/breadcrumbs.util';
 import { PROCESS_ID, PROCESS_ROUTE } from '../../config/registro-libretas.rutas';
 import { construirDetalleRegistro } from '../../utils/registro-libretas-detalle.util';
@@ -100,12 +101,13 @@ import { construirDetalleRegistro } from '../../utils/registro-libretas-detalle.
 export class RegistroLibretasRegistroComponent {
   private readonly ruta = inject(ActivatedRoute);
   private readonly location = inject(Location);
+  private readonly router = inject(Router);
 
   readonly breadcrumbs = buildProcessBreadcrumbs(PROCESS_ID, PROCESS_ROUTE);
 
   readonly registro = computed(() => construirDetalleRegistro(this.ruta.snapshot.paramMap.get('sec') ?? ''));
 
   volver(): void {
-    this.location.back();
+    volverAlOrigen(this.location, this.router, `${PROCESS_ROUTE}?tab=records`);
   }
 }
