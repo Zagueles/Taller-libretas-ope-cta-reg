@@ -787,6 +787,10 @@ export async function generarPdfRegistro(sec: string): Promise<{ blob: Blob; nom
 
   subtitulo('Importe en moneda de la cuenta');
   importesDestacados(detalle.importes);
+  if (detalle.importesNacional.length) {
+    subtitulo('Importe en moneda nacional');
+    importesDestacados(detalle.importesNacional);
+  }
 
   subtitulo('Descripción detallada del registro');
   campos([{ caption: 'Descripción', value: detalle.descripcionDetallada, ancho: 2 }]);

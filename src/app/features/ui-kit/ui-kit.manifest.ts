@@ -5307,6 +5307,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       "siaf-pagination",
       "siaf-records-search-toolbar",
       "siaf-records-tabs",
+      "siaf-report-columns-panel",
       "siaf-snackbar",
       "siaf-table-controls",
       "siaf-table-skeleton"

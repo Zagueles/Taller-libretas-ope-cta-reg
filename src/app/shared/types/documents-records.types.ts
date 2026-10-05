@@ -105,6 +105,10 @@ export type DocumentsRecordsConfig = {
   lockDefaultColumns?: boolean;
   /** La pestaña activa queda en la URL (`?tab=records`): al volver desde un detalle con «Regresar», se vuelve a la misma pestaña. */
   rememberTab?: boolean;
+  /** «Columnas visibles» como en Consultas y reportes (`siaf-report-columns-panel`): árbol por grupo de cabecera, «Seleccionar todas», «Restablecer» y «Aplicar»; en vez de la lista plana «Ocultar o mostrar columnas». */
+  columnsTreePanel?: boolean;
+  /** Nombre completo, en el panel «Columnas visibles», de un grupo de cabecera abreviado (`'Imp. m. cuenta'` → «Importe en moneda de la cuenta»). */
+  headerGroupLabels?: Record<string, string>;
   /** Con filas elegidas, la barra de selección suma «Descargar» y la página emite `selectionDownloaded`. */
   selectionDownload?: boolean;
   /** Reemplaza el botón de historial de cada fila de Registros (p. ej. «Ver documento PDF»); emite `recordActionClicked`. */

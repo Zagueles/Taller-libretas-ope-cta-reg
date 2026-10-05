@@ -77,6 +77,21 @@ import { construirDetalleRegistro } from '../../utils/registro-libretas-detalle.
               </div>
             </section>
 
+            @if (r.importesNacional.length) {
+              <section class="flex flex-col gap-siaf-sm">
+                <h3 class="m-0 text-sm font-bold uppercase leading-normal text-[var(--sys-color-text-neutral-high)]">Importe en moneda nacional</h3>
+                <div class="grid gap-siaf-md sm:grid-cols-2 lg:grid-cols-4">
+                  @for (importe of r.importesNacional; track importe.caption) {
+                    <readonly-field
+                      class="block rounded-siaf-md bg-[var(--sys-color-bg-surfaces-highlight)] [&_span.min-w-0]:ml-auto [&>div]:bg-transparent"
+                      [caption]="importe.caption"
+                      [value]="importe.value"
+                    />
+                  }
+                </div>
+              </section>
+            }
+
             <section class="flex flex-col gap-siaf-sm">
               <h3 class="m-0 text-sm font-bold uppercase leading-normal text-[var(--sys-color-text-neutral-high)]">Descripción detallada del registro</h3>
               <readonly-field caption="Descripcion" [value]="r.descripcionDetallada" />

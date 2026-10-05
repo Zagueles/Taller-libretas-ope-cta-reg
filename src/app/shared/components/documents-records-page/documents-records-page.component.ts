@@ -18,6 +18,7 @@ import type { DocumentsQuery, DocumentsRecordsColumn, DocumentsRecordsConfig, Do
 import { AccountHistoryPanelComponent } from '../account-history-panel/account-history-panel.component';
 import { AsientoHistoryPanelComponent } from '../asiento-history-panel/asiento-history-panel.component';
 import { ButtonComponent } from '../../ui/button/button.component';
+import { ColumnasPanelGrupo, ReportColumnsPanelComponent } from '../report-columns-panel/report-columns-panel.component';
 import { ColumnVisibilityPanelComponent } from '../../ui/column-visibility-panel/column-visibility-panel.component';
 import { CreateDocumentAccepted, CreateDocumentComponent, CreateDocumentField, CreateDocumentSelection } from '../create-document/create-document.component';
 import { DocumentHistoryPanelComponent, DocumentHistorySummary } from '../document-history-panel/document-history-panel.component';
@@ -97,7 +98,7 @@ type DocumentsRecordsRoleMode = 'creator' | 'approver' | 'readOnly';
 @Component({
   selector: 'siaf-documents-records-page',
   standalone: true,
-  imports: [FocoDirective, 
+  imports: [ReportColumnsPanelComponent, FocoDirective, 
     AccountHistoryPanelComponent, AsientoHistoryPanelComponent, BreadcrumbComponent, ButtonComponent, ColumnVisibilityPanelComponent,
     CreateDocumentComponent, CustomFilterComponent, DateRangeFilterPillComponent, DocumentHistoryPanelComponent,
     DocumentsRecordsTableComponent, FilterPillComponent, IconComponent, IconDropdownMenuComponent,
@@ -416,6 +417,17 @@ type DocumentsRecordsRoleMode = 'creator' | 'approver' | 'readOnly';
             }
           </section>
         </section>
+      @if (effectiveConfig.columnsTreePanel) {
+        <siaf-report-columns-panel
+          [open]="columnPanelOpen"
+          [grupos]="gruposPanelColumnas"
+          [selected]="seleccionPanelColumnas"
+          [defaults]="predeterminadasPanelColumnas"
+          [baseKeys]="basePanelColumnas"
+          (closed)="closeColumnPanel()"
+          (applied)="aplicarColumnasArbol($event)"
+        />
+      } @else {
       <siaf-column-visibility-panel
         [open]="columnPanelOpen"
         [allSelected]="allDraftColumnsSelected"
@@ -430,6 +442,7 @@ type DocumentsRecordsRoleMode = 'creator' | 'approver' | 'readOnly';
         (toggleAll)="toggleAllDraftColumns($event)"
         (toggleColumn)="toggleDraftColumnVisibility($event.key, $event.event)"
       />
+      }
     </div>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -1216,9 +1229,41 @@ export class DocumentsRecordsPageComponent implements OnChanges {
     return column?.visibility !== 'internal' && !this.currentHiddenColumns.has(columnKey);
   }
 
+  /** Datos del panel «Columnas visibles» en árbol (`columnsTreePanel`): se arman al abrirlo, no en cada ciclo. */
+  gruposPanelColumnas: ColumnasPanelGrupo[] = [];
+  seleccionPanelColumnas: ReadonlySet<string> = new Set();
+  predeterminadasPanelColumnas: ReadonlySet<string> = new Set();
+  basePanelColumnas: ReadonlySet<string> = new Set();
+
   openColumnPanel(): void {
     this.draftHiddenColumns = new Set(this.currentHiddenColumns);
+    if (this.effectiveConfig.columnsTreePanel) this.prepararPanelEnArbol();
     this.columnPanelOpen = true;
+  }
+
+  /** Agrupa las columnas por su grupo de cabecera (las de una columna suelta van sin flecha) para el árbol. */
+  private prepararPanelEnArbol(): void {
+    const grupos = new Map<string, ColumnasPanelGrupo>();
+    for (const column of this.selectableColumnOptions) {
+      const id = column.headerGroup ?? column.key;
+      const grupo = grupos.get(id) ?? { id, label: (column.headerGroup && this.effectiveConfig.headerGroupLabels?.[column.headerGroup]) || column.headerGroup || column.label, suelta: !column.headerGroup, columnas: [] };
+      grupo.columnas.push({ key: column.key, label: column.label });
+      grupos.set(id, grupo);
+    }
+    this.gruposPanelColumnas = [...grupos.values()];
+    this.seleccionPanelColumnas = new Set(this.selectableColumnOptions.filter((c) => this.isColumnVisible(c.key)).map((c) => c.key));
+    this.predeterminadasPanelColumnas = new Set(this.selectableColumnOptions.filter((c) => c.visibility === 'visible').map((c) => c.key));
+    // Con `lockDefaultColumns` las predeterminadas son la base (siempre marcadas); si no, al menos queda la primera.
+    this.basePanelColumnas = this.effectiveConfig.lockDefaultColumns
+      ? new Set(this.selectableColumnOptions.filter((c) => c.group === 'default').map((c) => c.key))
+      : new Set(this.selectableColumnOptions.slice(0, 1).map((c) => c.key));
+  }
+
+  aplicarColumnasArbol(elegidas: Set<string>): void {
+    const ocultas = new Set(this.selectableColumnOptions.filter((c) => !elegidas.has(c.key)).map((c) => c.key));
+    if (this.activeTab === 'documents') this.hiddenDocumentColumns = ocultas;
+    else this.hiddenRecordColumns = ocultas;
+    this.closeColumnPanel();
   }
 
   closeColumnPanel(): void {

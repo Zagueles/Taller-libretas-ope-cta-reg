@@ -41,6 +41,8 @@ export interface DetalleRegistro {
   numeroOperacion: string;
   secciones: DetalleRegistroSeccion[];
   importes: DetalleRegistroCampo[];
+  /** Solo en cuentas en dólares: los mismos cuatro importes convertidos a soles con el tipo de cambio de compra; vacío en soles. */
+  importesNacional: DetalleRegistroCampo[];
   descripcionDetallada: string;
 }
 
@@ -55,6 +57,9 @@ export function construirDetalleRegistro(sec: string): DetalleRegistro | null {
   const cuenta = CUENTAS_BANCARIAS_INFO.find((c) => c.id === m.cuentaBancariaId) ?? CUENTAS_BANCARIAS_INFO[0];
   const interno = MOVIMIENTO_INTERNO[m.tipoOperacionCodigo] ?? { codigo: SIN_DATO, descripcion: SIN_DATO, sigla: SIN_DATO };
   const tipo = nombreTipoOperacion(m.tipoOperacionCodigo);
+  const enDolares = cuenta.moneda === 'USD';
+  const compra = 3.35;
+  const venta = 3.32;
   const codigoUe = m.entidad === 'MINCETUR' ? '11111107004  - ' : '';
   return {
     sec: m.sec,
@@ -112,6 +117,18 @@ export function construirDetalleRegistro(sec: string): DetalleRegistro | null {
           { caption: 'Sigla', value: SIN_DATO },
         ],
       },
+      ...(enDolares
+        ? [
+            {
+              titulo: 'Tipo de cambio',
+              campos: [
+                { caption: 'Tipo de cotización', value: '01 - Compra / Venta' },
+                { caption: 'Compra', value: compra.toFixed(2) },
+                { caption: 'Venta', value: venta.toFixed(2) },
+              ],
+            },
+          ]
+        : []),
     ],
     importes: [
       { caption: 'Saldo inicial', value: monto(m.saldoInicial) },
@@ -119,6 +136,14 @@ export function construirDetalleRegistro(sec: string): DetalleRegistro | null {
       { caption: 'Crédito', value: monto(m.credito) },
       { caption: 'Saldo final', value: monto(m.saldoFinal) },
     ],
+    importesNacional: enDolares
+      ? [
+          { caption: 'Saldo inicial', value: monto(m.saldoInicial * compra) },
+          { caption: 'Débito', value: monto(m.debito * compra) },
+          { caption: 'Crédito', value: monto(m.credito * compra) },
+          { caption: 'Saldo final', value: monto(m.saldoFinal * compra) },
+        ]
+      : [],
     descripcionDetallada: `Registro de ${tipo.split(' - ')[1]?.toLowerCase() ?? tipo.toLowerCase()}`,
   };
 }
