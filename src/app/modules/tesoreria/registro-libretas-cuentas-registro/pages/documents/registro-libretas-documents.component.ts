@@ -68,9 +68,9 @@ export class RegistroLibretasDocumentsComponent {
     ...REGISTRO_LIBRETAS_DOCUMENTS_CONFIG,
     // Estado y tipo de acción no distinguen nada acá (todos los documentos quedan «Procesado»/«Creación»): los
     // filtros rápidos de la pestaña Documentos son, en su lugar, el número de documento y la fecha de registro.
-    documentFilter1Label: 'Documento',
-    documentFilter1Key: 'document',
-    documentFilter1Options: [NOMBRE_DOCUMENTO],
+    documentFilter1Label: 'Estado',
+    documentFilter1Key: 'status',
+    documentFilter1Options: ['Procesado', 'Rechazado'],
     documentFilter2Label: 'Fecha de registro',
     documentFilter2Key: 'dateIso',
     documentFilter2Type: 'dateRange',
