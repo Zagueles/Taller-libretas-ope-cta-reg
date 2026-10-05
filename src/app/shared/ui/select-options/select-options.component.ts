@@ -8,6 +8,8 @@ export interface SelectOption {
   label: string;
   value: string;
   disabled?: boolean;
+  /** Texto descriptivo bajo la etiqueta, más chico (ej. «PEN - MEF - DGTP - CUT» bajo el número de una cuenta). */
+  description?: string;
 }
 
 /**
@@ -114,7 +116,12 @@ export interface SelectOption {
             (keydown.end)="focusBoundary($event, 'last')"
           >
             <input class="pointer-events-none shrink-0" type="checkbox" tabindex="-1" aria-hidden="true" [checked]="isSelected(option.value)" [disabled]="!!option.disabled" />
-            <span class="min-w-0 flex-1 truncate" siafTooltip [ngClass]="optionLabelClass(option.value)">{{ option.label }}</span>
+            <span class="flex min-w-0 flex-1 flex-col">
+              <span class="truncate" siafTooltip [ngClass]="optionLabelClass(option.value)">{{ option.label }}</span>
+              @if (option.description) {
+                <span class="truncate text-xs text-[var(--sys-color-text-neutral-medium)]">{{ option.description }}</span>
+              }
+            </span>
           </div>
         }
       } @else {
@@ -135,7 +142,12 @@ export interface SelectOption {
           (keydown.home)="focusBoundary($event, 'first')"
           (keydown.end)="focusBoundary($event, 'last')"
         >
-          <span class="min-w-0 flex-1 truncate" siafTooltip [ngClass]="optionLabelClass(option.value)">{{ option.label }}</span>
+          <span class="flex min-w-0 flex-1 flex-col">
+              <span class="truncate" siafTooltip [ngClass]="optionLabelClass(option.value)">{{ option.label }}</span>
+              @if (option.description) {
+                <span class="truncate text-xs text-[var(--sys-color-text-neutral-medium)]">{{ option.description }}</span>
+              }
+            </span>
           @if (isSelected(option.value)) {
             <siaf-icon
               class="shrink-0 text-[var(--sys-color-text-neutral-activated)]"

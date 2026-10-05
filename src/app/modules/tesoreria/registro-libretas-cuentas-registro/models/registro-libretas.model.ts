@@ -7,6 +7,8 @@
 export interface OpcionCatalogo {
   value: string;
   label: string;
+  /** Texto descriptivo bajo la etiqueta al elegir la opción. */
+  description?: string;
 }
 
 export const TIPOS_OPERACION: OpcionCatalogo[] = [
@@ -16,8 +18,8 @@ export const TIPOS_OPERACION: OpcionCatalogo[] = [
 ];
 
 export const CUENTAS_BANCARIAS_REGISTRO: OpcionCatalogo[] = [
-  { value: 'mef-dgtp-cut', label: 'MEF - DGTP - CUT' },
-  { value: 'mef-dgtp', label: 'MEF - DGTP' },
+  { value: 'mef-dgtp-cut', label: '11040103570200000000', description: 'PEN - MEF - DGTP - CUT' },
+  { value: 'mef-dgtp', label: '12073303572000000003', description: 'USD - MEF - DGTP' },
 ];
 
 export const ENTIDADES: OpcionCatalogo[] = [
@@ -222,3 +224,48 @@ export const MOVIMIENTOS_LIBRETA_REGISTRO: MovimientoLibretaRegistro[] = (() => 
   });
   return [...junio, ...nuevos];
 })();
+
+/** Motivo de rechazo de cada documento que el sistema rechazó por traer datos incorrectos (no llegan a la libreta). */
+export const DOCUMENTOS_RECHAZADOS: Record<string, string> = {
+  '000016-2026': 'El documento no cumple con las validaciones del procedimiento.',
+  '000017-2026': 'El saldo final de los registros no coincide con el saldo inicial más abonos y menos cargos.',
+  '000018-2026': 'El débito supera el saldo disponible de la cuenta de registro.',
+};
+
+const incorrecto = (
+  sec: string,
+  fecha: string,
+  cuentaBancariaId: string,
+  beneficiarioCodigo: string,
+  tipoOperacionCodigo: string,
+  numeroDocumento: string,
+  saldos: { saldoInicial: number; debito: number; credito: number; saldoFinal: number },
+): MovimientoLibretaRegistro => ({
+  ...MOVIMIENTOS_BASE.find((m) => m.cuentaBancariaId === cuentaBancariaId && m.beneficiarioCodigo === beneficiarioCodigo)!,
+  sec,
+  fecha,
+  cuentaBancariaId,
+  beneficiarioCodigo,
+  tipoOperacionCodigo,
+  numeroDocumento,
+  documentoId: `doc-${numeroDocumento}`,
+  descripcionDocumento: DOC_REGISTRO,
+  ...saldos,
+});
+
+/**
+ * Movimientos de los documentos rechazados, con datos mock incorrectos a propósito (saldos que no cuadran, cargos que
+ * dejan la cuenta en negativo). No forman parte de la libreta (`MOVIMIENTOS_LIBRETA_REGISTRO`): solo se ven en la
+ * vista del propio documento y en su descarga.
+ */
+export const MOVIMIENTOS_RECHAZADOS: MovimientoLibretaRegistro[] = [
+  incorrecto('000056', '2026-07-15T16:20:00', 'mef-dgtp-cut', '000360', '2', '000016-2026', { saldoInicial: 999_999, debito: 0, credito: 8_000, saldoFinal: 7_500 }),
+  incorrecto('000057', '2026-07-15T16:20:00', 'mef-dgtp-cut', '000193', '3', '000016-2026', { saldoInicial: 10_000, debito: 90_000, credito: 0, saldoFinal: -80_000 }),
+  incorrecto('000058', '2026-08-27T11:45:00', 'mef-dgtp', '000009', '2', '000017-2026', { saldoInicial: 3_630_000, debito: 0, credito: 150_000, saldoFinal: 3_700_000 }),
+  incorrecto('000059', '2026-08-27T11:45:00', 'mef-dgtp-cut', '000120', '2', '000017-2026', { saldoInicial: 46_000, debito: 0, credito: 12_000, saldoFinal: 50_000 }),
+  incorrecto('000060', '2026-09-22T09:30:00', 'mef-dgtp-cut', '000366', '3', '000018-2026', { saldoInicial: 19_553, debito: 500_000, credito: 0, saldoFinal: -480_447 }),
+];
+
+/** Todos los movimientos que un documento referencia: los de la libreta y, si fue rechazado, los que traía. */
+export const movimientosDeDocumento = (numero: string): MovimientoLibretaRegistro[] =>
+  [...MOVIMIENTOS_LIBRETA_REGISTRO, ...MOVIMIENTOS_RECHAZADOS].filter((m) => m.numeroDocumento === numero);

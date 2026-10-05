@@ -81,11 +81,12 @@ export const REGISTRO_LIBRETAS_DOCUMENTS_CONFIG: DocumentsRecordsConfig = {
   recordTrackKey: 'sec',
   recordHistoryDocumentLabel: 'Registro de operaciones en las libretas de las cuentas de registro',
   recordHistoryKind: 'documento',
-  statusFilterOptions: ['Procesado'],
+  statusFilterOptions: ['Procesado', 'Rechazado'],
   actionTypeFilterOptions: ['Creación'],
   filterCampoOptions,
   filterValorOptions: [
     { label: 'Procesado', value: 'Procesado' },
+    { label: 'Rechazado', value: 'Rechazado' },
     { label: 'Creación', value: 'Creación' },
   ],
   fieldsMenuOptions,

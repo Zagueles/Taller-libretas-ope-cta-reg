@@ -9,6 +9,8 @@ import { FocoDirective } from '../foco/foco.directive';
 export interface TextFieldOption {
   label: string;
   value: string;
+  /** Texto descriptivo bajo la etiqueta en la lista de opciones (solo se ve en `select`). */
+  description?: string;
 }
 
 /**

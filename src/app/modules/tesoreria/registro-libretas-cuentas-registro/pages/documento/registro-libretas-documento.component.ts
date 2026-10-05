@@ -12,10 +12,11 @@ import { ButtonComponent } from '../../../../../shared/ui/button/button.componen
 import { DocumentSummaryCardComponent } from '../../../../../shared/ui/document-summary-card/document-summary-card.component';
 import { ReadonlyFieldComponent } from '../../../../../shared/ui/readonly-field/readonly-field.component';
 import { ReportTableColumn, ReportTableComponent, ReportTableRow } from '../../../../../shared/ui/report-table/report-table.component';
+import { TabsComponent, TabItem } from '../../../../../shared/ui/tabs/tabs.component';
 import { SnackbarComponent } from '../../../../../shared/ui/snackbar/snackbar.component';
 import { buildProcessBreadcrumbs } from '../../../../../shared/utils/breadcrumbs.util';
 import { PROCESS_ID, PROCESS_ROUTE } from '../../config/registro-libretas.rutas';
-import { MOVIMIENTOS_LIBRETA_REGISTRO, nombreBeneficiario } from '../../models/registro-libretas.model';
+import { DOCUMENTOS_RECHAZADOS, movimientosDeDocumento, nombreBeneficiario } from '../../models/registro-libretas.model';
 import { generarPdfDocumento } from '../../utils/registro-libretas-export.util';
 
 /** Descarga un Blob como archivo. */
@@ -71,6 +72,7 @@ const COLUMNAS: ReportTableColumn[] = [
     ReadonlyFieldComponent,
     ReportTableComponent,
     SnackbarComponent,
+    TabsComponent,
     SolicitudeFormCardComponent,
     SolicitudeInfoCardComponent,
     SolicitudePageLayoutComponent,
@@ -101,7 +103,7 @@ const COLUMNAS: ReportTableColumn[] = [
               { label: 'Ente rector', value: 'DIRECCIÓN GENERAL DEL TESORO PÚBLICO' }
             ]"
           />
-          <siaf-document-summary-card [documentNumber]="d.numero" status="Procesado" />
+          <siaf-document-summary-card [documentNumber]="d.numero" [status]="d.estado" />
         </div>
 
         <siaf-solicitude-form-card title="Información de operaciones financieras">
@@ -141,10 +143,27 @@ const COLUMNAS: ReportTableColumn[] = [
           <siaf-report-table [columns]="columnas" [rows]="filas()" rowKey="sec" ariaLabel="Registros de operaciones en las libretas del documento" />
         </siaf-solicitude-form-card>
 
+        @if (d.motivoRechazo) {
+          <section class="overflow-hidden rounded-siaf-md bg-surface">
+            <siaf-tabs [tabs]="pestanas" [activeId]="pestana()" (activeIdChange)="pestana.set($event)" ariaLabel="Detalle e historial del documento" />
+            @if (pestana() === 'detalle') {
+              <div class="flex flex-col gap-siaf-xs p-siaf-lg" data-detalle-rechazo>
+                <span class="text-xs uppercase tracking-[0.66px] text-[var(--sys-color-text-neutral-medium)]">Motivo de rechazo</span>
+                <p class="m-0 text-base text-[var(--sys-color-text-neutral-high)]">{{ d.motivoRechazo }}</p>
+              </div>
+            } @else {
+              <div class="flex flex-col gap-siaf-md p-siaf-lg" data-historial-rechazo>
+                <h3 class="m-0 text-base font-bold uppercase text-[var(--sys-color-text-neutral-high)]">Historial de comentarios y detalles</h3>
+                <siaf-report-table [columns]="columnasHistorial" [rows]="filasHistorial()" rowKey="iteracion" ariaLabel="Historial de comentarios y detalles del documento" />
+              </div>
+            }
+          </section>
+        }
+
         <siaf-action-tracker
           [summaryItems]="[
             { label: 'Registrado por', actionBy: 'SIAF RP', date: d.fechaRegistro },
-            { label: 'Procesado por', actionBy: 'SIAF RP', date: d.fechaProcesado }
+            { label: 'Procesado por', actionBy: d.motivoRechazo ? 'No asignado aún' : 'SIAF RP', date: d.motivoRechazo ? 'Fecha y hora no registradas' : d.fechaProcesado }
           ]"
         />
       }
@@ -166,20 +185,44 @@ export class RegistroLibretasDocumentoComponent {
   readonly cuentaElegida = signal('mef-dgtp-cut');
   readonly busqueda = signal('');
   readonly preparandoDescarga = signal(false);
+  readonly pestana = signal('detalle');
+  readonly pestanas: TabItem[] = [
+    { id: 'detalle', label: 'Detalle' },
+    { id: 'historial', label: 'Historial' },
+  ];
+  readonly columnasHistorial: ReportTableColumn[] = [
+    { key: 'iteracion', label: 'Iteración', width: 100 },
+    { key: 'proceso', label: 'Proceso', width: 180 },
+    { key: 'tipo', label: 'Comentario / Motivo', width: 200 },
+    { key: 'descripcion', label: 'Descripción', width: 420 },
+    { key: 'fecha', label: 'Fecha', width: 160 },
+    { key: 'rol', label: 'Rol', width: 130 },
+    { key: 'usuario', label: 'Usuario', width: 130 },
+  ];
 
   private readonly movimientos = computed(() => {
     const numero = this.ruta.snapshot.paramMap.get('numero');
-    return MOVIMIENTOS_LIBRETA_REGISTRO.filter((m) => m.numeroDocumento === numero);
+    return movimientosDeDocumento(numero ?? '');
   });
 
   readonly documento = computed(() => {
     const primero = this.movimientos()[0];
     if (!primero) return null;
+    const motivoRechazo = DOCUMENTOS_RECHAZADOS[primero.numeroDocumento] ?? '';
     return {
       numero: primero.numeroDocumento,
+      estado: motivoRechazo ? ('Rechazado' as const) : ('Procesado' as const),
+      motivoRechazo,
       fechaRegistro: `${fechaVisible(primero.fecha)}  18:01:00`,
       fechaProcesado: `${fechaVisible(primero.fecha)}  18:02:00`,
     };
+  });
+
+  /** Historial de un documento rechazado: el rechazo automático con su motivo. */
+  readonly filasHistorial = computed<ReportTableRow[]>(() => {
+    const d = this.documento();
+    if (!d?.motivoRechazo) return [];
+    return [{ iteracion: '1', proceso: 'Creación - Rechazado', tipo: 'Comentario', descripcion: d.motivoRechazo, fecha: d.fechaProcesado, rol: 'Automático', usuario: 'SIAF RP' }];
   });
 
   readonly filas = computed<ReportTableRow[]>(() => {

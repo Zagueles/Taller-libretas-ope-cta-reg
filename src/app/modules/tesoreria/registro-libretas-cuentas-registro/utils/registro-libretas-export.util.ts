@@ -1,6 +1,6 @@
 import { cargarToDataURL, cargarWorkbook } from '../../../../shared/utils/librerias-dinamicas.util';
 import type { QueryReportParameters } from '../../../../shared/types/query-report.types';
-import { CUENTAS_BANCARIAS_INFO, MOVIMIENTOS_LIBRETA_REGISTRO, MovimientoLibretaRegistro, nombreBeneficiario, nombreTipoOperacion } from '../models/registro-libretas.model';
+import { CUENTAS_BANCARIAS_INFO, MOVIMIENTOS_LIBRETA_REGISTRO, MovimientoLibretaRegistro, movimientosDeDocumento, nombreBeneficiario, nombreTipoOperacion } from '../models/registro-libretas.model';
 import { construirDetalleRegistro, DetalleRegistro } from './registro-libretas-detalle.util';
 
 const formatoMonto = new Intl.NumberFormat('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -824,7 +824,7 @@ export function nombrePdfDocumento(numero: string): string {
  * Se descarga directo, a diferencia de `generarPdfRegistro`, que solo se previsualiza.
  */
 export async function generarPdfDocumento(numero: string): Promise<{ blob: Blob; nombre: string } | null> {
-  const movimientos = MOVIMIENTOS_LIBRETA_REGISTRO.filter((m) => m.numeroDocumento === numero);
+  const movimientos = movimientosDeDocumento(numero);
   if (!movimientos.length) return null;
 
   const [{ default: jsPDF }, { default: autoTable }, logo, qr] = await Promise.all([

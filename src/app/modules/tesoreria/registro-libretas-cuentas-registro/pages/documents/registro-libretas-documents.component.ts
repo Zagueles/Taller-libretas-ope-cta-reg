@@ -6,7 +6,7 @@ import { SnackbarComponent } from '../../../../../shared/ui/snackbar/snackbar.co
 import type { DocumentsRecordsConfig, DocumentsRecordsDownloadEvent, DocumentsRecordsRow } from '../../../../../shared/types/documents-records.types';
 import { DOCUMENTO_ROUTE, REGISTRO_ROUTE } from '../../config/registro-libretas.rutas';
 import { REGISTRO_LIBRETAS_DOCUMENTS_CONFIG } from '../../config/registro-libretas-documents.config';
-import { MOVIMIENTOS_LIBRETA_REGISTRO, nombreBeneficiario, nombreTipoOperacion } from '../../models/registro-libretas.model';
+import { DOCUMENTOS_RECHAZADOS, MOVIMIENTOS_LIBRETA_REGISTRO, MOVIMIENTOS_RECHAZADOS, nombreBeneficiario, nombreTipoOperacion } from '../../models/registro-libretas.model';
 import { exportarDocumentosExcel, exportarRegistrosExcel, generarPdfRegistro } from '../../utils/registro-libretas-export.util';
 
 const NOMBRE_DOCUMENTO = 'Registro de operaciones en las libretas de las cuentas de registro';
@@ -23,7 +23,7 @@ const unMinutoAntes = (hora: string): string => {
 };
 
 /** Un documento por cada número que los movimientos de la libreta referencian (datos simulados). */
-const DOCUMENTOS = [...new Map(MOVIMIENTOS_LIBRETA_REGISTRO.map((m) => [m.numeroDocumento, m])).values()].sort((a, b) =>
+const DOCUMENTOS = [...new Map([...MOVIMIENTOS_LIBRETA_REGISTRO, ...MOVIMIENTOS_RECHAZADOS].map((m) => [m.numeroDocumento, m])).values()].sort((a, b) =>
   a.numeroDocumento.localeCompare(b.numeroDocumento),
 );
 
@@ -75,7 +75,7 @@ export class RegistroLibretasDocumentsComponent {
         documentId: m.documentoId,
         number: m.numeroDocumento,
         actionType: 'Creación',
-        status: 'Procesado',
+        status: m.numeroDocumento in DOCUMENTOS_RECHAZADOS ? 'Rechazado' : 'Procesado',
         system: 'Tesorería',
         date: fechaVisible(m.fecha),
         dateIso: m.fecha.slice(0, 10),
@@ -115,9 +115,10 @@ export class RegistroLibretasDocumentsComponent {
     buildDocumentHistory: (row) => {
       const fecha = String(row['date'] ?? '');
       const procesado = String(row['time'] ?? '18:02:00');
+      const estadoFinal = String(row['status'] ?? 'Procesado');
       return {
         staticRows: [
-          { usuario: USUARIO_HISTORIAL, rol: UNIDAD_HISTORIAL, fecha, hora: procesado, estado: 'Procesado', comentario: '' },
+          { usuario: USUARIO_HISTORIAL, rol: UNIDAD_HISTORIAL, fecha, hora: procesado, estado: estadoFinal, comentario: '' },
           { usuario: USUARIO_HISTORIAL, rol: UNIDAD_HISTORIAL, fecha, hora: unMinutoAntes(procesado), estado: 'Registrado', comentario: '' },
         ],
       };

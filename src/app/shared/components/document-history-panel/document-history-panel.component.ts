@@ -311,7 +311,7 @@ export class DocumentHistoryPanelComponent implements OnChanges {
     // Estados fuera del workflow estándar (ej. Registrado/Procesado/
     // Anulado de los asientos de apertura) llegan ya como etiqueta
     // legible: se pasan tal cual al tag.
-    const passthrough: FlowStatus[] = ['Registrado', 'Procesado', 'Anulado', 'Fallido', 'En proceso'];
+    const passthrough: FlowStatus[] = ['Registrado', 'Procesado', 'Rechazado', 'Anulado', 'Fallido', 'En proceso'];
     if (passthrough.includes(estado as FlowStatus)) return estado as FlowStatus;
     return FLOW_STATUS_MAP[estado] ?? ESTADO.ELABORADO;
   }
