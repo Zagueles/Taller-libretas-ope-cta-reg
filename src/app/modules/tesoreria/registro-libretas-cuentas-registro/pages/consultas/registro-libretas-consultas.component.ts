@@ -7,6 +7,7 @@ import { guardarFavoritos, leerFavoritos } from '../../../../../mock/mock-db';
 import { QueryReportExportEvent, QueryReportPageComponent } from '../../../../../shared/components/query-report-page/query-report-page.component';
 import type { QueryReportConfig, QueryReportFavorite, QueryReportParameters, QueryReportResult, QueryReportRow } from '../../../../../shared/types/query-report.types';
 import type { TabItem } from '../../../../../shared/ui/tabs/tabs.component';
+import { SnackbarComponent } from '../../../../../shared/ui/snackbar/snackbar.component';
 import { buildProcessBreadcrumbs } from '../../../../../shared/utils/breadcrumbs.util';
 import { RegistroLibretasApiService } from '../../api/registro-libretas-api.service';
 import { CONSULTAS_PROCESS_ID, CONSULTAS_ROUTE, DOCUMENTO_ROUTE, PROCESS_ROUTE } from '../../config/registro-libretas.rutas';
@@ -84,7 +85,7 @@ const fechaHoraVisible = (iso: string): string => {
 @Component({
   selector: 'siaf-registro-libretas-consultas',
   standalone: true,
-  imports: [QueryReportPageComponent],
+  imports: [QueryReportPageComponent, SnackbarComponent],
   template: `
     <siaf-query-report-page
       [config]="config()"
@@ -97,6 +98,9 @@ const fechaHoraVisible = (iso: string): string => {
       (exported)="exportar($event)"
       (linkClicked)="abrirDocumento($event.row)"
     />
+    <div class="fixed bottom-siaf-lg left-1/2 z-50 w-[min(430px,calc(100vw-32px))] -translate-x-1/2">
+      <siaf-snackbar [open]="preparandoExportacion()" tone="neutral" [dismissible]="false" message="Preparando archivo para exportar" />
+    </div>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -109,6 +113,7 @@ export class RegistroLibretasConsultasComponent {
 
   readonly resultado = signal<QueryReportResult | null>(null);
   readonly cargando = signal(false);
+  readonly preparandoExportacion = signal(false);
   readonly favoritos = signal<QueryReportFavorite[]>(leerFavoritos(PROCESS_ROUTE));
 
   readonly config = signal<QueryReportConfig>({
@@ -296,7 +301,7 @@ export class RegistroLibretasConsultasComponent {
   /** Esta pantalla solo exporta a Excel (`exportFormats: ['excel']`): la plantilla «Resumen» + «Resultado N», una
    *  pestaña por cada cuenta bancaria consultada, con todas sus filas (no solo las de la pestaña activa) tras las
    *  condiciones y filtros de la pantalla. Con un agrupado o agregado aplicado, cada pestaña sale con esa estructura. */
-  exportar(evento: QueryReportExportEvent): void {
+  async exportar(evento: QueryReportExportEvent): Promise<void> {
     const todas = [...this.filasPorCuenta.values()].flat();
     const permitidas = new Set(evento.filterRows(todas.map((m) => this.aFila(m))).map((fila) => fila['sec']));
     const cuentas = [...this.filasPorCuenta.entries()]
@@ -306,7 +311,14 @@ export class RegistroLibretasConsultasComponent {
     const agrupacion = levels.length
       ? { tipo: resultType, niveles: evento.levels, columnasOcultas: evento.hiddenColumns, gruposOcultos: evento.hiddenGroups }
       : undefined;
-    void exportarConsultaExcel(evento.parameters, cuentas, agrupacion);
+    // Armar el Excel es casi instantáneo: se le da un mínimo de tiempo visible al snackbar para que alcance a leerse.
+    this.preparandoExportacion.set(true);
+    try {
+      const minimoVisible = new Promise((resuelve) => setTimeout(resuelve, 1200));
+      await Promise.all([exportarConsultaExcel(evento.parameters, cuentas, agrupacion), minimoVisible]);
+    } finally {
+      this.preparandoExportacion.set(false);
+    }
   }
 
   /** El número del documento del registro lleva a su documento (el de «Documentos y registros»), en una pestaña nueva. */

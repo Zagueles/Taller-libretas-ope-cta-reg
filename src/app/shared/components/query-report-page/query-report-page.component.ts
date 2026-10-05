@@ -434,7 +434,7 @@ let siguienteId = 0;
                     [rows]="filasFiltradas()"
                     [levels]="nivelesGrupo()"
                     [aggregation]="configuracion().groupAggregation ?? null"
-                    [footerInnermost]="nivelesGrupo().length === 2"
+                    [footerInnermost]="nivelesGrupo().length <= 2"
                     [ariaLabel]="configuracion().tableLabel ?? configuracion().title"
                     [groupTooltips]="configuracion().columnsPanel?.groupLabels ?? {}"
                     (linkClicked)="linkClicked.emit($event)"

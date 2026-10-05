@@ -1,3 +1,4 @@
+import { cargarToDataURL, cargarWorkbook } from '../../../../shared/utils/librerias-dinamicas.util';
 import type { QueryReportParameters } from '../../../../shared/types/query-report.types';
 import { CUENTAS_BANCARIAS_INFO, MOVIMIENTOS_LIBRETA_REGISTRO, MovimientoLibretaRegistro, nombreBeneficiario, nombreTipoOperacion } from '../models/registro-libretas.model';
 import { construirDetalleRegistro, DetalleRegistro } from './registro-libretas-detalle.util';
@@ -20,8 +21,11 @@ function descargar(blob: Blob, nombre: string): void {
   const enlace = document.createElement('a');
   enlace.href = url;
   enlace.download = nombre;
+  document.body.appendChild(enlace);
   enlace.click();
-  URL.revokeObjectURL(url);
+  enlace.remove();
+  // Revocar al instante cancela la descarga en algunos navegadores: se deja un momento.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 /** Una cuenta bancaria consultada, con los movimientos ya filtrados que le tocan (Figma nodo «reporte detallado»). */
@@ -284,12 +288,12 @@ function hojaAgrupada(
       if (actual.subtitleColumn) texto += `\n${valoresMovimiento(filasGrupo[0], enDolares)[actual.subtitleColumn]}`;
       filaDeGrupo(texto, filasGrupo, nivel, esUltimo ? 'tituloInterno' : 'titulo', actual.subtitleColumn ? 45 : 33);
       nivelar(filasGrupo, nivel + 1);
-      // Agrupado: todos los niveles menos el más interno cierran con pie (con solo dos niveles, también el segundo),
+      // Agrupado: todos los niveles menos el más interno cierran con pie (con uno o dos niveles, también el más interno),
       // el primero es el «TOTAL». Agregado: la
       // entidad (nivel 1) va como tarjeta y no cierra; desde el nivel 2 todos cierran, el nivel 2 con «TOTAL» y los
       // siguientes con «Subtotal» (como la pantalla).
       const agregado = agrupacion.tipo === 'agregado';
-      if (agregado ? nivel >= 1 : !esUltimo || niveles.length === 2) {
+      if (agregado ? nivel >= 1 : !esUltimo || niveles.length <= 2) {
         const esTotal = agregado ? nivel === 1 : nivel === 0;
         const pie = `${esTotal ? 'TOTAL' : 'Subtotal'} ${prefijo}: ${textoNivel(actual.key, valor)}`;
         filaDeGrupo(pie, filasGrupo, nivel, esTotal ? 'total' : 'subtotal', 33);
@@ -312,7 +316,7 @@ export async function exportarConsultaExcel(
   cuentas: CuentaConsultaExcel[],
   agrupacion?: AgrupacionExcel,
 ): Promise<void> {
-  const { Workbook } = await import('exceljs');
+  const Workbook = await cargarWorkbook();
   const libro = new Workbook();
 
   // ---------- Resumen ----------
@@ -612,7 +616,7 @@ function cargarLogo(): Promise<Logo | null> {
 /** QR de verificación del documento (Figma nodo 440:84666), con el enlace para comprobarlo. */
 async function cargarQr(contenido: string): Promise<string | null> {
   try {
-    const { toDataURL } = await import('qrcode');
+    const toDataURL = await cargarToDataURL();
     return await toDataURL(contenido, { margin: 0, width: 240, color: { dark: '#202020', light: '#ffffff' } });
   } catch {
     return null;

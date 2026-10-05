@@ -1,3 +1,4 @@
+import { cargarWorkbook } from '../../../../shared/utils/librerias-dinamicas.util';
 import type { QueryReportColumn, QueryReportExportFormat, QueryReportRow } from '../../../../shared/types/query-report.types';
 
 /** Descarga un Blob como archivo. */
@@ -6,8 +7,10 @@ function descargar(blob: Blob, nombre: string): void {
   const enlace = document.createElement('a');
   enlace.href = url;
   enlace.download = nombre;
+  document.body.appendChild(enlace);
   enlace.click();
-  URL.revokeObjectURL(url);
+  enlace.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 /**
@@ -30,7 +33,7 @@ export async function exportarCuentasBancarias(formato: QueryReportExportFormat,
   }
 
   if (formato === 'excel') {
-    const { Workbook } = await import('exceljs');
+    const Workbook = await cargarWorkbook();
     const libro = new Workbook();
     const hoja = libro.addWorksheet('Cuentas bancarias');
     hoja.columns = columnas.map((c) => ({ header: c.label, key: c.key, width: Math.max(14, Math.round((c.width ?? 140) / 7)) }));

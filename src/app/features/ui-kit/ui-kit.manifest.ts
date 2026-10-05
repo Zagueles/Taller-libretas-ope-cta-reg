@@ -6476,7 +6476,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "tipo": "boolean",
         "porDefecto": "false",
         "requerida": false,
-        "descripcion": "El nivel más interno también cierra con su pie (el primer nivel es el «TOTAL» y los demás, «Subtotal»): en «Agregado» siempre y en «Agrupado» con dos niveles; con tres o más, el más interno solo lleva su saldo en el título."
+        "descripcion": "El nivel más interno también cierra con su pie (el primer nivel es el «TOTAL» y los demás, «Subtotal»): en «Agregado» siempre y en «Agrupado» con uno o dos niveles; con tres o más, el más interno solo lleva su saldo en el título."
       },
       {
         "nombre": "groupTooltips",

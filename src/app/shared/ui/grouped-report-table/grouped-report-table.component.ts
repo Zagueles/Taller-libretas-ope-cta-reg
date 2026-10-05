@@ -225,7 +225,7 @@ export class GroupedReportTableComponent implements OnChanges {
   @Input() rows: readonly ReportTableRow[] = [];
   @Input() levels: readonly GroupedTableLevel[] = [];
   @Input() aggregation: QueryReportGroupAggregation | null = null;
-  /** El nivel más interno también cierra con su pie (el primer nivel es el «TOTAL» y los demás, «Subtotal»): en «Agregado» siempre y en «Agrupado» con dos niveles; con tres o más, el más interno solo lleva su saldo en el título. */
+  /** El nivel más interno también cierra con su pie (el primer nivel es el «TOTAL» y los demás, «Subtotal»): en «Agregado» siempre y en «Agrupado» con uno o dos niveles; con tres o más, el más interno solo lleva su saldo en el título. */
   @Input() footerInnermost = false;
   @Input() ariaLabel = 'Resultado del reporte agrupado';
   @Input() emptyMessage = 'No se encontraron resultados con los filtros aplicados.';

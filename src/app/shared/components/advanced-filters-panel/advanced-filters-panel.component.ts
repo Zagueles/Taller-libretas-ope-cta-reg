@@ -340,7 +340,7 @@ export class AdvancedFiltersPanelComponent implements OnChanges {
   cambiarTipo(tipo: QueryReportResultType): void {
     this.tipoResultado.set(tipo);
     const permitidos = new Set(this.nivelesDisponibles().map((c) => c.key));
-    this.niveles.update((actual) => actual.filter((n) => permitidos.has(n)));
+    this.niveles.update((actual) => actual.filter((n) => n === '' || permitidos.has(n)));
   }
 
   /** Suelta el nivel arrastrado en `destino`; si el nuevo orden rompe la jerarquía, no cambia nada. */
@@ -385,12 +385,14 @@ export class AdvancedFiltersPanelComponent implements OnChanges {
   }
 
   puedeAgregarNivel(): boolean {
-    return this.niveles().length < MAX_NIVELES && this.libresParaAgregar().length > 0;
+    // Se puede agregar otro nivel aunque el anterior siga vacío, mientras queden campos por elegir para todos.
+    const vacios = this.niveles().filter((n) => n === '').length;
+    return this.niveles().length < MAX_NIVELES && this.libresParaAgregar().length > vacios;
   }
 
+  /** La condición nueva entra vacía (sin campo ni condición): la persona elige cada cosa; hasta entonces no se aplica. */
   agregarCondicion(): void {
-    const campoPorDefecto = this.opcionesCampo()[0]?.value ?? '';
-    this.condiciones.update((actual) => [...actual, { id: `condicion-${++siguienteCondicionId}`, field: campoPorDefecto, operator: '=' }]);
+    this.condiciones.update((actual) => [...actual, { id: `condicion-${++siguienteCondicionId}`, field: '', operator: '' as QueryReportCondition['operator'] }]);
   }
 
   quitarCondicion(id: string): void {
@@ -403,8 +405,8 @@ export class AdvancedFiltersPanelComponent implements OnChanges {
 
   agregarNivel(): void {
     if (this.niveles().length >= MAX_NIVELES) return;
-    const disponible = this.libresParaAgregar()[0];
-    if (disponible) this.niveles.update((actual) => [...actual, disponible.key]);
+    // El nivel nuevo entra vacío: la persona elige el campo.
+    if (this.puedeAgregarNivel()) this.niveles.update((actual) => [...actual, '']);
   }
 
   quitarNivel(indice: number): void {
@@ -424,9 +426,9 @@ export class AdvancedFiltersPanelComponent implements OnChanges {
 
   aplicar(): void {
     const condicionesCompletas = this.condiciones().filter(
-      (c) => c.field && (c.operator === 'empty' || c.operator === 'notEmpty' || !!c.value),
+      (c) => c.field && c.operator && (c.operator === 'empty' || c.operator === 'notEmpty' || !!c.value),
     );
-    this.applied.emit({ conditions: condicionesCompletas, resultType: this.tipoResultado(), levels: this.niveles() });
+    this.applied.emit({ conditions: condicionesCompletas, resultType: this.tipoResultado(), levels: this.niveles().filter(Boolean) });
   }
 
   cerrar(): void {

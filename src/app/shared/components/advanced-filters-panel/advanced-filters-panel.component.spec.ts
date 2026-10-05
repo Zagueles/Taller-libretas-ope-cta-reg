@@ -32,8 +32,27 @@ describe('AdvancedFiltersPanelComponent', () => {
   });
 
   it('admite hasta 3 niveles', () => {
-    for (let i = 0; i < 5; i++) panel.agregarNivel();
+    for (let i = 0; i < 5; i++) {
+      panel.agregarNivel();
+      const ultimo = panel.niveles().length - 1;
+      if (panel.niveles()[ultimo] === '') panel.cambiarNivel(ultimo, panel.opcionesNivel(ultimo)[0].value as string);
+    }
     expect(panel.niveles().length).toBe(MAX_NIVELES);
+  });
+
+  it('el nivel y la condición nuevos entran vacíos, y solo se aplica lo que la persona completó', () => {
+    panel.agregarNivel();
+    expect(panel.niveles()).toEqual(['']);
+    expect(panel.puedeAgregarNivel()).toBeTrue();
+
+    panel.agregarCondicion();
+    expect(panel.condiciones()).toEqual([jasmine.objectContaining({ field: '', operator: '' })]);
+
+    let aplicado: { conditions: unknown[]; levels: string[] } | undefined;
+    panel.applied.subscribe((v) => (aplicado = v));
+    panel.aplicar();
+    expect(aplicado?.levels).toEqual([]);
+    expect(aplicado?.conditions).toEqual([]);
   });
 
   it('Entidad va antes de Unidad ejecutora: el arrastre no los intercambia y el orden roto se marca', () => {
