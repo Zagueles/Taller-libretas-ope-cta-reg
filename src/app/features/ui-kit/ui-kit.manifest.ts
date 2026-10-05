@@ -5140,6 +5140,11 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "descripcion": "Igual que `documentsQueryChange`, para la pestaña Registros (`serverRecordsQuery`)."
       },
       {
+        "nombre": "selectionDownloaded",
+        "tipo": "DocumentsRecordsDownloadEvent",
+        "descripcion": "«Descargar» de la barra de selección (config `selectionDownload`): las filas elegidas y los filtros aplicados."
+      },
+      {
         "nombre": "tabChange",
         "tipo": "'documents' | 'records'",
         "descripcion": null
@@ -14713,6 +14718,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       }
     ],
     "usa": [
+      "[siafTooltip]",
       "siaf-icon",
       "siaf-pagination"
     ],

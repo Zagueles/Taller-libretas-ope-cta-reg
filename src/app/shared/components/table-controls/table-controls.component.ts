@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 
 import { IconComponent } from '../../ui/icon/icon.component';
+import { TooltipDirective } from '../../ui/tooltip/tooltip.directive';
 import { PaginationComponent } from '../pagination/pagination.component';
 
 /**
@@ -46,7 +47,7 @@ import { PaginationComponent } from '../pagination/pagination.component';
 @Component({
   selector: 'siaf-table-controls',
   standalone: true,
-  imports: [IconComponent, PaginationComponent],
+  imports: [IconComponent, PaginationComponent, TooltipDirective],
   template: `
     <div class="flex min-h-10 items-center gap-siaf-md">
       @if (showSelection) {
@@ -90,6 +91,7 @@ import { PaginationComponent } from '../pagination/pagination.component';
         <button
           class="inline-flex size-10 items-center justify-center rounded-siaf-md text-text-muted transition hover:bg-surface-muted"
           type="button"
+          [siafTooltip]="exportLabel"
           [attr.aria-label]="exportLabel"
           (click)="exported.emit()"
         >

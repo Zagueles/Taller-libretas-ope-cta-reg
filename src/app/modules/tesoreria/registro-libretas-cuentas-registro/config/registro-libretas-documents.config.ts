@@ -75,6 +75,8 @@ export const REGISTRO_LIBRETAS_DOCUMENTS_CONFIG: DocumentsRecordsConfig = {
   documentTableMinWidthClass: 'min-w-[1270px]',
   recordTableMinWidthClass: 'min-w-[2900px]',
   recordSelectable: true,
+  documentSelectable: true,
+  selectionDownload: true,
   recordRowAction: { icon: 'description', label: 'Ver documento PDF' },
   recordTrackKey: 'sec',
   recordHistoryDocumentLabel: 'Registro de operaciones en las libretas de las cuentas de registro',

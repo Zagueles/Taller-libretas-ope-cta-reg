@@ -95,6 +95,10 @@ export type DocumentsRecordsConfig = {
   recordHistoryKind?: 'cuenta' | 'asiento' | 'documento';
   /** Registros con casilla por fila y «seleccionar todo» (por defecto, solo Documentos las tiene). */
   recordSelectable?: boolean;
+  /** Documentos con casilla en cualquier estado (sin esto, solo los Elaborados o Verificados de la acción masiva). */
+  documentSelectable?: boolean;
+  /** Con filas elegidas, la barra de selección suma «Descargar» y la página emite `selectionDownloaded`. */
+  selectionDownload?: boolean;
   /** Reemplaza el botón de historial de cada fila de Registros (p. ej. «Ver documento PDF»); emite `recordActionClicked`. */
   recordRowAction?: { icon: string; label: string };
   // Filtros para tab Documentos
@@ -145,3 +149,11 @@ export type DocumentsRecordsConfig = {
    */
   buildDocumentHistory?: (row: DocumentsRecordsRow) => Record<string, unknown> | null | undefined;
 };
+
+/** Lo que emite «Descargar» de la barra de selección: la pestaña, las filas elegidas y los filtros rápidos aplicados. */
+export interface DocumentsRecordsDownloadEvent {
+  tab: DocumentsRecordsTab;
+  rows: DocumentsRecordsRow[];
+  /** Filtros rápidos de la pestaña con su valor («Todos» si no hay uno aplicado). */
+  filters: { label: string; value: string }[];
+}

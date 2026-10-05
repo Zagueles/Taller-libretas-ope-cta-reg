@@ -1002,3 +1002,178 @@ export async function generarPdfDocumento(numero: string): Promise<{ blob: Blob;
 
   return { blob: pdf.output('blob'), nombre: nombrePdfDocumento(numero) };
 }
+
+// ---------- «Documentos existentes» y «Registros existentes» (descarga de las filas elegidas con casilla) ----------
+
+const AZUL_TABLA = 'FF04589D';
+const TITULO_DESCARGA = 'DOCUMENTOS DE OPERACIONES EN LAS LIBRETAS DE LAS CUENTAS DE REGISTRO';
+
+export interface FiltroDescarga {
+  label: string;
+  value: string;
+}
+
+type Hoja = import('exceljs').Worksheet;
+
+/** Hoja «Resumen» de las dos descargas: título, hora de creación, sección y los dos filtros rápidos aplicados. */
+function resumenDescarga(libro: import('exceljs').Workbook, seccion: string, filtros: FiltroDescarga[], anchos: number[]): void {
+  const resumen = libro.addWorksheet('Resumen', { views: [{ zoomScale: 100, zoomScaleNormal: 100 }] });
+  anchos.forEach((ancho, i) => (resumen.getColumn(i + 1).width = ancho));
+  for (let f = 1; f <= 14; f++) for (let c = 1; c <= 14; c++) resumen.getCell(f, c).fill = relleno(BLANCO);
+
+  resumen.getRow(2).height = 26;
+  resumen.getCell('B2').value = TITULO_DESCARGA;
+  resumen.getCell('B2').font = { name: 'Calibri', bold: true, size: 20, color: { argb: AZUL } };
+  resumen.getCell('B3').value = `Creado ${fechaHoraActual().replace('  ', '    ')}`;
+  resumen.getCell('B3').font = { name: 'Calibri', italic: true, size: 11 };
+  resumen.getRow(7).height = 19;
+  resumen.getCell('B7').value = seccion;
+  resumen.getCell('B7').font = { name: 'Calibri', bold: true, size: 14, color: { argb: AZUL } };
+  for (let c = 2; c <= 14; c++) resumen.getCell(7, c).border = { bottom: { style: 'hair' } };
+
+  // Cada filtro rápido con su etiqueta en negrita (columnas B y F) y debajo el valor aplicado.
+  filtros.slice(0, 2).forEach((filtro, i) => {
+    const col = i === 0 ? 2 : 6;
+    resumen.getCell(9, col).value = filtro.label;
+    resumen.getCell(9, col).font = { name: 'Calibri', bold: true, size: 11 };
+    resumen.getCell(10, col).value = filtro.value;
+    resumen.getCell(10, col).font = { name: 'Calibri', size: 11 };
+    resumen.getCell(10, col).alignment = { horizontal: 'left' };
+  });
+}
+
+function cabeceraTabla(celda: import('exceljs').Cell, horizontal: 'left' | 'center' | 'right'): void {
+  celda.fill = relleno(AZUL_TABLA);
+  celda.font = { name: 'Calibri', bold: true, size: 14, color: { argb: BLANCO } };
+  celda.alignment = { horizontal, vertical: 'middle', wrapText: true };
+  celda.border = BORDES;
+}
+
+async function guardarLibro(libro: import('exceljs').Workbook, nombre: string): Promise<void> {
+  const buffer = await libro.xlsx.writeBuffer();
+  descargar(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), nombre);
+}
+
+export interface DocumentoDescarga {
+  document: string;
+  number: string;
+  actionType: string;
+  status: string;
+  system: string;
+  dateIso: string;
+  entity: string;
+}
+
+/** Excel de los documentos elegidos en la pestaña Documentos (plantilla «Documentos_existentes»). */
+export async function exportarDocumentosExcel(documentos: DocumentoDescarga[], filtros: FiltroDescarga[]): Promise<void> {
+  const Workbook = await cargarWorkbook();
+  const libro = new Workbook();
+  resumenDescarga(libro, 'DOCUMENTOS EXISTENTES', filtros, [3.5, 57.2, 9.2, 9.2, 9.2, 16.2]);
+
+  const hoja: Hoja = libro.addWorksheet('Resultado');
+  const columnas: [string, number][] = [['Documento', 30], ['Número', 17.5], ['Tipo de acción', 19.5], ['Estado', 12], ['Sistema', 25], ['Fecha de registro', 22], ['Entidad', 30]];
+  hoja.getRow(1).height = 30;
+  columnas.forEach(([titulo, ancho], i) => {
+    hoja.getColumn(i + 1).width = ancho;
+    hoja.getCell(1, i + 1).value = titulo;
+    cabeceraTabla(hoja.getCell(1, i + 1), 'left');
+  });
+  documentos.forEach((d, i) => {
+    const f = i + 2;
+    hoja.getRow(f).height = 40;
+    const valores: Array<string | Date> = [d.document, d.number, d.actionType, d.status, d.system, aFecha(d.dateIso), d.entity];
+    valores.forEach((valor, c) => {
+      const celda = hoja.getCell(f, c + 1);
+      celda.value = valor;
+      celda.border = BORDES;
+      celda.fill = relleno(BLANCO);
+      celda.font = { name: 'Calibri', size: 11 };
+      celda.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+      if (valor instanceof Date) celda.numFmt = 'mm-dd-yy';
+    });
+  });
+  await guardarLibro(libro, 'Documentos_existentes.xlsx');
+}
+
+/** Excel de los registros elegidos en la pestaña Registros (plantilla «Registros_existentes»): la tabla de dos filas de cabecera. */
+export async function exportarRegistrosExcel(secuencias: string[], filtros: FiltroDescarga[]): Promise<void> {
+  const Workbook = await cargarWorkbook();
+  const libro = new Workbook();
+  resumenDescarga(libro, 'REGISTROS EXISTENTES', filtros, [10.7, 10.7, 10.7, 10.7, 10.7, 11.8]);
+
+  const hoja: Hoja = libro.addWorksheet('Resultado', { pageSetup: { orientation: 'landscape' } });
+  const columnas: { grupo?: string; rotulo: string; ancho: number; alinea: 'left' | 'center' | 'right' }[] = [
+    { grupo: 'Acreditación', rotulo: 'Secuencia', ancho: 12, alinea: 'left' },
+    { grupo: 'Acreditación', rotulo: 'Fecha', ancho: 20.3, alinea: 'left' },
+    { grupo: 'Beneficiario', rotulo: 'Código', ancho: 12, alinea: 'left' },
+    { grupo: 'Beneficiario', rotulo: 'Descripción', ancho: 37, alinea: 'left' },
+    { grupo: 'Cuenta de registro', rotulo: 'Número', ancho: 26.5, alinea: 'left' },
+    { grupo: 'Cuenta de registro', rotulo: 'Descripción', ancho: 73.8, alinea: 'left' },
+    { rotulo: 'Tipo de operación', ancho: 32, alinea: 'left' },
+    { grupo: 'Ámbito institucional', rotulo: 'Entidad', ancho: 13.2, alinea: 'left' },
+    { grupo: 'Ámbito institucional', rotulo: 'Unidad ejecutora', ancho: 30.3, alinea: 'left' },
+    { grupo: 'Ámbito institucional', rotulo: 'Grupo', ancho: 20.5, alinea: 'left' },
+    { grupo: 'Importe en moneda de la cuenta', rotulo: 'Saldo inicial', ancho: 15, alinea: 'right' },
+    { grupo: 'Importe en moneda de la cuenta', rotulo: 'Débito', ancho: 13, alinea: 'right' },
+    { grupo: 'Importe en moneda de la cuenta', rotulo: 'Crédito', ancho: 13, alinea: 'right' },
+    { grupo: 'Importe en moneda de la cuenta', rotulo: 'Saldo final', ancho: 15, alinea: 'right' },
+    { rotulo: 'Estado de registro', ancho: 14, alinea: 'center' },
+    { grupo: 'Documento', rotulo: 'Número', ancho: 16.7, alinea: 'left' },
+    { grupo: 'Documento', rotulo: 'Descripción', ancho: 59, alinea: 'left' },
+  ];
+  hoja.getRow(1).height = 21.75;
+  hoja.getRow(2).height = 30;
+  for (let i = 0; i < columnas.length; ) {
+    const c = columnas[i];
+    let fin = i;
+    if (c.grupo) while (fin + 1 < columnas.length && columnas[fin + 1].grupo === c.grupo) fin++;
+    for (let k = i; k <= fin; k++) {
+      hoja.getColumn(k + 1).width = columnas[k].ancho;
+      for (const f of [1, 2]) cabeceraTabla(hoja.getCell(f, k + 1), f === 2 && columnas[k].alinea === 'right' ? 'right' : 'center');
+    }
+    if (!c.grupo) {
+      hoja.mergeCells(1, i + 1, 2, i + 1);
+      hoja.getCell(1, i + 1).value = c.rotulo;
+    } else {
+      if (fin > i) hoja.mergeCells(1, i + 1, 1, fin + 1);
+      hoja.getCell(1, i + 1).value = c.grupo;
+      for (let k = i; k <= fin; k++) hoja.getCell(2, k + 1).value = columnas[k].rotulo;
+    }
+    i = fin + 1;
+  }
+
+  secuencias.forEach((sec, i) => {
+    const m = MOVIMIENTOS_LIBRETA_REGISTRO.find((x) => x.sec === sec);
+    if (!m) return;
+    const f = i + 3;
+    hoja.getRow(f).height = 25.5;
+    const valores: Array<string | number> = [
+      m.sec,
+      fechaHoraVisible(m.fecha),
+      m.beneficiarioCodigo,
+      nombreBeneficiario(m.beneficiarioCodigo).toUpperCase(),
+      m.numeroCuentaRegistro,
+      m.descripcionCuentaRegistro,
+      nombreTipoOperacion(m.tipoOperacionCodigo),
+      m.entidad,
+      m.entidad === 'MEF' ? '-' : m.unidadEjecutora,
+      m.grupo,
+      m.saldoInicial,
+      m.debito,
+      m.credito,
+      m.saldoFinal,
+      'Activo',
+      m.numeroDocumento,
+      m.descripcionDocumento,
+    ];
+    valores.forEach((valor, c) => {
+      const celda = hoja.getCell(f, c + 1);
+      celda.value = valor;
+      celda.border = BORDES;
+      celda.font = { name: 'Calibri', size: 11 };
+      celda.alignment = { horizontal: columnas[c].alinea, vertical: 'middle' };
+      if (typeof valor === 'number') celda.numFmt = '#,##0.00';
+    });
+  });
+  await guardarLibro(libro, 'Registros_existentes.xlsx');
+}

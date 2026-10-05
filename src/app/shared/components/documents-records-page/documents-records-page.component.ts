@@ -14,7 +14,7 @@ import { PaginationComponent } from '../../components/pagination/pagination.comp
 import { RecordsSearchToolbarComponent } from '../../components/records-search-toolbar/records-search-toolbar.component';
 import { RecordsTabItem, RecordsTabsComponent } from '../../components/records-tabs/records-tabs.component';
 import { TableControlsComponent } from '../../components/table-controls/table-controls.component';
-import type { DocumentsQuery, DocumentsRecordsColumn, DocumentsRecordsConfig, DocumentsRecordsRow, DocumentsRecordsTab } from '../../types/documents-records.types';
+import type { DocumentsQuery, DocumentsRecordsColumn, DocumentsRecordsConfig, DocumentsRecordsDownloadEvent, DocumentsRecordsRow, DocumentsRecordsTab } from '../../types/documents-records.types';
 import { AccountHistoryPanelComponent } from '../account-history-panel/account-history-panel.component';
 import { AsientoHistoryPanelComponent } from '../asiento-history-panel/asiento-history-panel.component';
 import { ButtonComponent } from '../../ui/button/button.component';
@@ -327,6 +327,10 @@ type DocumentsRecordsRoleMode = 'creator' | 'approver' | 'readOnly';
                   [hideTopPaginationOnMobile]="true"
                   [checked]="allVisibleElaboradoDocumentsSelected"
                   [indeterminate]="someVisibleElaboradoDocumentsSelected"
+                  [selectedCount]="selectedCountActiveTab"
+                  [showExportAction]="!!effectiveConfig.selectionDownload"
+                  exportLabel="Descargar"
+                  (exported)="descargarSeleccion()"
                   [disabled]="visibleSelectableElaboradoDocuments.length === 0"
                   [page]="page"
                   [pageSize]="rowsPerPage"
@@ -342,6 +346,10 @@ type DocumentsRecordsRoleMode = 'creator' | 'approver' | 'readOnly';
                   [showSelection]="!!effectiveConfig.recordSelectable"
                   [checked]="allVisibleRecordsSelected"
                   [indeterminate]="someVisibleRecordsSelected"
+                  [selectedCount]="selectedCountActiveTab"
+                  [showExportAction]="!!effectiveConfig.selectionDownload"
+                  exportLabel="Descargar"
+                  (exported)="descargarSeleccion()"
                   (selectionChange)="toggleVisibleRecords($event)"
                   [page]="page"
                   [pageSize]="rowsPerPage"
@@ -436,6 +444,8 @@ export class DocumentsRecordsPageComponent implements OnChanges {
   @Output() tabChange = new EventEmitter<DocumentsRecordsTab>();
   /** El botón de la fila de Registros cuando la config declara `recordRowAction` (p. ej. «Ver documento PDF»). */
   @Output() recordActionClicked = new EventEmitter<DocumentsRecordsRow>();
+  /** «Descargar» de la barra de selección (config `selectionDownload`): las filas elegidas y los filtros aplicados. */
+  @Output() selectionDownloaded = new EventEmitter<DocumentsRecordsDownloadEvent>();
   /**
    * Consulta remota de la pestaña Documentos (solo si la config declara
    * `serverQuery`): se emite al confirmar la búsqueda (Enter/lupa), al cambiar
@@ -683,12 +693,40 @@ export class DocumentsRecordsPageComponent implements OnChanges {
       return [];
     }
 
+    if (this.effectiveConfig.documentSelectable) return this.paginatedRows;
+
     // APROBADOR selecciona Verificados — CREADOR selecciona Elaborados
     const selectableStatus = this.selectableDocumentStatus;
     if (!selectableStatus) {
       return [];
     }
     return this.paginatedRows.filter((row) => row['status'] === selectableStatus);
+  }
+
+  /** Filas elegidas de la pestaña activa que siguen a la vista (las que quedan tras buscar y filtrar). */
+  get selectedRowsActiveTab(): DocumentsRecordsRow[] {
+    return this.filteredRows.filter((row) => row.selected);
+  }
+
+  get selectedCountActiveTab(): number {
+    return this.selectedRowsActiveTab.length;
+  }
+
+  /** «Descargar» de la barra de selección: el padre arma el archivo con las filas y los filtros que se le entregan. */
+  descargarSeleccion(): void {
+    const cfg = this.effectiveConfig;
+    const valor = (v: string): string => v || 'Todos';
+    const filters =
+      this.activeTab === 'documents'
+        ? [
+            { label: cfg.documentFilter1Label ?? 'Estado', value: valor(this.selectedDocumentFilter1) },
+            { label: cfg.documentFilter2Label ?? 'Fecha', value: valor(this.selectedDocumentDateLabel || this.selectedDocumentFilter2) },
+          ]
+        : [
+            { label: cfg.recordFilter1Label ?? '', value: valor(this.selectedRecordFilter1) },
+            { label: cfg.recordFilter2Label ?? '', value: valor(this.selectedRecordFilter2) },
+          ];
+    this.selectionDownloaded.emit({ tab: this.activeTab, rows: this.selectedRowsActiveTab, filters });
   }
 
   get allVisibleRecordsSelected(): boolean {
@@ -888,6 +926,10 @@ export class DocumentsRecordsPageComponent implements OnChanges {
   }
 
   toggleVisibleElaboradoDocuments(selected: boolean): void {
+    if (this.effectiveConfig.documentSelectable) {
+      this.paginatedRows.forEach((row) => (row.selected = selected));
+      return;
+    }
     const selectableStatus = this.selectableDocumentStatus;
 
     this.paginatedRows.forEach((row) => {
@@ -902,6 +944,7 @@ export class DocumentsRecordsPageComponent implements OnChanges {
 
   selectionDisabled = (row: DocumentsRecordsRow): boolean => {
     if (this.activeTab !== 'documents') return false;
+    if (this.effectiveConfig.documentSelectable) return false;
     const selectableStatus = this.selectableDocumentStatus;
     if (!selectableStatus) return true;
 

@@ -2,11 +2,12 @@ import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 
 import { DocumentsRecordsPageComponent } from '../../../../../shared/components/documents-records-page/documents-records-page.component';
 import { PdfViewerModalComponent } from '../../../../../shared/components/pdf-viewer-modal/pdf-viewer-modal.component';
-import type { DocumentsRecordsConfig, DocumentsRecordsRow } from '../../../../../shared/types/documents-records.types';
+import { SnackbarComponent } from '../../../../../shared/ui/snackbar/snackbar.component';
+import type { DocumentsRecordsConfig, DocumentsRecordsDownloadEvent, DocumentsRecordsRow } from '../../../../../shared/types/documents-records.types';
 import { DOCUMENTO_ROUTE, REGISTRO_ROUTE } from '../../config/registro-libretas.rutas';
 import { REGISTRO_LIBRETAS_DOCUMENTS_CONFIG } from '../../config/registro-libretas-documents.config';
 import { MOVIMIENTOS_LIBRETA_REGISTRO, nombreBeneficiario, nombreTipoOperacion } from '../../models/registro-libretas.model';
-import { generarPdfRegistro } from '../../utils/registro-libretas-export.util';
+import { exportarDocumentosExcel, exportarRegistrosExcel, generarPdfRegistro } from '../../utils/registro-libretas-export.util';
 
 const NOMBRE_DOCUMENTO = 'Registro de operaciones en las libretas de las cuentas de registro';
 const ENTIDAD = '009 - Ministerio de Economía y Finanzas';
@@ -31,9 +32,12 @@ const fechaVisible = (iso: string): string => iso.slice(0, 10).split('-').revers
 @Component({
   selector: 'siaf-registro-libretas-documents',
   standalone: true,
-  imports: [DocumentsRecordsPageComponent, PdfViewerModalComponent],
+  imports: [DocumentsRecordsPageComponent, PdfViewerModalComponent, SnackbarComponent],
   template: `
-    <siaf-documents-records-page [config]="pageConfig" (recordActionClicked)="verDocumentoPdf($event)" />
+    <siaf-documents-records-page [config]="pageConfig" (recordActionClicked)="verDocumentoPdf($event)" (selectionDownloaded)="descargarSeleccion($event)" />
+    <div class="fixed bottom-siaf-lg left-1/2 z-50 w-[min(430px,calc(100vw-32px))] -translate-x-1/2">
+      <siaf-snackbar [open]="preparandoExportacion()" tone="neutral" [dismissible]="false" message="Preparando archivo para exportar" />
+    </div>
     <siaf-pdf-viewer-modal [open]="pdfAbierto()" [blob]="pdfBlob()" [nombre]="pdfNombre()" [totalPaginas]="pdfPaginas()" (closed)="cerrarPdf()" />
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -43,6 +47,7 @@ export class RegistroLibretasDocumentsComponent {
   readonly pdfBlob = signal<Blob | null>(null);
   readonly pdfNombre = signal('documento.pdf');
   readonly pdfPaginas = signal(1);
+  readonly preparandoExportacion = signal(false);
 
   readonly pageConfig: DocumentsRecordsConfig = {
     ...REGISTRO_LIBRETAS_DOCUMENTS_CONFIG,
@@ -111,6 +116,37 @@ export class RegistroLibretasDocumentsComponent {
     this.pdfNombre.set(generado.nombre);
     this.pdfPaginas.set(generado.paginas);
     this.pdfAbierto.set(true);
+  }
+
+  /** «Descargar» de la barra de selección: Excel de los documentos o de los registros elegidos (según la pestaña). */
+  async descargarSeleccion(evento: DocumentsRecordsDownloadEvent): Promise<void> {
+    if (!evento.rows.length) return;
+    this.preparandoExportacion.set(true);
+    try {
+      // Armar el Excel es casi instantáneo: se le da un mínimo de tiempo visible al snackbar para que alcance a leerse.
+      const minimoVisible = new Promise((resuelve) => setTimeout(resuelve, 1200));
+      const archivo =
+        evento.tab === 'documents'
+          ? exportarDocumentosExcel(
+              evento.rows.map((r) => ({
+                document: String(r['document'] ?? ''),
+                number: String(r['number'] ?? ''),
+                actionType: String(r['actionType'] ?? ''),
+                status: String(r['status'] ?? ''),
+                system: String(r['system'] ?? ''),
+                dateIso: String(r['dateIso'] ?? ''),
+                entity: String(r['entity'] ?? ''),
+              })),
+              evento.filters,
+            )
+          : exportarRegistrosExcel(
+              evento.rows.map((r) => String(r['sec'] ?? '')),
+              evento.filters,
+            );
+      await Promise.all([archivo, minimoVisible]);
+    } finally {
+      this.preparandoExportacion.set(false);
+    }
   }
 
   cerrarPdf(): void {
