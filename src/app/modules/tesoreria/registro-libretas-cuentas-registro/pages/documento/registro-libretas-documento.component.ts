@@ -2,6 +2,7 @@ import { Location } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 
+import { DetailHistoryEntry, DetailHistoryTabsComponent } from '../../../../../shared/components/detail-history-tabs/detail-history-tabs.component';
 import { FormTableSearchComponent } from '../../../../../shared/components/form-table-search/form-table-search.component';
 import { SolicitudeFormCardComponent } from '../../../../../shared/components/solicitude-form-card/solicitude-form-card.component';
 import { SolicitudeInfoCardComponent } from '../../../../../shared/components/solicitude-info-card/solicitude-info-card.component';
@@ -12,11 +13,10 @@ import { ButtonComponent } from '../../../../../shared/ui/button/button.componen
 import { DocumentSummaryCardComponent } from '../../../../../shared/ui/document-summary-card/document-summary-card.component';
 import { ReadonlyFieldComponent } from '../../../../../shared/ui/readonly-field/readonly-field.component';
 import { ReportTableColumn, ReportTableComponent, ReportTableRow } from '../../../../../shared/ui/report-table/report-table.component';
-import { TabsComponent, TabItem } from '../../../../../shared/ui/tabs/tabs.component';
 import { SnackbarComponent } from '../../../../../shared/ui/snackbar/snackbar.component';
 import { volverAlOrigen } from '../../../../../shared/utils/volver.util';
 import { buildProcessBreadcrumbs } from '../../../../../shared/utils/breadcrumbs.util';
-import { PROCESS_ID, PROCESS_ROUTE } from '../../config/registro-libretas.rutas';
+import { PROCESS_ID, PROCESS_ROUTE, REGISTRO_ROUTE } from '../../config/registro-libretas.rutas';
 import { DOCUMENTOS_RECHAZADOS, movimientosDeDocumento, nombreBeneficiario } from '../../models/registro-libretas.model';
 import { generarPdfDocumento } from '../../utils/registro-libretas-export.util';
 
@@ -73,7 +73,7 @@ const COLUMNAS: ReportTableColumn[] = [
     ReadonlyFieldComponent,
     ReportTableComponent,
     SnackbarComponent,
-    TabsComponent,
+    DetailHistoryTabsComponent,
     SolicitudeFormCardComponent,
     SolicitudeInfoCardComponent,
     SolicitudePageLayoutComponent,
@@ -141,24 +141,11 @@ const COLUMNAS: ReportTableColumn[] = [
 
         <siaf-solicitude-form-card title="Registros de operaciones en las libretas">
           <siaf-form-table-search [value]="busqueda()" (valueChange)="busqueda.set($any($event))" />
-          <siaf-report-table [columns]="columnas" [rows]="filas()" rowKey="sec" ariaLabel="Registros de operaciones en las libretas del documento" />
+          <siaf-report-table [columns]="columnas" [rows]="filas()" rowKey="sec" [clickableRows]="true" ariaLabel="Registros de operaciones en las libretas del documento" (rowClicked)="abrirRegistro($event)" />
         </siaf-solicitude-form-card>
 
         @if (d.motivoRechazo) {
-          <section class="overflow-hidden rounded-siaf-md bg-surface">
-            <siaf-tabs [tabs]="pestanas" [activeId]="pestana()" (activeIdChange)="pestana.set($event)" ariaLabel="Detalle e historial del documento" />
-            @if (pestana() === 'detalle') {
-              <div class="flex flex-col gap-siaf-xs p-siaf-lg" data-detalle-rechazo>
-                <span class="text-xs uppercase tracking-[0.66px] text-[var(--sys-color-text-neutral-medium)]">Motivo de rechazo</span>
-                <p class="m-0 text-base text-[var(--sys-color-text-neutral-high)]">{{ d.motivoRechazo }}</p>
-              </div>
-            } @else {
-              <div class="flex flex-col gap-siaf-md p-siaf-lg" data-historial-rechazo>
-                <h3 class="m-0 text-base font-bold uppercase text-[var(--sys-color-text-neutral-high)]">Historial de comentarios y detalles</h3>
-                <siaf-report-table [columns]="columnasHistorial" [rows]="filasHistorial()" rowKey="iteracion" ariaLabel="Historial de comentarios y detalles del documento" />
-              </div>
-            }
-          </section>
+          <siaf-detail-history-tabs [comentario]="{ label: 'Motivo de rechazo', texto: d.motivoRechazo }" [entries]="historialRechazo()" />
         }
 
         <siaf-action-tracker
@@ -187,21 +174,6 @@ export class RegistroLibretasDocumentoComponent {
   readonly cuentaElegida = signal('mef-dgtp-cut');
   readonly busqueda = signal('');
   readonly preparandoDescarga = signal(false);
-  readonly pestana = signal('detalle');
-  readonly pestanas: TabItem[] = [
-    { id: 'detalle', label: 'Detalle' },
-    { id: 'historial', label: 'Historial' },
-  ];
-  readonly columnasHistorial: ReportTableColumn[] = [
-    { key: 'iteracion', label: 'Iteración', width: 100 },
-    { key: 'proceso', label: 'Proceso', width: 180 },
-    { key: 'tipo', label: 'Comentario / Motivo', width: 200 },
-    { key: 'descripcion', label: 'Descripción', width: 420 },
-    { key: 'fecha', label: 'Fecha', width: 160 },
-    { key: 'rol', label: 'Rol', width: 130 },
-    { key: 'usuario', label: 'Usuario', width: 130 },
-  ];
-
   private readonly movimientos = computed(() => {
     const numero = this.ruta.snapshot.paramMap.get('numero');
     return movimientosDeDocumento(numero ?? '');
@@ -220,11 +192,23 @@ export class RegistroLibretasDocumentoComponent {
     };
   });
 
-  /** Historial de un documento rechazado: el rechazo automático con su motivo. */
-  readonly filasHistorial = computed<ReportTableRow[]>(() => {
+  /** Historial de un documento rechazado: el rechazo automático con su motivo (pestaña «Historial»). */
+  readonly historialRechazo = computed<DetailHistoryEntry[]>(() => {
     const d = this.documento();
-    if (!d?.motivoRechazo) return [];
-    return [{ iteracion: '1', proceso: 'Creación - Rechazado', tipo: 'Comentario', descripcion: d.motivoRechazo, fecha: d.fechaProcesado, rol: 'Automático', usuario: 'SIAF RP' }];
+    const primero = this.movimientos()[0];
+    if (!d?.motivoRechazo || !primero) return [];
+    return [
+      {
+        iteracion: 1,
+        proceso: 'Creación - Rechazado',
+        comentario: 'Comentario',
+        descripcion: d.motivoRechazo,
+        fecha: fechaVisible(primero.fecha),
+        hora: '18:02:00',
+        rol: 'Automático',
+        usuario: 'SIAF RP',
+      },
+    ];
   });
 
   readonly filas = computed<ReportTableRow[]>(() => {
@@ -261,6 +245,12 @@ export class RegistroLibretasDocumentoComponent {
     } finally {
       this.preparandoDescarga.set(false);
     }
+  }
+
+  /** Pulsar una fila de «Registros de operaciones en las libretas» abre el detalle de ese registro. */
+  abrirRegistro(fila: ReportTableRow): void {
+    const sec = fila['sec'];
+    if (sec) void this.router.navigate([REGISTRO_ROUTE, sec]);
   }
 
   volver(): void {

@@ -698,28 +698,54 @@ export async function generarPdfRegistro(sec: string): Promise<{ blob: Blob; nom
   };
 
   /** Etiquetas y valores en columnas, como `readonly-field`: 3 por fila (o `anchoCol` para una que ocupe dos). */
-  const campos = (filas: { caption: string; value: string; ancho?: 1 | 2 }[], anchoDisponible = anchoUtil): void => {
-    const columnas = 3;
+  const campos = (filas: { caption: string; value: string; ancho?: 1 | 2 }[], anchoDisponible = anchoUtil, columnas = 3): void => {
     const anchoCol = anchoDisponible / columnas;
     let col = 0;
+    /** Líneas de la caja más alta de la fila: toda la fila (y lo que sigue) respeta ese alto. */
+    let lineasFila = 1;
     for (const campo of filas) {
       const x = margen + col * anchoCol;
-      salto(11);
+      const ocupa = Math.min(campo.ancho === 2 ? 2 : 1, columnas);
+      salto(11 + (lineasFila - 1) * 4);
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(8);
       pdf.text(campo.caption.toUpperCase(), x, y);
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(9.5);
-      const lineas = pdf.splitTextToSize(campo.value || '-', (campo.ancho === 2 ? 2 : 1) * anchoCol - 4);
+      const lineas = pdf.splitTextToSize(campo.value || '-', ocupa * anchoCol - 4);
       pdf.text(lineas, x, y + 4.5);
-      col += campo.ancho === 2 ? 2 : 1;
+      lineasFila = Math.max(lineasFila, lineas.length);
+      col += ocupa;
       if (col >= columnas) {
         col = 0;
-        y += 4.5 + lineas.length * 4;
+        y += 4.5 + lineasFila * 4 + (columnas === 1 ? 3 : 0);
+        lineasFila = 1;
       }
     }
-    if (col !== 0) y += 12;
+    if (col !== 0) y += Math.max(12, 4.5 + lineasFila * 4);
     y += 3;
+  };
+
+  /** Alto que ocupará `campos` con esas filas, sin dibujar: para decidir si una sección entera cabe en la hoja. */
+  const medirCampos = (filas: { caption: string; value: string; ancho?: 1 | 2 }[], anchoDisponible = anchoUtil, columnas = 3): number => {
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(9.5);
+    const anchoCol = anchoDisponible / columnas;
+    let col = 0;
+    let lineasFila = 1;
+    let total = 0;
+    for (const campo of filas) {
+      const ocupa = Math.min(campo.ancho === 2 ? 2 : 1, columnas);
+      lineasFila = Math.max(lineasFila, (pdf.splitTextToSize(campo.value || '-', ocupa * anchoCol - 4) as string[]).length);
+      col += ocupa;
+      if (col >= columnas) {
+        total += 4.5 + lineasFila * 4 + (columnas === 1 ? 3 : 0);
+        col = 0;
+        lineasFila = 1;
+      }
+    }
+    if (col !== 0) total += Math.max(12, 4.5 + lineasFila * 4);
+    return total + 3;
   };
 
   /** Fila de 4 montos resaltados (Figma «Importe en moneda de la cuenta»): caja celeste, etiqueta arriba y el valor en negrita a la derecha. */
@@ -741,14 +767,14 @@ export async function generarPdfRegistro(sec: string): Promise<{ blob: Blob; nom
       pdf.setFontSize(9.5);
       pdf.text(campo.value, x + anchoCaja - 2, y + 8.5, { align: 'right' });
     });
-    y += alto + 3;
+    y += alto + 7; // aire antes del siguiente título (si no, «Descripción detallada» quedaba pegado a las cajas)
   };
 
   const linea = (): void => {
     salto(4);
     pdf.setDrawColor(210);
     pdf.line(margen, y, 210 - margen, y);
-    y += 5;
+    y += 9; // el mismo aire debajo del divisor que encima
   };
 
   encabezado();
@@ -781,24 +807,32 @@ export async function generarPdfRegistro(sec: string): Promise<{ blob: Blob; nom
 
   subtitulo('Registro de operación de la libreta');
   for (const seccion of detalle.secciones) {
+    const columnasSeccion = seccion.titulo === 'Cuenta de registro' ? 1 : 3;
+    // Una sección no se parte entre hojas: si su título y sus campos no caben, pasa entera a la siguiente.
+    salto(5 + medirCampos(seccion.campos, anchoUtil, columnasSeccion));
     subtitulo(seccion.titulo);
-    campos(seccion.campos);
+    // «Cuenta de registro»: la descripción (larga) va debajo del número, no al lado.
+    campos(seccion.campos, anchoUtil, columnasSeccion);
   }
 
+  salto(5 + 11 + 7);
   subtitulo('Importe en moneda de la cuenta');
   importesDestacados(detalle.importes);
   if (detalle.importesNacional.length) {
+    salto(5 + 11 + 7);
     subtitulo('Importe en moneda nacional');
     importesDestacados(detalle.importesNacional);
   }
 
+  const descripcionDetallada = [{ caption: 'Descripción', value: detalle.descripcionDetallada, ancho: 2 as const }];
+  salto(5 + medirCampos(descripcionDetallada));
   subtitulo('Descripción detallada del registro');
-  campos([{ caption: 'Descripción', value: detalle.descripcionDetallada, ancho: 2 }]);
+  campos(descripcionDetallada);
   linea();
 
   campos([
-    { caption: 'Estado de conciliación', value: 'Conciliado' },
-    { caption: 'Estado de registro', value: 'Activo' },
+    { caption: 'Estado de conciliación', value: detalle.rechazado ? 'No conciliado' : 'Conciliado' },
+    { caption: 'Estado de registro', value: detalle.rechazado ? '-' : 'Activo' },
   ]);
 
   // Pie de página (Figma «Pie de página - Membrete»): divider + «Creado …» y «Página X de Y» en todas las hojas.

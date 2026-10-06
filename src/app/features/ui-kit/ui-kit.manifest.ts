@@ -11155,6 +11155,13 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "descripcion": "Nombre de la tabla y de su zona desplazable."
       },
       {
+        "nombre": "clickableRows",
+        "tipo": "boolean",
+        "porDefecto": "false",
+        "requerida": false,
+        "descripcion": "Con `clickableRows`, pulsar una fila (o Enter con el foco en ella) la emite: abre su detalle. Los enlaces de la fila siguen emitiendo `linkClicked`."
+      },
+      {
         "nombre": "columns",
         "tipo": "readonly ReportTableColumn[]",
         "porDefecto": "[]",
@@ -11195,6 +11202,11 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "nombre": "linkClicked",
         "tipo": "{ row: ReportTableRow; column: ReportTableColumn; }",
         "descripcion": null
+      },
+      {
+        "nombre": "rowClicked",
+        "tipo": "ReportTableRow",
+        "descripcion": null
       }
     ],
     "usar": "- En «Resultado de reporte» de `siaf-query-report-page`, con `siaf-pagination` debajo.\n- Con `group` para reportes anchos con columnas emparentadas (Acreditación: secuencia y fecha; Beneficiario: código y\n  descripción) y `fixed` en el importe final, para leerlo mientras se desplaza.\n- `kind: 'link'` en la columna que abre el documento de la fila.",
@@ -11217,6 +11229,12 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       ]
     },
     "tokens": [
+      {
+        "token": "--sys-color-bg-states-light-hover",
+        "via": [
+          "var()"
+        ]
+      },
       {
         "token": "--sys-color-bg-surfaces-surface",
         "via": [

@@ -3,6 +3,7 @@ import {
   CUENTAS_BANCARIAS_INFO,
   CuentaBancariaRegistroInfo,
   MOVIMIENTOS_LIBRETA_REGISTRO,
+  MOVIMIENTOS_RECHAZADOS,
   nombreBeneficiario,
   nombreTipoOperacion,
 } from '../models/registro-libretas.model';
@@ -44,6 +45,8 @@ export interface DetalleRegistro {
   /** Solo en cuentas en dólares: los mismos cuatro importes convertidos a soles con el tipo de cambio de compra; vacío en soles. */
   importesNacional: DetalleRegistroCampo[];
   descripcionDetallada: string;
+  /** Registro de un documento rechazado: sin estado de registro y «No conciliado». */
+  rechazado: boolean;
 }
 
 /**
@@ -52,7 +55,8 @@ export interface DetalleRegistro {
  * quedan siempre iguales.
  */
 export function construirDetalleRegistro(sec: string): DetalleRegistro | null {
-  const m = MOVIMIENTOS_LIBRETA_REGISTRO.find((x) => x.sec === sec);
+  // También los de un documento rechazado: se pueden abrir desde la vista de su documento.
+  const m = [...MOVIMIENTOS_LIBRETA_REGISTRO, ...MOVIMIENTOS_RECHAZADOS].find((x) => x.sec === sec);
   if (!m) return null;
   const cuenta = CUENTAS_BANCARIAS_INFO.find((c) => c.id === m.cuentaBancariaId) ?? CUENTAS_BANCARIAS_INFO[0];
   const interno = MOVIMIENTO_INTERNO[m.tipoOperacionCodigo] ?? { codigo: SIN_DATO, descripcion: SIN_DATO, sigla: SIN_DATO };
@@ -61,7 +65,9 @@ export function construirDetalleRegistro(sec: string): DetalleRegistro | null {
   const compra = 3.35;
   const venta = 3.32;
   const codigoUe = m.entidad === 'MINCETUR' ? '11111107004  - ' : '';
+  const rechazado = MOVIMIENTOS_RECHAZADOS.some((x) => x.sec === sec);
   return {
+    rechazado,
     sec: m.sec,
     numeroDocumento: m.numeroDocumento,
     cuenta,

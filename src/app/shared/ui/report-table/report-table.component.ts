@@ -130,7 +130,14 @@ interface CeldaCabecera {
         </thead>
         <tbody>
           @for (fila of rows; track trackBy(fila, $index)) {
-            <tr class="border-b border-[var(--sys-color-divider-default)] bg-surface">
+            <tr
+              class="border-b border-[var(--sys-color-divider-default)] bg-surface"
+              [class.cursor-pointer]="clickableRows"
+              [class.hover:bg-[var(--sys-color-bg-states-light-hover)]]="clickableRows"
+              [attr.tabindex]="clickableRows ? 0 : null"
+              (click)="clickableRows && rowClicked.emit(fila)"
+              (keydown.enter)="clickableRows && rowClicked.emit(fila)"
+            >
               @for (columna of columns; track columna.key) {
                 <td
                   class="h-12 px-siaf-md py-siaf-sm align-middle text-sm leading-normal tracking-[0.0249px] text-[var(--sys-color-text-neutral-medium)]"
@@ -144,7 +151,7 @@ interface CeldaCabecera {
                     <button
                       class="rounded-siaf-sm text-left font-medium text-[var(--sys-color-text-brand-primary)] underline-offset-2 hover:underline focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sys-color-border-states-focus)]"
                       type="button"
-                      (click)="linkClicked.emit({ row: fila, column: columna })"
+                      (click)="$event.stopPropagation(); linkClicked.emit({ row: fila, column: columna })"
                     >
                       {{ fila[columna.key] }}
                     </button>
@@ -178,6 +185,9 @@ export class ReportTableComponent {
   @Input() emptyMessage = 'No se encontraron resultados con los filtros aplicados.';
 
   @Output() linkClicked = new EventEmitter<{ row: ReportTableRow; column: ReportTableColumn }>();
+  /** Con `clickableRows`, pulsar una fila (o Enter con el foco en ella) la emite: abre su detalle. Los enlaces de la fila siguen emitiendo `linkClicked`. */
+  @Input() clickableRows = false;
+  @Output() rowClicked = new EventEmitter<ReportTableRow>();
 
   /**
    * Columna fija a la derecha: sticky con la sombra de elevación 6 del Figma recortada a su borde izquierdo, para que no

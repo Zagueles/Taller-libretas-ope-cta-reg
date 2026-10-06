@@ -100,10 +100,14 @@ import { construirDetalleRegistro } from '../../utils/registro-libretas-detalle.
             <div class="h-px w-full bg-[var(--sys-color-divider-default)]"></div>
 
             <div class="grid gap-x-siaf-lg gap-y-siaf-lg md:grid-cols-3">
-              <readonly-field caption="Estado de conciliación" value="Conciliado" />
+              <readonly-field caption="Estado de conciliación" [value]="r.rechazado ? 'No conciliado' : 'Conciliado'" />
               <div class="flex flex-col gap-siaf-xxs px-siaf-md">
                 <span class="text-xs font-medium text-text-muted">Estado de registro</span>
-                <span><siaf-record-status-tag status="Activo" size="small" /></span>
+                @if (r.rechazado) {
+                  <span class="text-sm text-[var(--sys-color-text-neutral-high)]">-</span>
+                } @else {
+                  <span><siaf-record-status-tag status="Activo" size="small" /></span>
+                }
               </div>
             </div>
           </div>
