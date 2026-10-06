@@ -1,5 +1,5 @@
 import { NgClass } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, inject, Input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, inject, Input, OnChanges, Output } from '@angular/core';
 
 import { ButtonComponent } from '../../ui/button/button.component';
 import { IconComponent } from '../../ui/icon/icon.component';
@@ -7,6 +7,7 @@ import { DEFAULT_PROCESS_TREE, ProcessMenuNode } from '../../utils/process-tree.
 import { SelectOption, SelectOptionsComponent } from '../../ui/select-options/select-options.component';
 import { TooltipDirective } from '../../ui/tooltip/tooltip.directive';
 import { FocoDirective } from '../../ui/foco/foco.directive';
+import { ProcessMenuTreeComponent } from '../../../layout/process-menu-tree/process-menu-tree.component';
 
 export type CreateDocumentVariant = 'sidepanel' | 'dropdown';
 
@@ -52,8 +53,8 @@ const CREATE_DOCUMENT_PROCESSES: CreateDocumentProcessOption[] = collectProcessO
 
 /**
  * Formulario «Crear documento»: pide proceso, documento y tipo de acción y emite `accepted` con esa selección y la ruta
- * de la solicitud a abrir. La variante `sidepanel` (panel del shell) busca el proceso entre `processOptions`, que
- * por defecto salen del árbol `DEFAULT_PROCESS_TREE`; `dropdown` (popover) solo pide documento y tipo de acción.
+ * de la solicitud a abrir. La variante `sidepanel` (panel del shell) elige el proceso en el mismo árbol de procesos del menú (se abre al
+ * tocar el buscador, con flecha para regresar); el árbol se poda a los procesos de `processOptions` (los que tienen creación habilitada), abiertos y como hojas; `dropdown` (popover) solo pide documento y tipo de acción.
  * Con `fields` el padre controla los campos y recibe cada cambio por `fieldValueChange`.
  *
  * @usar
@@ -72,20 +73,17 @@ const CREATE_DOCUMENT_PROCESSES: CreateDocumentProcessOption[] = collectProcessO
  * - **Enter / Espacio** en Documento o Tipo de acción: abre o cierra sus opciones; al abrir, el foco entra en la
  *   opción elegida, que sigue `siaf-select-options` (flechas, Inicio, Fin, Enter o Espacio). Escape o salir con Tab
  *   las cierra y el foco vuelve al campo.
- * - **Flecha abajo** en el buscador de procesos: entra a la lista (si estaba cerrada, primero la abre);
- *   **flechas arriba / abajo** la recorren y **Enter** elige el proceso (el foco vuelve al buscador).
- * - **Escape**: en el buscador cierra la lista; en un proceso, cierra la lista y vuelve al buscador.
+ * - **Enter / Flecha abajo / clic** en el buscador de procesos: abre el árbol; ahí se navega como en el menú de procesos y la
+ *   flecha «Regresar» vuelve al formulario.
  * - **Enter / Espacio** en Cancelar y Aceptar: emiten `canceled` y `accepted`.
  * @accesibilidad
- * - **2.1.1 Teclado (A)**: el buscador es un `combobox` con `aria-expanded`: flecha abajo entra a la lista de procesos,
- *   las flechas la recorren y Enter elige; la lista ya no se cierra al pasar del buscador a ella.
+ * - **2.1.1 Teclado (A)**: el buscador abre el árbol con Enter, flecha abajo o clic; el árbol y su botón «Regresar» se usan con teclado.
  * - **2.4.7 Foco visible (AA)**: Documento, Tipo de acción y el buscador muestran el borde azul de 2 px
  *   (`border-states-focus`, 5.35:1 claro / 10.15:1 oscuro) al recibir el foco, también si ya tienen valor.
  * - **2.4.3 Orden del foco (A)**: con `siafFoco`, las opciones de Documento y Tipo de acción reciben el foco al abrir y
  *   al elegir, cerrar con Escape o salir con Tab vuelve al campo; al elegir un proceso el foco vuelve al buscador.
- * - **4.1.2 Nombre, función y valor (A)**: el buscador es un `combobox` con `aria-expanded` y `aria-controls` hacia
- *   la lista `role="listbox"` «Procesos», y el proceso elegido lleva `aria-selected`. Documento y Tipo de acción
- *   publican `aria-expanded` y `aria-haspopup="listbox"`.
+ * - **4.1.2 Nombre, función y valor (A)**: el buscador es de solo lectura con `aria-haspopup="tree"`; Documento y Tipo de acción
+ *   publican `aria-expanded` y `aria-haspopup="listbox"`. El botón de regresar del árbol lleva `aria-label="Regresar"`.
  * - **Pendiente · 1.4.11 Contraste no textual (AA)**: el borde de los campos en reposo es `border-states-enabled`
  *   (2.44:1 / 2.59:1); el de foco, `border-states-focus` (5.35:1 / 10.15:1), sí cumple.
  * - **3.3.2 Etiquetas o instrucciones (A)**: cada campo muestra su nombre (en el placeholder o como etiqueta flotante)
@@ -98,15 +96,18 @@ const CREATE_DOCUMENT_PROCESSES: CreateDocumentProcessOption[] = collectProcessO
 @Component({
   selector: 'siaf-create-document',
   standalone: true,
-  imports: [FocoDirective, ButtonComponent, IconComponent, NgClass, SelectOptionsComponent, TooltipDirective],
+  imports: [FocoDirective, ButtonComponent, IconComponent, NgClass, ProcessMenuTreeComponent, SelectOptionsComponent, TooltipDirective],
   template: `
+    @if (treeOpen) {
+      <siaf-process-menu-tree [nodes]="treeNodes" [showBack]="true" [expandAll]="true" (back)="cerrarArbol()" (nodeSelected)="onTreeNode($event)" />
+    } @else {
     <section
       class="flex flex-col items-start bg-[var(--sys-color-bg-surfaces-field,var(--sys-color-bg-surfaces-surface))]"
       [ngClass]="variantClass"
       aria-label="Crear documento"
     >
-      <header class="flex w-full items-center gap-siaf-xs p-siaf-md">
-        <h2 class="m-0 min-h-6 text-base font-bold uppercase leading-none tracking-[0.02px] text-text">
+      <header class="flex min-h-14 w-full items-center gap-siaf-xs p-siaf-md">
+        <h2 class="m-0 min-h-6 text-base font-bold uppercase leading-6 tracking-[0.02px] text-[var(--sys-color-text-neutral-high)]">
           {{ title }}
         </h2>
       </header>
@@ -170,46 +171,14 @@ const CREATE_DOCUMENT_PROCESSES: CreateDocumentProcessOption[] = collectProcessO
                       [placeholder]="isFieldFloating(field) ? '' : optionPlaceholder(field)"
                       [value]="field.value || ''"
                       [disabled]="field.disabled"
-                      role="combobox"
-                      aria-autocomplete="list"
-                      [attr.aria-expanded]="showProcessResults(field)"
-                      [attr.aria-controls]="showProcessResults(field) ? idResultados : null"
+                      readonly
+                      aria-haspopup="tree"
                       (focus)="onSearchFocus(field)"
-                      (blur)="onSearchBlur($event)"
-                      (input)="onSearchInput(field, $event)"
-                      (keydown.arrowDown)="enfocarProceso($event, 0)"
-                      (keydown.escape)="cerrarResultadosConEscape($event)"
+                      (blur)="focusedField = ''"
+                      (click)="abrirArbol()"
+                      (keydown.enter)="abrirArbol()"
+                      (keydown.arrowDown)="abrirArbol()"
                     />
-
-                    @if (showProcessResults(field)) {
-                      <div
-                        class="absolute left-0 right-0 top-[calc(100%+4px)] z-50 max-h-72 overflow-y-auto rounded-siaf-md bg-[var(--sys-color-bg-surfaces-field,var(--sys-color-bg-surfaces-surface))] py-siaf-xs shadow-siaf-elevation-1"
-                        role="listbox"
-                        aria-label="Procesos"
-                        [id]="idResultados"
-                        (focusout)="alSalirDeResultados($event)"
-                      >
-                        @for (process of filteredProcessOptions; track process.id) {
-                          <button
-                            class="flex min-h-10 w-full items-center px-siaf-md py-siaf-xs text-left text-sm text-[var(--sys-color-text-neutral-medium)] transition hover:bg-[var(--sys-color-bg-states-light-hover)] focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--sys-color-border-states-focus)]"
-                            type="button"
-                            role="option"
-                            [attr.aria-selected]="process.id === selectedProcess?.id"
-                            (mousedown)="$event.preventDefault()"
-                            (click)="selectProcess(process, $event)"
-                            (keydown.arrowDown)="enfocarProceso($event, 1)"
-                            (keydown.arrowUp)="enfocarProceso($event, -1)"
-                            (keydown.escape)="volverAlBuscador($event)"
-                          >
-                            <span class="min-w-0 flex-1 truncate" siafTooltip>{{ process.label }}</span>
-                          </button>
-                        } @empty {
-                          <span class="block px-siaf-md py-siaf-xs text-sm text-[var(--sys-color-text-neutral-low)]">
-                            No se encontraron procesos
-                          </span>
-                        }
-                      </div>
-                    }
                   </div>
                 }
               </label>
@@ -223,10 +192,11 @@ const CREATE_DOCUMENT_PROCESSES: CreateDocumentProcessOption[] = collectProcessO
         </div>
       </div>
     </section>
+    }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class CreateDocumentComponent {
+export class CreateDocumentComponent implements OnChanges {
   private readonly cdr = inject(ChangeDetectorRef);
 
   @Input() variant: CreateDocumentVariant = 'sidepanel';
@@ -236,7 +206,8 @@ export class CreateDocumentComponent {
   @Input() processOptions: CreateDocumentProcessOption[] = CREATE_DOCUMENT_PROCESSES;
   focusedField = '';
   openedSelectField = '';
-  processResultsOpen = false;
+  treeOpen = false;
+  treeNodes: ProcessMenuNode[] = this.armarArbol();
   private readonly internalValues = new Map<string, string>();
 
   @Output() canceled = new EventEmitter<void>();
@@ -299,16 +270,6 @@ export class CreateDocumentComponent {
     return this.processOptions.find((process) => process.id === selectedProcessId) || null;
   }
 
-  get filteredProcessOptions(): CreateDocumentProcessOption[] {
-    const query = this.normalize(this.internalValues.get('Buscar proceso o procedimiento') || '');
-
-    if (!query) {
-      return this.processOptions;
-    }
-
-    return this.processOptions.filter((process) => this.normalize(process.label).includes(query));
-  }
-
   get resolvedAcceptDisabled(): boolean {
     return this.acceptDisabled || this.resolvedFields.some((field) => field.required && !field.value);
   }
@@ -327,7 +288,6 @@ export class CreateDocumentComponent {
     this.fieldSelected.emit(field.placeholder);
     this.openedSelectField = this.openedSelectField === field.placeholder ? '' : field.placeholder;
     this.focusedField = this.openedSelectField;
-    this.processResultsOpen = false;
   }
 
   closeSelect(): void {
@@ -357,105 +317,60 @@ export class CreateDocumentComponent {
   onSearchFocus(field: CreateDocumentField): void {
     this.focusedField = field.placeholder;
     this.openedSelectField = '';
-    this.processResultsOpen = this.isProcessSearchField(field);
   }
 
-  onSearchBlur(event?: FocusEvent): void {
-    // Pasar a la lista de procesos (con flecha abajo) no la cierra.
-    if (this.estaEnResultados(event?.relatedTarget)) return;
-    this.focusedField = '';
-    this.closeProcessResults();
-  }
-
-  readonly idResultados = `siaf-create-document-procesos-${Math.random().toString(36).slice(2)}`;
-
-  /** Flecha abajo desde el buscador entra a la lista; en la lista, flechas arriba y abajo recorren los procesos. */
-  enfocarProceso(event: Event, paso: 0 | 1 | -1): void {
-    const origen = event.target as HTMLElement;
-    if (paso === 0 && !this.processResultsOpen) {
-      // Con la lista cerrada (después de Escape), flecha abajo la vuelve a abrir sin mover el foco.
-      event.preventDefault();
-      this.processResultsOpen = true;
-      this.cdr.markForCheck();
-      return;
-    }
-    const lista = paso === 0 ? origen.parentElement?.querySelector<HTMLElement>('[role="listbox"]') : origen.closest<HTMLElement>('[role="listbox"]');
-    const opciones = Array.from(lista?.querySelectorAll<HTMLElement>('[role="option"]') ?? []);
-    if (!opciones.length) return;
-    event.preventDefault();
-    const actual = opciones.indexOf(origen);
-    const destino = paso === 0 ? 0 : (actual + paso + opciones.length) % opciones.length;
-    opciones[destino].focus();
-  }
-
-  /** Escape en el buscador cierra la lista abierta y lo marca como atendido (el popover que lo contiene no se cierra). */
-  cerrarResultadosConEscape(event: Event): void {
-    if (!this.processResultsOpen) return;
-    event.preventDefault();
-    this.closeProcessResults();
-  }
-
-  /** Escape en un proceso cierra la lista y el foco vuelve al buscador. */
-  volverAlBuscador(event: Event): void {
-    event.preventDefault();
-    // Primero el foco: al enfocarse, el buscador vuelve a abrir la lista.
-    this.buscadorDe(event)?.focus();
-    this.closeProcessResults();
-  }
-
-  /** La lista se cierra cuando el foco sale de ella hacia un control que no es el buscador. */
-  alSalirDeResultados(event: FocusEvent): void {
-    const lista = event.currentTarget as HTMLElement;
-    const destino = event.relatedTarget as Node | null;
-    if (destino && (lista.contains(destino) || lista.parentElement?.querySelector('input') === destino)) return;
-    this.focusedField = '';
-    this.closeProcessResults();
-  }
-
-  private estaEnResultados(destino: EventTarget | null | undefined): boolean {
-    return destino instanceof HTMLElement && !!destino.closest('[role="listbox"]');
-  }
-
-  private buscadorDe(event?: Event): HTMLInputElement | null {
-    const origen = event?.target instanceof HTMLElement ? event.target : null;
-    return origen?.closest('[role="listbox"]')?.parentElement?.querySelector<HTMLInputElement>('input') ?? null;
-  }
-
-  onSearchInput(field: CreateDocumentField, event: Event): void {
-    const value = (event.target as HTMLInputElement).value;
-
-    if (this.fields.length === 0) {
-      this.internalValues.set(field.placeholder, value);
-      // Cambiar de proceso invalida documento y tipo de accion seleccionados previamente.
-      this.internalValues.delete('processId');
-      this.internalValues.delete('Documento');
-      this.internalValues.delete('Tipo de acci\u00f3n');
-      this.processResultsOpen = true;
-      this.cdr.markForCheck();
-    }
-
-    this.fieldValueChange.emit({
-      placeholder: field.placeholder,
-      value
-    });
-  }
-
-  selectProcess(process: CreateDocumentProcessOption, event?: Event): void {
-    // El foco vuelve al buscador, que ahora muestra el proceso elegido y conserva su borde de foco.
-    const buscador = this.buscadorDe(event);
-    buscador?.focus();
+  selectProcess(process: CreateDocumentProcessOption): void {
     this.internalValues.set('processId', process.id);
     this.internalValues.set('Buscar proceso o procedimiento', process.label);
     this.internalValues.delete('Documento');
     this.internalValues.delete('Tipo de acci\u00f3n');
-    this.processResultsOpen = false;
-    if (!buscador) this.focusedField = '';
+    this.focusedField = '';
     this.cdr.markForCheck();
 
     this.fieldValueChange.emit({
       placeholder: 'Buscar proceso o procedimiento',
       value: process.label
     });
+  }
+
+  /** El buscador de proceso abre el mismo árbol del menú de procesos, con la flecha para regresar al formulario. */
+  abrirArbol(): void {
+    if (this.fields.length > 0) return;
+    this.treeOpen = true;
+    this.focusedField = '';
+    this.cdr.markForCheck();
+  }
+
+  cerrarArbol(): void {
+    this.treeOpen = false;
+    this.cdr.markForCheck();
+  }
+
+  /** Solo una hoja con algo por crear elige el proceso; las demás ramas se abren o cierran dentro del árbol. */
+  onTreeNode(node: ProcessMenuNode): void {
+    if (node.children?.length) return;
+    const proceso = this.processOptions.find((p) => p.id === node.id);
+    if (!proceso) return;
+    this.selectProcess(proceso);
+    this.treeOpen = false;
+  }
+
+  ngOnChanges(): void {
+    this.treeNodes = this.armarArbol();
+  }
+
+  /**
+   * El árbol de procesos podado a lo que se puede crear: solo quedan las ramas que llevan a un proceso de `processOptions`,
+   * y ese proceso se muestra como hoja aunque en el menú tenga pantallas debajo.
+   */
+  private armarArbol(): ProcessMenuNode[] {
+    const podar = (nodos: ProcessMenuNode[]): ProcessMenuNode[] =>
+      nodos.flatMap((n) => {
+        if (this.processOptions.some((p) => p.id === n.id)) return [{ id: n.id, label: n.label }];
+        const hijos = n.children ? podar(n.children) : [];
+        return hijos.length ? [{ id: n.id, label: n.label, children: hijos }] : [];
+      });
+    return podar(DEFAULT_PROCESS_TREE);
   }
 
   accept(): void {
@@ -470,15 +385,6 @@ export class CreateDocumentComponent {
       actionType: this.internalValues.get('Tipo de acci\u00f3n') || this.externalFieldValue('Tipo de acción'),
       route: documentOption?.route || selectedProcess?.route
     });
-  }
-
-  closeProcessResults(): void {
-    this.processResultsOpen = false;
-    this.cdr.markForCheck();
-  }
-
-  showProcessResults(field: CreateDocumentField): boolean {
-    return this.processResultsOpen && this.isProcessSearchField(field);
   }
 
   fieldOptions(field: CreateDocumentField): SelectOption[] {
@@ -517,10 +423,6 @@ export class CreateDocumentComponent {
     }
 
     return 'border border-[var(--sys-color-border-states-enabled)] hover:border-2 hover:border-[var(--sys-color-border-states-hover)]';
-  }
-
-  private isProcessSearchField(field: CreateDocumentField): boolean {
-    return this.fields.length === 0 && field.placeholder === 'Buscar proceso o procedimiento';
   }
 
   private get defaultProcess(): CreateDocumentProcessOption | null {

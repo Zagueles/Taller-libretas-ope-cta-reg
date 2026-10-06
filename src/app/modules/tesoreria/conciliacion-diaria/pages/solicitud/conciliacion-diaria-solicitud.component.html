@@ -1,0 +1,216 @@
+<div class="min-h-[calc(100vh-56px)] bg-[var(--sys-color-bg-surfaces-surface-lowest)] text-text">
+  <!-- La cabecera (migas, título, estado y botones según rol y estado) la pinta el layout de solicitudes. -->
+  <siaf-solicitude-page-layout
+    [breadcrumbs]="breadcrumbs"
+    [role]="headerRole()"
+    [state]="headerState()"
+    [loading]="cargando()"
+    [heading]="heading"
+    secondaryText="Creación"
+    [showReturn]="soloLectura()"
+    [saveDisabled]="!formValido() || saving()"
+    [keepVerifyOnEdit]="true"
+    [verifyDisabled]="editando() || !puedeVerificar() || cargando()"
+    (returned)="regresar()"
+    (canceled)="regresar()"
+    (saved)="modalGrabar.set(true)"
+    (edited)="editar()"
+    (verified)="modalVerificar.set(true)"
+    (deleted)="modalEliminar.set(true)"
+    (approved)="abrirAprobar()"
+    (observed)="abrirObservar()"
+    (rejected)="abrirRechazar()"
+  >
+    @if (cargando()) {
+      <div class="rounded-siaf-md bg-surface p-siaf-xl">
+        <div class="grid grid-cols-3 gap-siaf-md">
+          @for (i of [1, 2, 3]; track i) {
+            <div class="siaf-skeleton-pulse h-4 w-32 rounded bg-[var(--sys-color-bg-surfaces-surface-low)]"></div>
+          }
+        </div>
+      </div>
+    } @else {
+      @if (elaborado()) {
+        <section class="grid gap-siaf-md lg:grid-cols-[1fr_360px]">
+          <siaf-solicitude-info-card [fields]="camposEntidad()" />
+          <siaf-document-summary-card [documentNumber]="numeroDocumento()" [status]="estadoDocumento()" />
+        </section>
+      } @else {
+        <siaf-solicitude-info-card [fields]="camposEntidad()" [captureOpenDate]="true" />
+      }
+
+      <!-- ── Información de conciliación ── -->
+      <siaf-solicitude-form-card title="Información de conciliación">
+        @if (soloLectura()) {
+          <readonly-field caption="Tipo de conciliación" value="Manual" />
+        } @else {
+          <div class="grid gap-siaf-lg md:grid-cols-2 xl:grid-cols-4">
+            <siaf-input label="Tipo de conciliación" value="Manual" [disabled]="true" />
+          </div>
+        }
+      </siaf-solicitude-form-card>
+
+      <!-- ── Cuenta bancaria ── -->
+      <siaf-solicitude-form-card title="Cuenta bancaria">
+        @if (!soloLectura()) {
+          <siaf-button card-actions variant="filled" icon="search" [iconOnly]="true" [disabled]="registrosElegidos().length > 0" ariaLabel="Buscar cuenta bancaria" (click)="abrirCuentas()" />
+        }
+        @if (cuenta()) {
+          <siaf-summary-card [fields]="camposCuenta()" [bordered]="true" [showIndicator]="true" [showClose]="false" />
+        } @else {
+          <message-box text="No se ha seleccionado ningún tipo. Haga clic en el botón para realizar una selección." />
+        }
+      </siaf-solicitude-form-card>
+
+      <!-- ── Registros no conciliados (o su edición) ── -->
+      @if (registroEnEdicion(); as r) {
+        <siaf-conciliacion-registro-edicion [registro]="r" (cancelled)="registroEnEdicion.set(null)" (accepted)="aceptarEdicion($event)" />
+      } @else {
+        <siaf-solicitude-form-card title="Registros no conciliados">
+          @if (!elaborado()) {
+            <siaf-button card-actions variant="filled" icon="search" [iconOnly]="true" [disabled]="!cuenta()" ariaLabel="Buscar registros no conciliados" (click)="abrirRegistros()" />
+          }
+          @if (!registrosElegidos().length) {
+            <message-box text="No es necesario completar esta información en este momento." />
+          } @else {
+            <siaf-form-table-search [value]="busquedaTabla()" ariaLabel="Buscar registros" (valueChange)="busquedaTabla.set($event)" />
+            @if (!soloLectura()) {
+              <!-- Barra de control sobre la tabla: selección y editar la fila elegida (Figma 284:11534) -->
+              <siaf-table-controls
+                [showTopPagination]="false"
+                selectAllLabel="Seleccionar registros"
+                editLabel="Editar el registro seleccionado"
+                deleteLabel="Quitar los registros seleccionados"
+                [showEditAction]="true"
+                [showDeleteAction]="true"
+                [editDisabled]="marcados().length !== 1"
+                [checked]="todosMarcadosTabla()"
+                [indeterminate]="marcados().length > 0 && !todosMarcadosTabla()"
+                [selectedCount]="marcados().length"
+                (selectionChange)="alternarTodosTabla()"
+                (edit)="editarSeleccionado()"
+                (delete)="eliminarSeleccionados()"
+              />
+            }
+            <siaf-conciliacion-registros-tabla
+              [rows]="registrosTabla()"
+              [selectable]="!soloLectura()"
+              [selectedIds]="marcados()"
+              (toggled)="alternarMarcado($event)"
+            />
+            <siaf-pagination
+              navigation="Activate"
+              position="Bottom"
+              [rowPage]="true"
+              [page]="1"
+              [pageSize]="filasTabla()"
+              [totalItems]="registrosTabla().length"
+              [totalPages]="1"
+              [rowsPerPage]="filasTabla()"
+              [rowsPerPageOptions]="[10, 25, 50, 100]"
+              (rowsPerPageChange)="filasTabla.set($event)"
+            />
+          }
+        </siaf-solicitude-form-card>
+      }
+
+      <!-- ── Comentarios del aprobador y trazabilidad ── -->
+      @if (historial().length > 0 || comentarioActual()) {
+        <siaf-detail-history-tabs [comentario]="comentarioActual()" [entries]="historial()" />
+      }
+
+      @if (numeroDocumento()) {
+        <siaf-action-tracker [showSummaryCards]="true" [showTabs]="false" [summaryItems]="trazabilidad()" />
+      }
+    }
+  </siaf-solicitude-page-layout>
+
+  <!-- Seleccionar cuenta bancaria (Figma 284:8135) -->
+  <siaf-selection-side-nav
+    [open]="cuentasAbierto()"
+    title="Seleccionar cuenta bancaria"
+    mode="single"
+    idKey="numeroCuenta"
+    [rows]="cuentasPagina()"
+    [columns]="columnasCuenta"
+    [searchValue]="busquedaCuenta()"
+    [selectedIds]="cuentaTemporal() ? [cuentaTemporal()] : []"
+    [paginated]="true"
+    [page]="paginaCuentas()"
+    [totalPages]="totalPaginasCuentas()"
+    [pageSize]="filasCuentas()"
+    [rowsPerPage]="filasCuentas()"
+    [totalItems]="cuentasFiltradas().length"
+    [rowsPerPageOptions]="[10, 25, 50, 100]"
+    (searchChange)="busquedaCuenta.set($event); paginaCuentas.set(1)"
+    (selectionChange)="cuentaTemporal.set($event[0] ?? '')"
+    (previousPage)="paginaCuentas.set(paginaCuentas() - 1)"
+    (nextPage)="paginaCuentas.set(paginaCuentas() + 1)"
+    (rowsPerPageChange)="filasCuentas.set($event); paginaCuentas.set(1)"
+    (closed)="cuentasAbierto.set(false)"
+    (accepted)="aceptarCuenta()"
+  />
+
+  <!-- Seleccionar registros no conciliados (Figma 284:8153) -->
+  <siaf-selection-side-nav
+    [open]="registrosAbierto()"
+    title="Seleccionar registros no conciliados"
+    mode="multiple"
+    [customTable]="true"
+    selectAllLabel="Seleccionar registros no conciliados"
+    [showSelectAll]="true"
+    [selectAllChecked]="todosMarcados()"
+    [selectAllIndeterminate]="registrosTemporales().length > 0 && !todosMarcados()"
+    [paginated]="true"
+    [page]="1"
+    [totalPages]="1"
+    [pageSize]="filasRegistros()"
+    [rowsPerPage]="filasRegistros()"
+    [totalItems]="registrosFiltrados().length"
+    [rowsPerPageOptions]="[10, 25, 50, 100]"
+    [searchValue]="busquedaRegistro()"
+    [selectedIds]="registrosTemporales()"
+    (selectAllChange)="alternarTodos()"
+    (rowsPerPageChange)="filasRegistros.set($event)"
+    (searchChange)="busquedaRegistro.set($event)"
+    (closed)="registrosAbierto.set(false)"
+    (accepted)="aceptarRegistros()"
+  >
+    <siaf-conciliacion-registros-tabla
+      [rows]="registrosFiltrados()"
+      [selectable]="true"
+      [selectedIds]="registrosTemporales()"
+      (toggled)="alternarRegistro($event)"
+    />
+  </siaf-selection-side-nav>
+
+  <siaf-request-approval-modals
+    [saveOpen]="modalGrabar()"
+    [verifyOpen]="modalVerificar()"
+    [deleteOpen]="modalEliminar()"
+    [approveOpen]="modalAprobar()"
+    [observeOpen]="modalObservar()"
+    [rejectOpen]="modalRechazar()"
+    [saving]="saving()"
+    [reason]="comentario()"
+    [rejectReasonType]="motivoRechazo()"
+    [rejectReasonTypeOptions]="motivosRechazo"
+    [snackbarVariant]="aviso()"
+    [snackbarOpen]="avisoAbierto()"
+    requestType="creación"
+    [requestNumber]="numeroDocumento()"
+    (saveConfirmed)="onConfirmarGrabar()"
+    (verifyConfirmed)="onConfirmarVerificar()"
+    (deleteConfirmed)="onConfirmarEliminar()"
+    (approveConfirmed)="onConfirmarAprobar()"
+    (observeConfirmed)="onConfirmarObservar()"
+    (rejectConfirmed)="onConfirmarRechazar()"
+    (saveClosed)="modalGrabar.set(false)"
+    (verifyClosed)="modalVerificar.set(false)"
+    (deleteClosed)="modalEliminar.set(false)"
+    (approvalClosed)="cerrarModalesAprobador()"
+    (reasonChange)="comentario.set($event)"
+    (rejectReasonTypeChange)="motivoRechazo.set($event)"
+    (snackbarClosed)="avisoAbierto.set(false)"
+  />
+</div>

@@ -36,6 +36,18 @@ describe('SolicitudeHeaderComponent', () => {
     ]);
   });
 
+  it('en Edición solo trae Cancelar y Grabar, salvo que el padre pida conservar Verificar (deshabilitado)', () => {
+    configurar({ role: 'creator', state: 'edit' });
+    expect(acciones().map((a) => a.texto)).toEqual(['Cancelar', 'Grabar']);
+
+    configurar({ keepVerifyOnEdit: true, verifyDisabled: true });
+    expect(acciones().map((a) => [a.texto, a.deshabilitado])).toEqual([
+      ['Cancelar', false],
+      ['Grabar', false],
+      ['Verificar', true],
+    ]);
+  });
+
   it('en cada estado la última acción es la principal: solo ella lleva ícono', () => {
     const casos: Array<[string, string, string[], string]> = [
       ['creator', 'edit', ['Cancelar', 'Grabar'], 'save'],

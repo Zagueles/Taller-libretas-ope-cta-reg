@@ -7,6 +7,7 @@ import type { DocumentsRecordsColumn, DocumentsRecordsRow, DocumentsRecordsTab }
 import { FlowStatus, FlowStatusTagComponent } from '../flow-status-tag/flow-status-tag.component';
 import { IconComponent } from '../icon/icon.component';
 import { RecordStatus, RecordStatusTagComponent } from '../record-status-tag/record-status-tag.component';
+import { StatusTagComponent } from '../status-tag/status-tag.component';
 import { TooltipDirective } from '../tooltip/tooltip.directive';
 
 export type DocumentsRecordsSelectionChange = {
@@ -67,7 +68,7 @@ export type DocumentsRecordsSelectionChange = {
 @Component({
   selector: 'siaf-documents-records-table',
   standalone: true,
-  imports: [FlowStatusTagComponent, IconComponent, NgClass, RecordStatusTagComponent, RouterLink, TooltipDirective],
+  imports: [FlowStatusTagComponent, IconComponent, NgClass, RecordStatusTagComponent, RouterLink, StatusTagComponent, TooltipDirective],
   template: `
     <div class="siaf-table-scroll min-w-0">
       <table class="w-full border-collapse text-left text-sm" [ngClass]="minWidthClass">
@@ -139,6 +140,8 @@ export type DocumentsRecordsSelectionChange = {
                     <siaf-flow-status-tag [status]="flowStatus(row[column.key])" size="small" />
                   } @else if (column.kind === 'record-status') {
                     <siaf-record-status-tag [status]="recordStatus(row[column.key])" [size]="activeTab === 'records' ? 'small' : 'standard'" />
+                  } @else if (column.kind === 'conciliation-status') {
+                    <siaf-status-tag [tone]="row[column.key] === 'Conciliado' ? 'success' : 'default'" appearance="soft" size="small">{{ row[column.key] }}</siaf-status-tag>
                   } @else {
                     <span class="block truncate" siafTooltip>{{ row[column.key] }}</span>
                   }

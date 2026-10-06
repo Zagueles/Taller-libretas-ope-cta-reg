@@ -55,9 +55,9 @@ type TrayItem = {
   standalone: true,
   imports: [BadgeComponent, IconComponent],
   template: `
-    <aside class="flex h-[calc(100vh-56px)] w-full flex-col items-center border-r border-[var(--sys-color-divider-default)] bg-[var(--sys-color-bg-surfaces-surface-highest,white)] py-siaf-xs shadow-siaf-elevation-1 lg:w-[300px]">
-      <header class="flex w-full items-center px-siaf-lg py-siaf-md">
-        <h2 class="m-0 text-sm font-bold leading-normal text-[var(--sys-color-tipography-neutral-high)]">BANDEJA</h2>
+    <aside class="flex h-[calc(100vh-56px)] w-full flex-col items-center border-r border-[var(--sys-color-divider-default)] bg-[var(--sys-color-bg-surfaces-surface-highest,white)] pb-siaf-xs shadow-siaf-elevation-1 lg:w-[300px]">
+      <header class="flex min-h-14 w-full items-center gap-siaf-xs p-siaf-md">
+        <h2 class="m-0 min-h-6 text-base font-bold uppercase leading-6 tracking-[0.02px] text-[var(--sys-color-text-neutral-high)]">BANDEJA</h2>
       </header>
 
       <nav class="flex w-full flex-col">

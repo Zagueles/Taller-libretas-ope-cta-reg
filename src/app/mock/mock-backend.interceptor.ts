@@ -6,17 +6,25 @@ import type { CambiarPerfilResponse, LoginResponse, PerfilItem } from '../core/a
 import type { SolicitudResponse } from '../core/api/solicitudes-api.service';
 import { APP_CONFIG } from '../core/config/app.config';
 import type { EstadoDocumento } from '../core/models/documento.model';
+import {
+  CODIGO_DOCUMENTO as CODIGO_CONCILIACION,
+  CUENTAS_CONCILIACION,
+  ConciliacionManualDatos,
+  registroCompleto,
+} from '../modules/tesoreria/conciliacion-diaria/models/conciliacion-diaria.model';
 import type { CuentaBancariaDatos } from '../modules/tesoreria/cuentas-bancarias/models/cuenta-bancaria.model';
 import {
   DatosTaller,
   ENTIDAD_CREADORA,
   NotificacionMock,
   TIPO_DOCUMENTO,
+  TIPO_DOCUMENTO_CONCILIACION,
   UNIDAD_CREADORA,
   filaHistorial,
   guardarDatos,
   leerDatos,
   nuevoId,
+  numeroConciliacion,
   numeroDocumento,
 } from './mock-db';
 import { CONTRASENA_DEMO, USUARIOS_DEMO, UsuarioDemo, buscarUsuarioPorPerfil } from './usuarios-demo';
@@ -140,6 +148,13 @@ const tiposDocumento: Manejador = () => ok([
     accionesPermitidas: [{ tipoAccion: 'creacion' }],
     proceso: { codigo: 'registro-cuentas-bancarias', nombre: 'Registro de cuentas bancarias', modulo: 'tesoreria' },
   },
+  {
+    ...TIPO_DOCUMENTO_CONCILIACION,
+    modulo: 'tesoreria',
+    esActivo: true,
+    accionesPermitidas: [{ tipoAccion: 'creacion' }],
+    proceso: { codigo: 'conciliacion-diaria', nombre: 'Conciliación diaria', modulo: 'tesoreria' },
+  },
 ]);
 
 // ─── Notificaciones ────────────────────────────────────────────────
@@ -190,7 +205,7 @@ function notificar(datos: DatosTaller, s: SolicitudResponse, estado: EstadoDocum
     leida: false,
     leidaEn: null,
     createdAt: new Date().toISOString(),
-    documento: { id: s.id, numero: s.numero, catDocumento: TIPO_DOCUMENTO },
+    documento: { id: s.id, numero: s.numero, catDocumento: { ...TIPO_DOCUMENTO, ...s.catDocumento } },
     ...destino,
   });
 }
@@ -237,13 +252,14 @@ const detalleSolicitud: Manejador = ({ datos, params }) => {
 const crearSolicitud: Manejador = ({ req, datos, sesion }) => {
   if (!sesion) return error(401, 'Sesión expirada.');
   if (sesion.perfil.rolCodigo !== 'CREADOR') return error(403, 'Solo un creador puede registrar solicitudes.');
-  const dto = (req.body ?? {}) as { tipoAccion?: string; organoLinea?: string; justificacion?: string };
+  const dto = (req.body ?? {}) as { tipoDocumentoId?: string; tipoAccion?: string; organoLinea?: string; justificacion?: string };
+  const tipo = [TIPO_DOCUMENTO, TIPO_DOCUMENTO_CONCILIACION].find((t) => t.id === dto.tipoDocumentoId) ?? TIPO_DOCUMENTO;
   const ahora = new Date().toISOString();
   const id = nuevoId(datos, 'sol');
   const s: SolicitudResponse = {
     id,
     numero: null,
-    catDocumento: TIPO_DOCUMENTO,
+    catDocumento: tipo,
     tipoAccion: dto.tipoAccion ?? 'creacion',
     estado: 'NUEVO',
     asuntoMotivo: `[${dto.organoLinea ?? ''}] ${dto.justificacion ?? ''}`,
@@ -255,6 +271,7 @@ const crearSolicitud: Manejador = ({ req, datos, sesion }) => {
     updatedAt: ahora,
     itemsCuenta: [],
     detalleCuentaBancaria: null,
+    detalleConciliacionManual: null,
     sustentos: [],
     historialEstados: [filaHistorial(datos, null, 'NUEVO', ahora, sesion.usuario, rolDe(sesion.perfil))],
   };
@@ -285,6 +302,24 @@ const guardarCuentaBancaria: Manejador = ({ req, datos, params }) => {
   s.updatedAt = new Date().toISOString();
   guardarDatos(datos);
   return ok({ message: 'Cuenta guardada' });
+};
+
+const guardarConciliacionManual: Manejador = ({ req, datos, params }) => {
+  const s = buscarSolicitud(datos, params[0]);
+  if (!s) return error(404, 'La solicitud no existe.');
+  if (s.catDocumento?.codigo !== CODIGO_CONCILIACION) return error(409, 'La solicitud no es una conciliación manual diaria.');
+  if (!['NUEVO', 'ELABORADO', 'OBSERVADO'].includes(s.estado)) return error(409, 'La solicitud ya no admite cambios.');
+  const detalle = (req.body ?? {}) as Partial<ConciliacionManualDatos>;
+  if (!CUENTAS_CONCILIACION.some((c) => c.numeroCuenta === detalle.numeroCuenta)) return error(400, 'Seleccione la cuenta bancaria.');
+  // Los registros son opcionales; el que se marca como conciliado debe traer montos, documento y justificación de sustento.
+  const registros = detalle.registros ?? [];
+  if (!registros.filter((r) => r.conciliado).every(registroCompleto)) {
+    return error(400, 'Complete el débito, el crédito, el documento y la justificación de sustento de cada registro para conciliarlo.');
+  }
+  s.detalleConciliacionManual = { documentoId: s.id, numeroCuenta: detalle.numeroCuenta!, registros };
+  s.updatedAt = new Date().toISOString();
+  guardarDatos(datos);
+  return ok({ message: 'Conciliación guardada' });
 };
 
 const subirSustento: Manejador = ({ req, datos, params }) => {
@@ -350,16 +385,26 @@ const cambiarEstado: Manejador = ({ req, datos, params, sesion }) => {
   if (nuevo === 'ELIMINADO' && (s.historialEstados ?? []).some((h) => h.estadoNuevo === 'OBSERVADO')) {
     return error(409, 'No se puede eliminar una solicitud que fue observada.');
   }
+  const esConciliacion = s.catDocumento?.codigo === CODIGO_CONCILIACION;
   if (nuevo === 'ELABORADO') {
-    if (!s.detalleCuentaBancaria) return error(400, 'Registre los datos de la cuenta bancaria.');
-    if (!(s.sustentos ?? []).length) return error(400, 'Adjunte el documento de sustento.');
+    if (esConciliacion) {
+      if (!s.detalleConciliacionManual) return error(400, 'Registre la cuenta a conciliar.');
+    } else {
+      if (!s.detalleCuentaBancaria) return error(400, 'Registre los datos de la cuenta bancaria.');
+      if (!(s.sustentos ?? []).length) return error(400, 'Adjunte el documento de sustento.');
+    }
   }
 
   const ahora = new Date().toISOString();
   const anterior = s.estado;
   if (nuevo === 'ELABORADO' && !s.numero) {
-    datos.correlativoDocumento += 1;
-    s.numero = numeroDocumento(datos.correlativoDocumento, new Date());
+    if (esConciliacion) {
+      datos.correlativoConciliacion += 1;
+      s.numero = numeroConciliacion(datos.correlativoConciliacion, new Date());
+    } else {
+      datos.correlativoDocumento += 1;
+      s.numero = numeroDocumento(datos.correlativoDocumento, new Date());
+    }
   }
   // Volver a grabar un ELABORADO no deja fila en el historial.
   if (!(anterior === 'ELABORADO' && nuevo === 'ELABORADO')) {
@@ -419,6 +464,7 @@ const RUTAS: [string, RegExp, Manejador][] = [
   ['POST', /^\/solicitudes$/, crearSolicitud],
   ['PATCH', /^\/solicitudes\/([^/]+)\/estado$/, cambiarEstado],
   ['POST', /^\/solicitudes\/([^/]+)\/cuenta-bancaria$/, guardarCuentaBancaria],
+  ['POST', /^\/solicitudes\/([^/]+)\/conciliacion-manual$/, guardarConciliacionManual],
   ['POST', /^\/solicitudes\/([^/]+)\/sustentos$/, subirSustento],
   ['GET', /^\/solicitudes\/([^/]+)\/sustentos$/, listarSustentos],
   ['DELETE', /^\/solicitudes\/([^/]+)\/sustentos\/([^/]+)$/, eliminarSustento],

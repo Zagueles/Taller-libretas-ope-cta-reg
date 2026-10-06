@@ -69,8 +69,13 @@ export { DEFAULT_PROCESS_TREE, findProcessPathById } from '../../shared/utils/pr
       class="flex h-[calc(100vh-56px)] w-screen flex-col bg-[var(--sys-color-bg-surfaces-field,var(--sys-color-bg-surfaces-surface))] text-text shadow-siaf-elevation-1 lg:max-w-[370px]"
       aria-label="Menu de procesos"
     >
-      <header class="sticky top-0 z-[2] flex min-h-14 w-full items-center bg-[var(--sys-color-bg-surfaces-field,var(--sys-color-bg-surfaces-surface))] p-siaf-md">
-        <h2 class="m-0 min-h-6 text-base font-bold uppercase leading-none tracking-[0.02px] text-[var(--sys-color-text-neutral-high)]">
+      <header class="sticky top-0 z-[2] flex min-h-14 w-full items-center gap-siaf-xs p-siaf-md bg-[var(--sys-color-bg-surfaces-field,var(--sys-color-bg-surfaces-surface))]">
+        @if (showBack) {
+          <button class="inline-flex size-6 shrink-0 items-center justify-center rounded-siaf-sm text-[var(--sys-color-text-neutral-high)] focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sys-color-border-states-focus)]" type="button" aria-label="Regresar" (click)="back.emit()">
+            <siaf-icon name="arrow_back" [size]="24" />
+          </button>
+        }
+        <h2 class="m-0 min-h-6 text-base font-bold uppercase leading-6 tracking-[0.02px] text-[var(--sys-color-text-neutral-high)]">
           {{ title }}
         </h2>
       </header>
@@ -128,7 +133,7 @@ export { DEFAULT_PROCESS_TREE, findProcessPathById } from '../../shared/utils/pr
                   [size]="level === 0 ? 24 : 20"
                   [class.-rotate-90]="!isExpanded(node)"
                 />
-              } @else if (!node.moduleRoute) {
+              } @else if (!node.moduleRoute && !node.hideIcon) {
                 <!-- Los nodos «Próximamente» (sin hijos ni pantalla) muestran la misma flecha que Figma, solo
                      decorativa. Una hoja con pantalla (con moduleRoute) es el último nivel y va sin ícono inicial. -->
                 <siaf-icon
@@ -170,7 +175,13 @@ export class ProcessMenuTreeComponent implements OnChanges, OnInit {
   @Input() searchLabel = 'Buscar proceso o procedimiento';
   @Input() nodes: ProcessMenuNode[] = DEFAULT_PROCESS_TREE;
 
+  /** Muestra la flecha para regresar junto al título (cuando el árbol se abre desde otro formulario). */
+  @Input() showBack = false;
+  /** Arranca con todas las ramas abiertas (el árbol podado de «Crear documento» es corto). */
+  @Input() expandAll = false;
+
   @Output() nodeSelected = new EventEmitter<ProcessMenuNode>();
+  @Output() back = new EventEmitter<void>();
 
   query = '';
   selectedId = '';
@@ -255,7 +266,7 @@ export class ProcessMenuTreeComponent implements OnChanges, OnInit {
   private collectState(nodes: ProcessMenuNode[], parentId = ''): void {
     for (const node of nodes) {
       // Evita que hijos profundos arranquen abiertos aunque alguien agregue expanded por error.
-      if (node.expanded && !parentId) {
+      if ((node.expanded && !parentId) || (this.expandAll && node.children?.length)) {
         this.expandedIds.add(node.id);
       }
 

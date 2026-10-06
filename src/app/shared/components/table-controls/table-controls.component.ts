@@ -110,9 +110,11 @@ import { PaginationComponent } from '../pagination/pagination.component';
         <ng-content select="[tableAction]" />
       }
 
+      @if (showTopPagination) {
       <div class="ml-auto min-w-[220px]" [class.hidden]="hideTopPaginationOnMobile" [class.md:block]="hideTopPaginationOnMobile">
         <siaf-pagination navigation="Activate" position="Top" [page]="page" [pageSize]="pageSize" [totalItems]="totalItems" [totalPages]="totalPages" (previous)="previous.emit()" (next)="next.emit()" />
       </div>
+      }
     </div>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -133,6 +135,8 @@ export class TableControlsComponent {
   @Input() showSelection = true;
   @Input() editDisabled = false;
   @Input() hideTopPaginationOnMobile = false;
+  /** Oculta el contador y las flechas de la derecha cuando la tabla ya trae su paginación inferior. */
+  @Input() showTopPagination = true;
   @Input() selectAllLabel = 'Seleccionar filas';
   @Input() editLabel = 'Editar fila seleccionada';
   @Input() deleteLabel = 'Eliminar filas seleccionadas';

@@ -26,6 +26,28 @@ describe('UploadSideNavComponent', () => {
 
   afterEach(() => fixture.destroy());
 
+  it('con `multiple` entrega todos los archivos cargados (y `confirmed` solo el primero); con el tipo exigido en `document-type`', () => {
+    fixture.componentRef.setInput('multiple', true);
+    fixture.componentRef.setInput('variant', 'document-type');
+    fixture.detectChanges();
+    expect(el().querySelector('input[type="file"]')!.hasAttribute('multiple')).toBeTrue();
+
+    const todos: File[][] = [];
+    panel.confirmedFiles.subscribe((archivos) => todos.push(archivos));
+    const a = pdf('A.pdf');
+    const b = pdf('B.pdf');
+    uploader().fileSelected.emit(a);
+    uploader().fileSelected.emit(b);
+    fixture.detectChanges();
+    expect(aceptar().disabled).withContext('falta el tipo de documento').toBeTrue();
+
+    fixture.componentRef.setInput('documentTypeValue', 'Constancia');
+    fixture.detectChanges();
+    aceptar().click();
+    expect(todos).toEqual([[a, b]]);
+    expect(confirmados).toEqual([a]);
+  });
+
   it('«Aceptar» se habilita con el archivo cargado, lo entrega y vuelve a deshabilitarse al quitarlo', () => {
     const sustento = pdf('Sustento.pdf');
     expect(aceptar().disabled).toBeTrue();

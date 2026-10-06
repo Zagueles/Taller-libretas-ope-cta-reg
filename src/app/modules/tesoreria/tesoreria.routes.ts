@@ -58,4 +58,25 @@ export const TESORERIA_ROUTES: Routes = [
         (m) => m.RegistroLibretasConsultasComponent,
       ),
   },
+  {
+    path: 'procesos/conciliacion-diaria',
+    loadComponent: () =>
+      import('./conciliacion-diaria/pages/documents/conciliacion-diaria-documents.component').then(
+        (m) => m.ConciliacionDiariaDocumentsComponent,
+      ),
+  },
+  {
+    path: 'procesos/conciliacion-diaria/solicitud',
+    loadComponent: () =>
+      import('./conciliacion-diaria/pages/solicitud/conciliacion-diaria-solicitud.component').then(
+        (m) => m.ConciliacionDiariaSolicitudComponent,
+      ),
+  },
+  {
+    path: 'procesos/conciliacion-diaria/solicitud/:id',
+    loadComponent: () =>
+      import('./conciliacion-diaria/pages/solicitud/conciliacion-diaria-solicitud.component').then(
+        (m) => m.ConciliacionDiariaSolicitudComponent,
+      ),
+  },
 ];

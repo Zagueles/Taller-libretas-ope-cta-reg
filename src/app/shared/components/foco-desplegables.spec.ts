@@ -222,66 +222,21 @@ describe('Desplegables con siafFoco', () => {
     expect(document.activeElement).toBe(campo);
   });
 
-  it('buscador de procesos de siaf-create-document: flecha abajo entra a la lista y Enter elige, con el foco de vuelta en el buscador', async () => {
-    const buscador = q<HTMLInputElement>('siaf-create-document input[role="combobox"]');
-    buscador.focus();
+  it('buscador de procesos de siaf-create-document: abre el árbol de procesos, regresa al formulario y elige una hoja', async () => {
+    const buscador = q<HTMLInputElement>('siaf-create-document input[readonly]');
+    buscador.click();
     await pintar();
-    expect(buscador.getAttribute('aria-expanded')).toBe('true');
+    expect(el().querySelector('siaf-create-document input[readonly]')).withContext('el árbol reemplaza al formulario').toBeNull();
+    const botones = (): HTMLButtonElement[] => Array.from(el().querySelectorAll<HTMLButtonElement>('siaf-process-menu-tree button'));
 
-    tecla('ArrowDown', buscador);
-    await pintar();
-    const lista = q<HTMLElement>('siaf-create-document [role="listbox"]');
-    expect(lista).not.toBeNull();
-    expect(lista.contains(document.activeElement)).withContext('el foco pasó a la lista y la lista sigue abierta').toBeTrue();
+    await pulsar(q<HTMLButtonElement>('siaf-process-menu-tree button[aria-label="Regresar"]'));
+    expect(el().querySelector('siaf-process-menu-tree')).toBeNull();
 
-    const primero = document.activeElement as HTMLButtonElement;
-    tecla('ArrowDown', primero);
-    expect(document.activeElement).not.toBe(primero);
-
-    (document.activeElement as HTMLButtonElement).click();
+    q<HTMLInputElement>('siaf-create-document input[readonly]').click();
     await pintar();
-    expect(document.activeElement).toBe(buscador);
-    expect(buscador.value.length).toBeGreaterThan(0);
-    expect(buscador.getAttribute('aria-expanded')).toBe('false');
-    expect(buscador.className).withContext('conserva el borde de foco').toContain('border-states-focus');
-  });
-
-  it('buscador de procesos: Escape en un proceso cierra la lista y el foco vuelve al buscador', async () => {
-    const buscador = q<HTMLInputElement>('siaf-create-document input[role="combobox"]');
-    buscador.focus();
-    await pintar();
-    tecla('ArrowDown', buscador);
-    await pintar();
-    expect(document.activeElement?.getAttribute('role')).toBe('option');
-
-    tecla('Escape');
-    await pintar();
-    expect(document.activeElement).toBe(buscador);
-    expect(buscador.getAttribute('aria-expanded')).toBe('false');
-    expect(el().querySelector('siaf-create-document [role="listbox"]')).toBeNull();
-
-    tecla('ArrowDown', buscador);
-    await pintar();
-    expect(buscador.getAttribute('aria-expanded')).withContext('flecha abajo la vuelve a abrir').toBe('true');
-    expect(document.activeElement).toBe(buscador);
-    tecla('ArrowDown', buscador);
-    expect(document.activeElement?.getAttribute('role')).toBe('option');
-  });
-
-  it('buscador de procesos: el proceso elegido queda marcado con aria-selected', async () => {
-    const buscador = q<HTMLInputElement>('siaf-create-document input[role="combobox"]');
-    buscador.focus();
-    await pintar();
-    const [primero, segundo] = Array.from(el().querySelectorAll<HTMLButtonElement>('siaf-create-document [role="option"]'));
-    expect(primero.getAttribute('aria-selected')).toBe('false');
-    segundo.focus();
-    segundo.click();
-    await pintar();
-
-    tecla('ArrowDown', buscador);
-    await pintar();
-    const marcadas = Array.from(el().querySelectorAll('siaf-create-document [role="option"][aria-selected="true"]'));
-    expect(marcadas.length).toBe(1);
-    expect(marcadas[0].textContent?.trim()).toBe(buscador.value);
+    const abrir = async (texto: string): Promise<void> => pulsar(botones().find((b) => b.textContent?.trim().endsWith(texto))!);
+    await abrir('Documentos de operaciones en las libretas de las cuentas de registro');
+    expect(el().querySelector('siaf-process-menu-tree')).toBeNull();
+    expect(q<HTMLInputElement>('siaf-create-document input[readonly]').value).toContain('Documentos de operaciones en las libretas');
   });
 });

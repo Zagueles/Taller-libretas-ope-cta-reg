@@ -21,6 +21,23 @@ describe('UploaderComponent', () => {
 
   afterEach(() => fixture.destroy());
 
+  it('un clic en cualquier parte del recuadro abre el selector una sola vez (también en «elige archivo»)', () => {
+    fixture.detectChanges();
+    const entrada = el().querySelector<HTMLInputElement>('input[type="file"]')!;
+    let aperturas = 0;
+    entrada.addEventListener('click', (e) => {
+      aperturas += 1;
+      e.preventDefault();
+    });
+
+    el().querySelector<HTMLElement>('.border-dashed siaf-icon')!.click();
+    expect(aperturas).withContext('clic en el ícono').toBe(1);
+    el().querySelector<HTMLElement>('.border-dashed p:last-child')!.click();
+    expect(aperturas).withContext('clic en la ayuda').toBe(2);
+    el().querySelector<HTMLElement>('label')!.click();
+    expect(aperturas).withContext('clic en «elige archivo»: no se duplica').toBe(3);
+  });
+
   it('por defecto pinta la variante extendida con su ayuda', () => {
     fixture.componentRef.setInput('hint', 'PDF de hasta 10 MB');
     fixture.detectChanges();

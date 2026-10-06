@@ -36,7 +36,7 @@ export type DocumentsRecordsColumn = {
   group: ColumnGroup;
   widthClass?: string;
   align?: 'left' | 'right' | 'center';
-  kind?: 'text' | 'document-link' | 'flow-status' | 'record-status';
+  kind?: 'text' | 'document-link' | 'flow-status' | 'record-status' | 'conciliation-status';
   /** Grupo de la primera fila de la cabecera («Acreditación»): las columnas contiguas del mismo grupo lo comparten; sin grupo, la cabecera ocupa las dos filas. */
   headerGroup?: string;
   /** Queda fija a la derecha, junto a la columna de acción, al desplazar horizontalmente (solo la última columna). */
@@ -155,6 +155,8 @@ export type DocumentsRecordsConfig = {
    * motor externo (p.ej. pedidos de contabilización).
    */
   modoConsulta?: boolean;
+  /** En `modoConsulta`, conserva «+Crear documento» para el creador (los documentos los genera el sistema, pero se puede iniciar uno). */
+  crearEnModoConsulta?: boolean;
   /**
    * Personaliza el "Historial del documento" de una fila: permite
    * aportar atributos propios y filas de historial pre-resueltas

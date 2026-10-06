@@ -1,6 +1,6 @@
 import {
   ChangeDetectionStrategy, Component, EventEmitter,
-  Input, OnDestroy, Output, signal
+  ElementRef, Input, OnDestroy, Output, signal, viewChild
 } from '@angular/core';
 
 import { IconComponent } from '../icon/icon.component';
@@ -50,7 +50,9 @@ export interface UploadItem {
  *   archivo») y después los botones de cada tarjeta (Pausar, Reintentar, Cancelar).
  * - **Enter / Espacio**: en el selector abren el diálogo de archivos del sistema; en los botones, ejecutan la acción.
  * @accesibilidad
- * - **2.1.1 Teclado (A)**: soltar archivos es opcional; el `input type="file"` nativo permite elegirlos con teclado.
+ * - **2.1.1 Teclado (A)**: soltar archivos es opcional; el `input type="file"` nativo permite elegirlos con teclado. El clic
+ *   en cualquier parte del recuadro extendido también abre el selector (es una ayuda para el puntero: el teclado sigue
+ *   entrando por «elige archivo»).
  * - **2.4.7 Foco visible (AA)**: el `input type="file"` va oculto con `sr-only`, así que «elige archivo» (`extended`)
  *   y «Elegir archivo» (`compact`) pintan un contorno azul de 2 px (`border-states-focus`, 5.35:1 claro / 10.15:1
  *   oscuro) cuando el selector recibe el foco con teclado. Los botones de las tarjetas conservan el anillo nativo.
@@ -75,7 +77,7 @@ export interface UploadItem {
     <!-- Zona de drop — siempre visible -->
     @if (variant === 'extended') {
       <div
-        class="relative flex w-full flex-col items-center justify-center gap-siaf-sm rounded-siaf-md border p-siaf-lg transition"
+        class="relative flex w-full cursor-pointer flex-col items-center justify-center gap-siaf-sm rounded-siaf-md border p-siaf-lg transition"
         [class.border-dashed]="!isDragOver()"
         [class.border-border]="!isDragOver()"
         [class.bg-surface]="!isDragOver()"
@@ -85,6 +87,7 @@ export interface UploadItem {
         (dragover)="onDragOver($event)"
         (dragleave)="onDragLeave()"
         (drop)="onDrop($event)"
+        (click)="abrirSelector($event)"
       >
         <siaf-icon name="backup" [size]="42" class="text-brand-primary" />
         <div class="flex flex-col items-center gap-siaf-xs">
@@ -92,7 +95,7 @@ export interface UploadItem {
             Arrastrar o
             <label class="cursor-pointer rounded-siaf-sm font-bold text-brand-primary has-[:focus-visible]:outline-solid has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--sys-color-border-states-focus)]">
               elige archivo
-              <input class="sr-only" type="file" [accept]="accept" [multiple]="multiple" (change)="onFileInput($event)" />
+              <input #selector class="sr-only" type="file" [accept]="accept" [multiple]="multiple" (change)="onFileInput($event)" />
             </label>
             del computador
           </p>
@@ -250,6 +253,14 @@ export class UploaderComponent implements OnDestroy {
     this.isDragOver.set(false);
     const files = Array.from(event.dataTransfer?.files ?? []);
     files.forEach((f) => this.addUpload(f));
+  }
+
+  private readonly selector = viewChild<ElementRef<HTMLInputElement>>('selector');
+
+  /** Todo el recuadro abre el selector de archivos; el clic en «elige archivo» ya lo abre solo (no se duplica). */
+  abrirSelector(event: Event): void {
+    if ((event.target as HTMLElement).closest('label, input')) return;
+    this.selector()?.nativeElement.click();
   }
 
   onFileInput(event: Event): void {

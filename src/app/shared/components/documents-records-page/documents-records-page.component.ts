@@ -482,7 +482,7 @@ export class DocumentsRecordsPageComponent implements OnChanges {
     if (this.config.modoConsulta) {
       return {
         ...this.config,
-        createDocumentOptions: [],
+        createDocumentOptions: this.config.crearEnModoConsulta && this.documentsRecordsRoleMode === 'creator' ? this.config.createDocumentOptions : [],
         accionPrincipal: undefined,
       };
     }

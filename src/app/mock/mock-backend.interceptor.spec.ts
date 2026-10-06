@@ -6,6 +6,7 @@ import { Observable } from 'rxjs';
 import type { LoginResponse } from '../core/api/auth-api.service';
 import type { SolicitudResponse } from '../core/api/solicitudes-api.service';
 import type { CuentaBancariaDatos, CuentaBancariaRegistro } from '../modules/tesoreria/cuentas-bancarias/models/cuenta-bancaria.model';
+import { CUENTAS_CONCILIACION, ConciliacionManualDatos, REGISTROS_NO_CONCILIADOS } from '../modules/tesoreria/conciliacion-diaria/models/conciliacion-diaria.model';
 import { mockBackendInterceptor } from './mock-backend.interceptor';
 import { reiniciarDatosDemo } from './mock-db';
 import { CONTRASENA_DEMO } from './usuarios-demo';
@@ -143,6 +144,72 @@ describe('mockBackendInterceptor', () => {
     expect(eliminar.error?.status).toBe(409);
     expect(eliminar.error?.error.message).toContain('observada');
   }));
+
+  describe('conciliación manual diaria (SCMD)', () => {
+    /** Un registro ya conciliado: montos completos en el libro banco y en el registro de operaciones bancarias. */
+    const conciliado = (i: number): ConciliacionManualDatos['registros'][number] => ({
+      ...REGISTROS_NO_CONCILIADOS[i],
+      lbDebito: '0.00',
+      lbCredito: '1,000.00',
+      rbDebito: '0.00',
+      rbCredito: '1,000.00',
+      motivo: '-',
+      conciliado: true,
+      sustentos: [{ tipo: 'Constancia', nombre: 'constancia.pdf' }],
+      justificacion: 'Coincide con el libro banco.',
+    });
+    const DETALLE: ConciliacionManualDatos = { numeroCuenta: CUENTAS_CONCILIACION[0].numeroCuenta, registros: [conciliado(0)] };
+
+    it('lista el tipo de documento y numera la conciliación con su propio correlativo', fakeAsync(() => {
+      const ana = entrar('creador');
+      const tipos = esperar(http.get<{ id: string; codigo: string; proceso: { codigo: string } }[]>(`${API}/tipos-documento`, { headers: ana }));
+      const tipo = tipos.valor!.find((t) => t.codigo === 'SCMD')!;
+      expect(tipo.proceso.codigo).toBe('conciliacion-diaria');
+
+      const creada = esperar(http.post<SolicitudResponse>(`${API}/solicitudes`, { tipoDocumentoId: tipo.id, tipoAccion: 'creacion', organoLinea: 'DGTP', justificacion: 'Prueba' }, { headers: ana }));
+      const id = creada.valor!.id;
+      expect(creada.valor?.catDocumento?.codigo).toBe('SCMD');
+
+      // Sin cuenta y registros no se puede elaborar; la conciliación no pide sustento.
+      expect(esperar(http.patch(`${API}/solicitudes/${id}/estado`, { estadoNuevo: 'ELABORADO' }, { headers: ana })).error?.status).toBe(400);
+      esperar(http.post(`${API}/solicitudes/${id}/conciliacion-manual`, DETALLE, { headers: ana }));
+      const elaborada = esperar(http.patch<{ numero: string }>(`${API}/solicitudes/${id}/estado`, { estadoNuevo: 'ELABORADO' }, { headers: ana }));
+
+      expect(elaborada.valor?.numero).toMatch(/^000005-\d{4}$/);
+    }));
+
+    it('exige la cuenta y, en cada registro conciliado, el débito, el crédito y el sustento', fakeAsync(() => {
+      const ana = entrar('creador');
+      const creada = esperar(http.post<SolicitudResponse>(`${API}/solicitudes`, { tipoDocumentoId: 'td-scmd', tipoAccion: 'creacion', organoLinea: 'DGTP', justificacion: 'Prueba' }, { headers: ana }));
+      const guardar = (detalle: unknown) => esperar(http.post(`${API}/solicitudes/${creada.valor!.id}/conciliacion-manual`, detalle, { headers: ana })).error;
+
+      expect(guardar({ numeroCuenta: 'inexistente', registros: [conciliado(0)] })?.status).toBe(400);
+      expect(guardar({ numeroCuenta: DETALLE.numeroCuenta, registros: [{ ...conciliado(0), rbCredito: '' }] })?.error.message).toContain('débito, el crédito');
+      // Un registro sin conciliar todavía puede grabarse (los registros son opcionales «en este momento»).
+      expect(guardar({ numeroCuenta: DETALLE.numeroCuenta, registros: [{ ...REGISTROS_NO_CONCILIADOS[0] }] })).toBeUndefined();
+      expect(guardar({ numeroCuenta: DETALLE.numeroCuenta, registros: [] })).toBeUndefined();
+      expect(guardar({ numeroCuenta: DETALLE.numeroCuenta, registros: [{ ...conciliado(0), sustentos: [] }] })?.status).toBe(400);
+      expect(guardar({ numeroCuenta: DETALLE.numeroCuenta, registros: [{ ...conciliado(0), justificacion: ' ' }] })?.status).toBe(400);
+      expect(guardar(DETALLE)).toBeUndefined();
+    }));
+
+    it('el flujo de verificar y aprobar avisa con el tipo de documento de la conciliación y no crea registros de cuentas', fakeAsync(() => {
+      const ana = entrar('creador');
+      const creada = esperar(http.post<SolicitudResponse>(`${API}/solicitudes`, { tipoDocumentoId: 'td-scmd', tipoAccion: 'creacion', organoLinea: 'DGTP', justificacion: 'Prueba' }, { headers: ana }));
+      const id = creada.valor!.id;
+      esperar(http.post(`${API}/solicitudes/${id}/conciliacion-manual`, DETALLE, { headers: ana }));
+      esperar(http.patch(`${API}/solicitudes/${id}/estado`, { estadoNuevo: 'ELABORADO' }, { headers: ana }));
+      esperar(http.patch(`${API}/solicitudes/${id}/estado`, { estadoNuevo: 'VERIFICADO' }, { headers: ana }));
+
+      const luis = entrar('aprobador');
+      const avisos = esperar(http.get<{ documento: { id: string; catDocumento: { codigo: string } } }[]>(`${API}/notificaciones`, { headers: luis }));
+      expect(avisos.valor?.find((n) => n.documento.id === id)?.documento.catDocumento.codigo).toBe('SCMD');
+
+      const antes = esperar(http.get<CuentaBancariaRegistro[]>(`${API}/cuentas-bancarias`, { headers: luis })).valor!.length;
+      esperar(http.patch(`${API}/solicitudes/${id}/estado`, { estadoNuevo: 'APROBADO' }, { headers: luis }));
+      expect(esperar(http.get<CuentaBancariaRegistro[]>(`${API}/cuentas-bancarias`, { headers: luis })).valor!.length).toBe(antes);
+    }));
+  });
 
   it('deja pasar lo que no es de la API (los assets)', () => {
     http.get('assets/datos.json').subscribe();

@@ -7,6 +7,13 @@ import {
   CuentaBancariaRegistro,
   NOMBRE_DOCUMENTO,
 } from '../modules/tesoreria/cuentas-bancarias/models/cuenta-bancaria.model';
+import {
+  CODIGO_DOCUMENTO as CODIGO_CONCILIACION,
+  CUENTAS_CONCILIACION,
+  ConciliacionManualDatos,
+  NOMBRE_DOCUMENTO as NOMBRE_CONCILIACION,
+  REGISTROS_NO_CONCILIADOS,
+} from '../modules/tesoreria/conciliacion-diaria/models/conciliacion-diaria.model';
 import type { QueryReportFavorite } from '../shared/types/query-report.types';
 import { USUARIOS_DEMO, UsuarioDemo } from './usuarios-demo';
 
@@ -16,7 +23,7 @@ import { USUARIOS_DEMO, UsuarioDemo } from './usuarios-demo';
  */
 
 const CLAVE = 'taller-siaf-rp:datos';
-const VERSION = 3;
+const VERSION = 4;
 
 export interface NotificacionMock extends NotificacionResponse {
   /** Destinatario: un usuario puntual o, si no hay, todos los perfiles con este rol. */
@@ -31,12 +38,15 @@ export interface DatosTaller {
   notificaciones: NotificacionMock[];
   correlativoDocumento: number;
   correlativoRegistro: number;
+  /** Correlativo de la conciliación manual diaria (se reinicia cada año en el sistema real; en el taller es único). */
+  correlativoConciliacion: number;
   secuencia: number;
   /** Favoritos de «Consultas y reportes», por reporte (clave = ruta del proceso). */
   favoritos: Record<string, QueryReportFavorite[]>;
 }
 
 export const TIPO_DOCUMENTO = { id: 'td-srcb', codigo: CODIGO_DOCUMENTO, nombre: NOMBRE_DOCUMENTO };
+export const TIPO_DOCUMENTO_CONCILIACION = { id: 'td-scmd', codigo: CODIGO_CONCILIACION, nombre: NOMBRE_CONCILIACION };
 export const ENTIDAD_CREADORA = { id: 'ent-mef', codMef: '0001', siglas: 'MEF', nombre: 'Ministerio de Economía y Finanzas' };
 export const UNIDAD_CREADORA = { id: 'uo-oga', sigla: 'OGA', nombre: 'Oficina General de Administración' };
 
@@ -85,6 +95,11 @@ export function nuevoId(datos: DatosTaller, prefijo: string): string {
 
 export function numeroDocumento(correlativo: number, fecha: Date): string {
   return `PCB-SRCB-${String(correlativo).padStart(5, '0')}-${fecha.getFullYear()}-MEF-OGA`;
+}
+
+/** Número de la conciliación manual diaria: correlativo de 6 dígitos y año («000010-2025»). */
+export function numeroConciliacion(correlativo: number, fecha: Date): string {
+  return `${String(correlativo).padStart(6, '0')}-${fecha.getFullYear()}`;
 }
 
 export function filaHistorial(
@@ -164,6 +179,7 @@ function crearDatosIniciales(): DatosTaller {
     notificaciones: [],
     correlativoDocumento: 0,
     correlativoRegistro: 0,
+    correlativoConciliacion: 0,
     secuencia: 0,
     favoritos: {},
   };
@@ -229,6 +245,8 @@ function crearDatosIniciales(): DatosTaller {
     }
   }
 
+  sembrarConciliaciones(datos, ana, luis);
+
   // Notificaciones: el aprobador tiene una solicitud por aprobar; el creador, una observada y otras ya leídas.
   const aviso = (s: SolicitudResponse, tipo: string, titulo: string, mensaje: string, leida: boolean, destino: Pick<NotificacionMock, 'paraUsuarioId' | 'paraRolCodigo'>): NotificacionMock => ({
     id: nuevoId(datos, 'not'),
@@ -238,7 +256,7 @@ function crearDatosIniciales(): DatosTaller {
     leida,
     leidaEn: leida ? s.updatedAt ?? null : null,
     createdAt: s.updatedAt ?? s.createdAt,
-    documento: { id: s.id, numero: s.numero, catDocumento: TIPO_DOCUMENTO },
+    documento: { id: s.id, numero: s.numero, catDocumento: { ...TIPO_DOCUMENTO, ...s.catDocumento } },
     ...destino,
   });
   const porEstado = (estado: string) => datos.solicitudes.filter((s) => s.estado === estado);
@@ -257,4 +275,84 @@ function crearDatosIniciales(): DatosTaller {
   }
 
   return datos;
+}
+
+// ─── Conciliación manual diaria ────────────────────────────────────
+
+/** Un registro que el creador ya concilió a mano: montos completos en ambas fuentes. */
+function registroConciliado(base: (typeof REGISTROS_NO_CONCILIADOS)[number], credito: string): (typeof REGISTROS_NO_CONCILIADOS)[number] {
+  const propio = base.lbNumero ? 'lb' : 'rb';
+  return {
+    ...base,
+    lbFecha: base.lbFecha || base.rbFecha,
+    lbNumero: base.lbNumero || base.rbNumero,
+    lbDescripcion: base.lbDescripcion || base.rbDescripcion,
+    lbEntidad: base.lbEntidad || 'SUNAT',
+    lbDebito: base.lbDebito || '0.00',
+    lbCredito: base.lbCredito || credito,
+    rbFecha: base.rbFecha || base.lbFecha,
+    rbNumero: base.rbNumero || base.lbNumero,
+    rbDescripcion: base.rbDescripcion || base.lbDescripcion,
+    rbDebito: base.rbDebito || '0.00',
+    rbCredito: base.rbCredito || (propio === 'lb' ? base.lbCredito : credito),
+    motivo: '-',
+    conciliado: true,
+    sustentos: [{ tipo: 'Constancia', nombre: `Constancia registro ${base.nro}.pdf` }],
+    justificacion: 'La operación bancaria coincide con el registro del libro banco.',
+  };
+}
+
+interface SemillaConciliacion {
+  creada: string;
+  estado: 'ELABORADO' | 'VERIFICADO' | 'APROBADO' | 'OBSERVADO';
+  cuenta: number;
+  registros: number[];
+  comentario?: string;
+}
+
+const SEMILLAS_CONCILIACION: SemillaConciliacion[] = [
+  { creada: '2026-08-18', estado: 'APROBADO', cuenta: 0, registros: [0, 1] },
+  { creada: '2026-09-04', estado: 'VERIFICADO', cuenta: 2, registros: [2] },
+  { creada: '2026-09-16', estado: 'OBSERVADO', cuenta: 0, registros: [3], comentario: 'Adjunte el sustento de la operación bancaria conciliada.' },
+  { creada: '2026-09-28', estado: 'ELABORADO', cuenta: 5, registros: [0] },
+];
+
+function sembrarConciliaciones(datos: DatosTaller, creador: UsuarioDemo, aprobador: UsuarioDemo): void {
+  for (const semilla of SEMILLAS_CONCILIACION) {
+    const id = nuevoId(datos, 'sol');
+    datos.correlativoConciliacion += 1;
+    const creada = enFecha(semilla.creada, 9);
+    const numero = numeroConciliacion(datos.correlativoConciliacion, new Date(creada));
+    const historial: HistorialItem[] = [
+      filaHistorial(datos, null, 'NUEVO', creada, creador, ROL_CREADOR),
+      filaHistorial(datos, 'NUEVO', 'ELABORADO', creada, creador, ROL_CREADOR),
+    ];
+    if (semilla.estado !== 'ELABORADO') historial.push(filaHistorial(datos, 'ELABORADO', 'VERIFICADO', enFecha(semilla.creada, 10, 1), creador, ROL_CREADOR));
+    if (semilla.estado === 'APROBADO' || semilla.estado === 'OBSERVADO') {
+      historial.push(filaHistorial(datos, 'VERIFICADO', semilla.estado, enFecha(semilla.creada, 11, 2), aprobador, ROL_APROBADOR, semilla.comentario ?? null));
+    }
+    const detalle: ConciliacionManualDatos = {
+      numeroCuenta: CUENTAS_CONCILIACION[semilla.cuenta].numeroCuenta,
+      registros: semilla.registros.map((i) => registroConciliado(REGISTROS_NO_CONCILIADOS[i], '1,000.00')),
+    };
+    datos.solicitudes.push({
+      id,
+      numero,
+      catDocumento: TIPO_DOCUMENTO_CONCILIACION,
+      tipoAccion: 'creacion',
+      estado: semilla.estado,
+      asuntoMotivo: '[DIRECCIÓN GENERAL DEL TESORO PÚBLICO] Conciliación manual de registros no conciliados.',
+      entidadCreadora: ENTIDAD_CREADORA,
+      unidadCreadora: UNIDAD_CREADORA,
+      creador: { id: creador.id, nombres: creador.nombres, apellidoPaterno: creador.apellidoPaterno, apellidoMaterno: creador.apellidoMaterno },
+      fechaRegistro: creada,
+      createdAt: creada,
+      updatedAt: historial[historial.length - 1].createdAt,
+      itemsCuenta: [],
+      detalleCuentaBancaria: null,
+      detalleConciliacionManual: { documentoId: id, ...detalle },
+      sustentos: [],
+      historialEstados: historial,
+    });
+  }
 }

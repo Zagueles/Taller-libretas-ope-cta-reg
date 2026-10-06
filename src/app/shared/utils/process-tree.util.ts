@@ -28,6 +28,8 @@ export interface ProcessMenuNode {
    * y el click no navega (solo expande si tiene hijos).
    */
   comingSoon?: boolean;
+  /** Hoja sin pantalla que va sin la flecha inicial (por defecto, una hoja sin `moduleRoute` la lleva, como en el Figma). */
+  hideIcon?: boolean;
   children?: ProcessMenuNode[];
 }
 
@@ -61,7 +63,29 @@ export const DEFAULT_PROCESS_TREE: ProcessMenuNode[] = [
             expanded: true,
             children: [
               { id: 'registro-operaciones-bancarias', label: 'Registro de operaciones bancarias', comingSoon: true },
-              { id: 'conciliacion-diaria', label: 'Conciliación diaria', comingSoon: true },
+              {
+                id: 'conciliacion-diaria',
+                label: 'Conciliación diaria',
+                children: [
+                  {
+                    id: 'conciliacion-diaria-documentos',
+                    label: 'Documentos de conciliación diaria',
+                    moduleRoute: '/procesos/conciliacion-diaria',
+                    createRoute: '/procesos/conciliacion-diaria/solicitud',
+                    documentOptions: ['Conciliación manual diaria'],
+                    documentCreateOptions: [
+                      { label: 'Conciliación manual diaria', route: '/procesos/conciliacion-diaria/solicitud', actionTypes: ['Creación'] },
+                    ],
+                    actionTypeOptions: ['Creación'],
+                  },
+                  {
+                    id: 'conciliacion-diaria-consultas',
+                    label: 'Consulta y reporte de conciliación diaria',
+                    comingSoon: true,
+                    hideIcon: true,
+                  },
+                ],
+              },
               { id: 'insercion-cuentas-registro', label: 'Inserción de cuentas de registro', comingSoon: true },
               { id: 'conciliacion-mensual', label: 'Conciliación mensual', comingSoon: true },
               {

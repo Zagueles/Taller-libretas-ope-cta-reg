@@ -66,6 +66,8 @@ Para empezar de cero: **Reiniciar datos** en el login (o borrar el almacenamient
 | `/procesos/registro-cuentas-bancarias` | Documentos y registros | `siaf-documents-records-page` |
 | `/procesos/registro-cuentas-bancarias/solicitud` y `/solicitud/:id` | Solicitud de Registro de Cuenta Bancaria | `siaf-solicitude-page-layout` |
 | `/procesos/registro-cuentas-bancarias/consultas` | Consultas y reportes | `siaf-query-report-page` |
+| `/procesos/conciliacion-diaria` | Documentos y registros de Conciliación diaria | `siaf-documents-records-page` |
+| `/procesos/conciliacion-diaria/solicitud` y `/solicitud/:id` | Solicitud de Conciliación manual diaria (SCMD) | `siaf-solicitude-page-layout`, `siaf-selection-side-nav` |
 | `/ui-kit` | Catálogo de componentes (sin sesión) | — |
 
 ## Cómo funcionan los datos simulados

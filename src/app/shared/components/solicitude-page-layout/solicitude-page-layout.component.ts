@@ -66,6 +66,7 @@ import { SolicitudeHeaderComponent, SolicitudeHeaderRole, SolicitudeHeaderState 
           [showButtonGroup]="showButtonGroup"
           [saveDisabled]="saveDisabled"
           [verifyDisabled]="verifyDisabled"
+          [keepVerifyOnEdit]="keepVerifyOnEdit"
           [loading]="loading"
           (returned)="returned.emit()"
           (canceled)="canceled.emit()"
@@ -102,6 +103,8 @@ export class SolicitudePageLayoutComponent {
   @Input() showButtonGroup = true;
   @Input() saveDisabled = false;
   @Input() verifyDisabled = false;
+  /** Conserva «Verificar» (deshabilitado) en el modo edición de la cabecera. */
+  @Input() keepVerifyOnEdit = false;
   @Input() trayMenuOpen = false;
   @Input() floatingPanelOpen = false;
   @Input() loading = false;

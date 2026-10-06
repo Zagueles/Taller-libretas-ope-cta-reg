@@ -3400,7 +3400,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     "capa": "components",
     "importacion": "@siaf/shared/components/create-document/create-document.component",
     "archivo": "src/app/shared/components/create-document/create-document.component.ts",
-    "descripcion": "Formulario «Crear documento»: pide proceso, documento y tipo de acción y emite `accepted` con esa selección y la ruta\nde la solicitud a abrir. La variante `sidepanel` (panel del shell) busca el proceso entre `processOptions`, que\npor defecto salen del árbol `DEFAULT_PROCESS_TREE`; `dropdown` (popover) solo pide documento y tipo de acción.\nCon `fields` el padre controla los campos y recibe cada cambio por `fieldValueChange`.",
+    "descripcion": "Formulario «Crear documento»: pide proceso, documento y tipo de acción y emite `accepted` con esa selección y la ruta\nde la solicitud a abrir. La variante `sidepanel` (panel del shell) elige el proceso en el mismo árbol de procesos del menú (se abre al\ntocar el buscador, con flecha para regresar); el árbol se poda a los procesos de `processOptions` (los que tienen creación habilitada), abiertos y como hojas; `dropdown` (popover) solo pide documento y tipo de acción.\nCon `fields` el padre controla los campos y recibe cada cambio por `fieldValueChange`.",
     "usaSesion": false,
     "proyectaContenido": false,
     "entradas": [
@@ -3464,32 +3464,19 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     ],
     "usar": "- Desde «Crear» del sidebar o del menú móvil: el shell lo abre como `sidepanel` con las opciones que arma de los tipos\n  de documento del API.\n- En la bandeja, como popover del botón «Crear documento» de `siaf-documents-records-page` (`dropdown` con `fields`\n  controlados para Documento y Tipo de acción).",
     "evitar": "- Pintar otro `sidepanel` en una página: pedir el del shell con `ShellNavigationService.openCreateDocument()`.\n- Para los campos de la solicitud misma: usar `siaf-input` dentro de `siaf-solicitude-page-layout`.\n- Para elegir un registro de un catálogo con columnas: usar `siaf-selection-side-nav`.\n- Copiar a mano la lista de procesos: sale de `DEFAULT_PROCESS_TREE` o de `processOptions`.",
-    "teclado": "- **Tab**: recorre el buscador de procesos (en `sidepanel`), Documento, Tipo de acción y Cancelar / Aceptar;\n  Documento y Tipo de acción siguen deshabilitados hasta elegir el campo anterior.\n- **Enter / Espacio** en Documento o Tipo de acción: abre o cierra sus opciones; al abrir, el foco entra en la\n  opción elegida, que sigue `siaf-select-options` (flechas, Inicio, Fin, Enter o Espacio). Escape o salir con Tab\n  las cierra y el foco vuelve al campo.\n- **Flecha abajo** en el buscador de procesos: entra a la lista (si estaba cerrada, primero la abre);\n  **flechas arriba / abajo** la recorren y **Enter** elige el proceso (el foco vuelve al buscador).\n- **Escape**: en el buscador cierra la lista; en un proceso, cierra la lista y vuelve al buscador.\n- **Enter / Espacio** en Cancelar y Aceptar: emiten `canceled` y `accepted`.",
-    "accesibilidad": "- **2.1.1 Teclado (A)**: el buscador es un `combobox` con `aria-expanded`: flecha abajo entra a la lista de procesos,\n  las flechas la recorren y Enter elige; la lista ya no se cierra al pasar del buscador a ella.\n- **2.4.7 Foco visible (AA)**: Documento, Tipo de acción y el buscador muestran el borde azul de 2 px\n  (`border-states-focus`, 5.35:1 claro / 10.15:1 oscuro) al recibir el foco, también si ya tienen valor.\n- **2.4.3 Orden del foco (A)**: con `siafFoco`, las opciones de Documento y Tipo de acción reciben el foco al abrir y\n  al elegir, cerrar con Escape o salir con Tab vuelve al campo; al elegir un proceso el foco vuelve al buscador.\n- **4.1.2 Nombre, función y valor (A)**: el buscador es un `combobox` con `aria-expanded` y `aria-controls` hacia\n  la lista `role=\"listbox\"` «Procesos», y el proceso elegido lleva `aria-selected`. Documento y Tipo de acción\n  publican `aria-expanded` y `aria-haspopup=\"listbox\"`.\n- **Pendiente · 1.4.11 Contraste no textual (AA)**: el borde de los campos en reposo es `border-states-enabled`\n  (2.44:1 / 2.59:1); el de foco, `border-states-focus` (5.35:1 / 10.15:1), sí cumple.\n- **3.3.2 Etiquetas o instrucciones (A)**: cada campo muestra su nombre (en el placeholder o como etiqueta flotante)\n  con asterisco en los obligatorios; no llevan `aria-required`.\n- **1.3.1 Información y relaciones (A)**: sección con `aria-label=\"Crear documento\"` (fijo aunque cambie `title`) y\n  título `h2`; cada campo va dentro de su `<label>`.\n- **1.4.3 Contraste mínimo (AA)**: texto `text-neutral-medium` (14.53:1 / 12.87:1) y placeholder `text-neutral-low`\n  (5.01:1 / 8.86:1) sobre el `bg-surface` de los campos.",
+    "teclado": "- **Tab**: recorre el buscador de procesos (en `sidepanel`), Documento, Tipo de acción y Cancelar / Aceptar;\n  Documento y Tipo de acción siguen deshabilitados hasta elegir el campo anterior.\n- **Enter / Espacio** en Documento o Tipo de acción: abre o cierra sus opciones; al abrir, el foco entra en la\n  opción elegida, que sigue `siaf-select-options` (flechas, Inicio, Fin, Enter o Espacio). Escape o salir con Tab\n  las cierra y el foco vuelve al campo.\n- **Enter / Flecha abajo / clic** en el buscador de procesos: abre el árbol; ahí se navega como en el menú de procesos y la\n  flecha «Regresar» vuelve al formulario.\n- **Enter / Espacio** en Cancelar y Aceptar: emiten `canceled` y `accepted`.",
+    "accesibilidad": "- **2.1.1 Teclado (A)**: el buscador abre el árbol con Enter, flecha abajo o clic; el árbol y su botón «Regresar» se usan con teclado.\n- **2.4.7 Foco visible (AA)**: Documento, Tipo de acción y el buscador muestran el borde azul de 2 px\n  (`border-states-focus`, 5.35:1 claro / 10.15:1 oscuro) al recibir el foco, también si ya tienen valor.\n- **2.4.3 Orden del foco (A)**: con `siafFoco`, las opciones de Documento y Tipo de acción reciben el foco al abrir y\n  al elegir, cerrar con Escape o salir con Tab vuelve al campo; al elegir un proceso el foco vuelve al buscador.\n- **4.1.2 Nombre, función y valor (A)**: el buscador es de solo lectura con `aria-haspopup=\"tree\"`; Documento y Tipo de acción\n  publican `aria-expanded` y `aria-haspopup=\"listbox\"`. El botón de regresar del árbol lleva `aria-label=\"Regresar\"`.\n- **Pendiente · 1.4.11 Contraste no textual (AA)**: el borde de los campos en reposo es `border-states-enabled`\n  (2.44:1 / 2.59:1); el de foco, `border-states-focus` (5.35:1 / 10.15:1), sí cumple.\n- **3.3.2 Etiquetas o instrucciones (A)**: cada campo muestra su nombre (en el placeholder o como etiqueta flotante)\n  con asterisco en los obligatorios; no llevan `aria-required`.\n- **1.3.1 Información y relaciones (A)**: sección con `aria-label=\"Crear documento\"` (fijo aunque cambie `title`) y\n  título `h2`; cada campo va dentro de su `<label>`.\n- **1.4.3 Contraste mínimo (AA)**: texto `text-neutral-medium` (14.53:1 / 12.87:1) y placeholder `text-neutral-low`\n  (5.01:1 / 8.86:1) sobre el `bg-surface` de los campos.",
     "figma": [],
     "aria": {
-      "roles": [
-        "combobox",
-        "listbox",
-        "option"
-      ],
+      "roles": [],
       "atributos": [
-        "aria-autocomplete",
-        "aria-controls",
         "aria-expanded",
         "aria-haspopup",
         "aria-hidden",
-        "aria-label",
-        "aria-selected"
+        "aria-label"
       ]
     },
     "tokens": [
-      {
-        "token": "--sys-color-bg-states-light-hover",
-        "via": [
-          "var()"
-        ]
-      },
       {
         "token": "--sys-color-bg-surfaces-disabled",
         "via": [
@@ -3566,7 +3553,8 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       {
         "token": "--sys-color-text-neutral-high",
         "via": [
-          "text-text"
+          "text-text",
+          "var()"
         ]
       },
       {
@@ -3640,6 +3628,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       "[siafTooltip]",
       "siaf-button",
       "siaf-icon",
+      "siaf-process-menu-tree",
       "siaf-select-options"
     ],
     "sinUso": false
@@ -5574,7 +5563,8 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       "[siafTooltip]",
       "siaf-flow-status-tag",
       "siaf-icon",
-      "siaf-record-status-tag"
+      "siaf-record-status-tag",
+      "siaf-status-tag"
     ],
     "sinUso": false
   },
@@ -9859,6 +9849,13 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     "proyectaContenido": false,
     "entradas": [
       {
+        "nombre": "expandAll",
+        "tipo": "boolean",
+        "porDefecto": "false",
+        "requerida": false,
+        "descripcion": "Arranca con todas las ramas abiertas (el árbol podado de «Crear documento» es corto)."
+      },
+      {
         "nombre": "nodes",
         "tipo": "ProcessMenuNode[]",
         "porDefecto": "DEFAULT_PROCESS_TREE",
@@ -9880,6 +9877,13 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "descripcion": null
       },
       {
+        "nombre": "showBack",
+        "tipo": "boolean",
+        "porDefecto": "false",
+        "requerida": false,
+        "descripcion": "Muestra la flecha para regresar junto al título (cuando el árbol se abre desde otro formulario)."
+      },
+      {
         "nombre": "subtitle",
         "tipo": "string",
         "porDefecto": "'Seleccionar proceso o procedimiento'",
@@ -9895,6 +9899,11 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       }
     ],
     "eventos": [
+      {
+        "nombre": "back",
+        "tipo": "void",
+        "descripcion": null
+      },
       {
         "nombre": "nodeSelected",
         "tipo": "ProcessMenuNode",
@@ -10017,6 +10026,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       {
         "token": "--sys-gap-base-xs",
         "via": [
+          "gap-siaf-xs",
           "pt-siaf-xs"
         ]
       },
@@ -12186,7 +12196,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       "siaf-pagination",
       "siaf-table-controls"
     ],
-    "sinUso": true
+    "sinUso": false
   },
   {
     "selector": "siaf-side-nav",
@@ -13180,6 +13190,13 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "descripcion": null
       },
       {
+        "nombre": "keepVerifyOnEdit",
+        "tipo": "boolean",
+        "porDefecto": "false",
+        "requerida": false,
+        "descripcion": "En modo edición, deja visible «Verificar» (el padre lo deshabilita con `verifyDisabled`); por defecto la edición solo trae Cancelar y Grabar."
+      },
+      {
         "nombre": "loading",
         "tipo": "boolean",
         "porDefecto": "false",
@@ -13609,6 +13626,13 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "porDefecto": "''",
         "requerida": false,
         "descripcion": null
+      },
+      {
+        "nombre": "keepVerifyOnEdit",
+        "tipo": "boolean",
+        "porDefecto": "false",
+        "requerida": false,
+        "descripcion": "Conserva «Verificar» (deshabilitado) en el modo edición de la cabecera."
       },
       {
         "nombre": "loading",
@@ -14731,6 +14755,13 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "porDefecto": "true",
         "requerida": false,
         "descripcion": null
+      },
+      {
+        "nombre": "showTopPagination",
+        "tipo": "boolean",
+        "porDefecto": "true",
+        "requerida": false,
+        "descripcion": "Oculta el contador y las flechas de la derecha cuando la tabla ya trae su paginación inferior."
       },
       {
         "nombre": "totalItems",
@@ -15997,29 +16028,23 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         ]
       },
       {
+        "token": "--sys-color-text-neutral-high",
+        "via": [
+          "var()"
+        ]
+      },
+      {
         "token": "--sys-color-text-neutral-medium",
         "via": [
           "var()"
         ]
       },
       {
-        "token": "--sys-color-tipography-neutral-high",
-        "via": [
-          "var()"
-        ]
-      },
-      {
-        "token": "--sys-gap-base-lg",
-        "via": [
-          "px-siaf-lg"
-        ]
-      },
-      {
         "token": "--sys-gap-base-md",
         "via": [
           "gap-siaf-md",
-          "px-siaf-md",
-          "py-siaf-md"
+          "p-siaf-md",
+          "px-siaf-md"
         ]
       },
       {
@@ -16031,7 +16056,8 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       {
         "token": "--sys-gap-base-xs",
         "via": [
-          "py-siaf-xs"
+          "gap-siaf-xs",
+          "pb-siaf-xs"
         ]
       },
       {
@@ -16287,7 +16313,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     "capa": "ui",
     "importacion": "@siaf/ui/upload-side-nav/upload-side-nav.component",
     "archivo": "src/app/shared/ui/upload-side-nav/upload-side-nav.component.ts",
-    "descripcion": "Panel lateral animado de carga de archivos: envuelve `siaf-uploader` y confirma con Aceptar/Cancelar.\n\nEs la puerta de entrada normal a la carga en las request-pages (adjuntar el sustento .pdf); la\nvariante `bulk-chart-accounts` agrega los selects y el enlace de plantilla de la carga masiva.\n\n«Aceptar» confirma el archivo que terminó de cargar y sigue en su tarjeta: si se quita con su × o el panel se vuelve\na abrir (el uploader aparece vacío), queda deshabilitado hasta cargar otro.",
+    "descripcion": "Panel lateral animado de carga de archivos: envuelve `siaf-uploader` y confirma con Aceptar/Cancelar.\n\nEs la puerta de entrada normal a la carga en las request-pages (adjuntar el sustento .pdf); la\nvariante `bulk-chart-accounts` agrega los selects y el enlace de plantilla de la carga masiva, y `document-type` el select «Tipo de documento» del sustento (Figma 162:9647).\n\n«Aceptar» confirma el archivo que terminó de cargar y sigue en su tarjeta: si se quita con su × o el panel se vuelve\na abrir (el uploader aparece vacío), queda deshabilitado hasta cargar otro.",
     "usaSesion": false,
     "proyectaContenido": false,
     "entradas": [
@@ -16313,6 +16339,27 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "descripcion": null
       },
       {
+        "nombre": "documentTypeLabel",
+        "tipo": "string",
+        "porDefecto": "'Tipo de documento'",
+        "requerida": false,
+        "descripcion": "Variante `document-type`: etiqueta, opciones y valor del select «Tipo de documento»."
+      },
+      {
+        "nombre": "documentTypeOptions",
+        "tipo": "TextFieldOption[]",
+        "porDefecto": "[]",
+        "requerida": false,
+        "descripcion": null
+      },
+      {
+        "nombre": "documentTypeValue",
+        "tipo": "string",
+        "porDefecto": "''",
+        "requerida": false,
+        "descripcion": null
+      },
+      {
         "nombre": "hint",
         "tipo": "string",
         "porDefecto": "'Se permiten archivos de 10 MB como máximo'",
@@ -16325,6 +16372,13 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "porDefecto": "10",
         "requerida": false,
         "descripcion": null
+      },
+      {
+        "nombre": "multiple",
+        "tipo": "boolean",
+        "porDefecto": "false",
+        "requerida": false,
+        "descripcion": "Permite elegir (o soltar) varios archivos: `confirmedFiles` los emite todos; `confirmed` sigue emitiendo el primero."
       },
       {
         "nombre": "open",
@@ -16391,7 +16445,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       },
       {
         "nombre": "variant",
-        "tipo": "'default' | 'bulk-chart-accounts'",
+        "tipo": "'default' | 'bulk-chart-accounts' | 'document-type'",
         "porDefecto": "'default'",
         "requerida": false,
         "descripcion": null
@@ -16406,6 +16460,16 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       {
         "nombre": "confirmed",
         "tipo": "File",
+        "descripcion": null
+      },
+      {
+        "nombre": "confirmedFiles",
+        "tipo": "File[]",
+        "descripcion": "Todos los archivos que terminaron de cargar, en el orden en que terminaron."
+      },
+      {
+        "nombre": "documentTypeValueChange",
+        "tipo": "string",
         "descripcion": null
       },
       {
@@ -16424,7 +16488,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "descripcion": null
       }
     ],
-    "usar": "- Para adjuntar el documento de sustento (.pdf) desde la request-page: plan de cuentas, asiento de ajuste, catálogo de\n  ajuste (tipo y clase), catálogo de eventos, eventos contables y apertura contable.\n- Con `variant=\"bulk-chart-accounts\"` en la carga masiva del plan de cuentas: tipo de plan, plan a reemplazar y\n  enlace a la plantilla Excel (`templateHref`).\n- Con `accept`, `acceptedLabel`, `title` y `description` propios para subir un Excel, como el archivo de eventos de\n  la carga masiva (SCM).\n- `confirmed` para adjuntar el archivo a la solicitud: `fileSelected` avisa apenas termina de cargar, antes de que\n  el usuario acepte, y el archivo todavía se puede quitar o cancelar.",
+    "usar": "- Para adjuntar el documento de sustento (.pdf) desde la request-page: plan de cuentas, asiento de ajuste, catálogo de\n  ajuste (tipo y clase), catálogo de eventos, eventos contables y apertura contable.\n- Con `variant=\"bulk-chart-accounts\"` en la carga masiva del plan de cuentas: tipo de plan, plan a reemplazar y\n  enlace a la plantilla Excel (`templateHref`).\n- Con `variant=\"document-type\"` cuando el sustento se clasifica (constancia, captura de pantalla…): el padre pasa\n  `documentTypeOptions` y lleva `documentTypeValue`; «Aceptar» exige el tipo y el archivo.\n- Con `accept`, `acceptedLabel`, `title` y `description` propios para subir un Excel, como el archivo de eventos de\n  la carga masiva (SCM).\n- Con `multiple`, `confirmedFiles` entrega todos los archivos cargados (por ejemplo, varios sustentos del mismo tipo).\n- `confirmed` para adjuntar el archivo a la solicitud: `fileSelected` avisa apenas termina de cargar, antes de que\n  el usuario acepte, y el archivo todavía se puede quitar o cancelar.",
     "evitar": "- Para una carga embebida en la página, sin panel: usar `siaf-uploader` directo.\n- Para mostrar un archivo ya adjunto: usar `siaf-uploaded-file-card`.\n- Para elegir registros de un catálogo: usar `siaf-selection-side-nav`.",
     "teclado": "- **Tab**: al abrir, el foco entra en la X; recorre, en carga masiva, los dos selects y el enlace de plantilla, el\n  «elige archivo» de `siaf-uploader` y Cancelar / Aceptar, y da la vuelta sin salir del panel. Los selects siguen\n  `siaf-input`.\n- **Escape**: cierra el panel (emite `closed`) y el foco vuelve al botón que lo abrió; con la lista de un select\n  abierta, Escape cierra solo la lista.\n- **Enter / Espacio** en «elige archivo»: abre el selector de archivos del sistema (input de archivo nativo);\n  arrastrar y soltar es solo con mouse.\n- **Enter** en el enlace de plantilla: la descarga.\n- **Enter / Espacio**: activan la X y Cancelar (emiten `closed`) y Aceptar (emite `confirmed` con el archivo;\n  habilitado cuando hay un archivo cargado en su tarjeta y, en carga masiva, los selects obligatorios tienen valor).",
     "accesibilidad": "- **4.1.2 Nombre, función y valor (A)**: `role=\"dialog\"` con `aria-modal=\"true\"` y `aria-labelledby` al título; la X\n  se llama «Cerrar».\n- **2.4.3 Orden del foco (A)**: con `siafFoco`, al abrir lleva el foco a la X y al cerrar lo devuelve al botón que lo\n  abrió; Tab no sale a la página de atrás.\n- **2.1.1 Teclado (A)**: Escape cierra el panel como la X; arrastrar y soltar tiene alternativa: el input de archivo.\n- **2.4.7 Foco visible (AA)**: «elige archivo» de `siaf-uploader` (variante `extended`, la de este panel) y el enlace\n  de plantilla muestran un contorno azul de 2 px (`border-states-focus`, 5.35:1 claro / 10.15:1 oscuro) con el foco;\n  la X y Cancelar quedan con el anillo nativo.\n- **Pendiente · 1.4.3 Contraste mínimo (AA)**: el enlace «descárgalo aquí» y el «elige archivo» del uploader usan la\n  clase `text-brand-primary`, que toma el fondo de marca: 8.79:1 en claro, pero 2.66:1 sobre la superficie en oscuro\n  (el token de texto `--sys-color-text-brand-primary` da 10.15:1).\n- **Pendiente · 4.1.3 Mensajes de estado (AA)**: el avance («Subiendo...») y el rechazo del archivo en\n  `siaf-uploader` no se anuncian (sin `role=\"status\"` ni `aria-live`).\n- **3.3.2 Etiquetas o instrucciones (A)**: en carga masiva los selects de `siaf-input` tienen etiqueta y marcan el\n  obligatorio; el tipo admitido y el tamaño máximo se dicen en texto (`acceptedLabel`, `hint`).\n- **2.5.8 Tamaño del objetivo (AA)**: la X y Cancelar miden 40 px.",
@@ -16748,7 +16812,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     "usar": "- Dentro de `siaf-upload-side-nav`, el panel que abren las solicitudes para adjuntar el sustento .pdf: es su uso\n  normal.\n- Suelto solo para una carga embebida en la página; `compact` (una fila de 48 px) cuando el formulario tiene poco alto,\n  como el sustento de `siaf-annulment-modal`.\n- `fileSelected` cuando un archivo termina de cargar y `fileRemoved` cuando se quita con su ×, para que el padre sepa\n  si todavía tiene archivo.\n- Con el `accept` y el `maxSizeMb` de cada caso (.pdf para el sustento, .xlsx para las cargas masivas): también\n  valida lo que se suelta.",
     "evitar": "- Para mostrar un archivo ya adjunto o guardado: usar `siaf-uploaded-file-card`.\n- Para el flujo de adjuntar en una solicitud: usar `siaf-upload-side-nav`, que ya trae título, Aceptar y Cancelar.\n- Para mostrar el avance real de una subida al servidor: el progreso es simulado con un temporizador.",
     "teclado": "- **Tab**: enfoca el selector de archivos (el `input type=\"file\"` oculto dentro de «elige archivo» o «Elegir\n  archivo») y después los botones de cada tarjeta (Pausar, Reintentar, Cancelar).\n- **Enter / Espacio**: en el selector abren el diálogo de archivos del sistema; en los botones, ejecutan la acción.",
-    "accesibilidad": "- **2.1.1 Teclado (A)**: soltar archivos es opcional; el `input type=\"file\"` nativo permite elegirlos con teclado.\n- **2.4.7 Foco visible (AA)**: el `input type=\"file\"` va oculto con `sr-only`, así que «elige archivo» (`extended`)\n  y «Elegir archivo» (`compact`) pintan un contorno azul de 2 px (`border-states-focus`, 5.35:1 claro / 10.15:1\n  oscuro) cuando el selector recibe el foco con teclado. Los botones de las tarjetas conservan el anillo nativo.\n- **Pendiente · 4.1.3 Mensajes de estado (AA)**: ni el progreso, ni la carga terminada, ni el motivo de un rechazo se\n  anuncian: no hay `role=\"status\"`, `role=\"alert\"` ni `aria-live`, y la barra es un `div` sin `role=\"progressbar\"`.\n- **3.3.1 Identificación de errores (A)**: un archivo de tipo o tamaño inválido queda en una tarjeta roja con el\n  motivo en texto («Solo se admiten archivos .pdf»).\n- **Pendiente · 3.3.2 Etiquetas o instrucciones (A)**: la ayuda (`hint`) no se asocia al selector y `compact` no la\n  muestra.\n- **4.1.2 Nombre, función y valor (A)**: el selector se nombra con el texto de su `label`; los botones de cada\n  tarjeta tienen `aria-label` (Pausar, Reintentar, Cancelar) y los íconos son decorativos.\n- **Pendiente · 1.4.3 Contraste mínimo (AA)**: «elige archivo» usa la clase `text-brand-primary`, que pinta con\n  `bg-brand-primary`: 8.79:1 en claro, pero 2.66:1 en oscuro. El resto cumple: texto `text-neutral-high` 16.29:1,\n  ayuda y peso `text-neutral-low` 5.01:1 y error `text-feedback-danger` 9.84:1.\n- **2.5.8 Tamaño del objetivo (AA)**: los botones de las tarjetas miden 24 × 24 px (`size-6`).",
+    "accesibilidad": "- **2.1.1 Teclado (A)**: soltar archivos es opcional; el `input type=\"file\"` nativo permite elegirlos con teclado. El clic\n  en cualquier parte del recuadro extendido también abre el selector (es una ayuda para el puntero: el teclado sigue\n  entrando por «elige archivo»).\n- **2.4.7 Foco visible (AA)**: el `input type=\"file\"` va oculto con `sr-only`, así que «elige archivo» (`extended`)\n  y «Elegir archivo» (`compact`) pintan un contorno azul de 2 px (`border-states-focus`, 5.35:1 claro / 10.15:1\n  oscuro) cuando el selector recibe el foco con teclado. Los botones de las tarjetas conservan el anillo nativo.\n- **Pendiente · 4.1.3 Mensajes de estado (AA)**: ni el progreso, ni la carga terminada, ni el motivo de un rechazo se\n  anuncian: no hay `role=\"status\"`, `role=\"alert\"` ni `aria-live`, y la barra es un `div` sin `role=\"progressbar\"`.\n- **3.3.1 Identificación de errores (A)**: un archivo de tipo o tamaño inválido queda en una tarjeta roja con el\n  motivo en texto («Solo se admiten archivos .pdf»).\n- **Pendiente · 3.3.2 Etiquetas o instrucciones (A)**: la ayuda (`hint`) no se asocia al selector y `compact` no la\n  muestra.\n- **4.1.2 Nombre, función y valor (A)**: el selector se nombra con el texto de su `label`; los botones de cada\n  tarjeta tienen `aria-label` (Pausar, Reintentar, Cancelar) y los íconos son decorativos.\n- **Pendiente · 1.4.3 Contraste mínimo (AA)**: «elige archivo» usa la clase `text-brand-primary`, que pinta con\n  `bg-brand-primary`: 8.79:1 en claro, pero 2.66:1 en oscuro. El resto cumple: texto `text-neutral-high` 16.29:1,\n  ayuda y peso `text-neutral-low` 5.01:1 y error `text-feedback-danger` 9.84:1.\n- **2.5.8 Tamaño del objetivo (AA)**: los botones de las tarjetas miden 24 × 24 px (`size-6`).",
     "figma": [],
     "aria": {
       "roles": [],

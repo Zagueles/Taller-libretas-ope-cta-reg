@@ -3,6 +3,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 
+import { CREATE_CONCILIACION_DIARIA_OPTION, REQUEST_ROUTE as CONCILIACION_REQUEST_ROUTE } from '../../modules/tesoreria/conciliacion-diaria/config/conciliacion-diaria.config';
+import { CODIGO_DOCUMENTO as CODIGO_CONCILIACION } from '../../modules/tesoreria/conciliacion-diaria/models/conciliacion-diaria.model';
 import { CREATE_DOCUMENT_OPTIONS, REQUEST_ROUTE } from '../../modules/tesoreria/cuentas-bancarias/config/cuentas-bancarias.rutas';
 import { CreateDocumentAccepted, CreateDocumentComponent, CreateDocumentProcessOption } from '../../shared/components/create-document/create-document.component';
 import { CatalogosApiService, TipoDocumentoResponse } from '../../core/api/catalogos-api.service';
@@ -150,7 +152,7 @@ export class AppShellComponent implements OnInit {
   adminMenuOpen = false;
 
   // Fallback en caso de que el API tarde o falle — la maqueta sigue funcional
-  private readonly fallbackOptions: CreateDocumentProcessOption[] = [...CREATE_DOCUMENT_OPTIONS];
+  private readonly fallbackOptions: CreateDocumentProcessOption[] = [...CREATE_DOCUMENT_OPTIONS, CREATE_CONCILIACION_DIARIA_OPTION];
 
   readonly createDocumentOptions = signal<CreateDocumentProcessOption[]>(this.fallbackOptions);
 
@@ -182,6 +184,10 @@ export class AppShellComponent implements OnInit {
       'registro-cuentas-bancarias': {
         processRoute: REQUEST_ROUTE,
         tipoRoutes: { SRCB: REQUEST_ROUTE },
+      },
+      'conciliacion-diaria': {
+        processRoute: CONCILIACION_REQUEST_ROUTE,
+        tipoRoutes: { [CODIGO_CONCILIACION]: CONCILIACION_REQUEST_ROUTE },
       },
     };
 

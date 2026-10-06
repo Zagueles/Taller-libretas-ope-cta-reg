@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 
 import { APP_CONFIG } from '../config/app.config';
 import { EstadoDocumento } from '../models/documento.model';
+import type { ConciliacionManualDatos } from '../../modules/tesoreria/conciliacion-diaria/models/conciliacion-diaria.model';
 import type { CuentaBancariaDatos } from '../../modules/tesoreria/cuentas-bancarias/models/cuenta-bancaria.model';
 
 // ─────────────────────────────────────────────────────────────
@@ -312,6 +313,8 @@ export interface SolicitudResponse {
   detalleAsientoAjuste?: AsientoAjusteResponse | null; // SRAA
   /** Taller: cuenta bancaria propuesta en la solicitud SRCB (proceso de ejemplo). */
   detalleCuentaBancaria?: (CuentaBancariaDatos & { documentoId: string }) | null; // SRCB
+  /** Taller: cuenta y registros de la conciliación manual diaria (SCMD). */
+  detalleConciliacionManual?: (ConciliacionManualDatos & { documentoId: string }) | null; // SCMD
   detalleConfiguracionMensual?: {
     documentoId: string;
     periodoContableId: string;

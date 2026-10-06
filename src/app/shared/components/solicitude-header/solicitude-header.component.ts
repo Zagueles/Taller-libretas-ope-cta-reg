@@ -436,6 +436,8 @@ export class SolicitudeHeaderComponent {
   @Input() showDelete = false;
   @Input() showEdit = false;
   @Input() showVerify = true;
+  /** En modo edición, deja visible «Verificar» (el padre lo deshabilita con `verifyDisabled`); por defecto la edición solo trae Cancelar y Grabar. */
+  @Input() keepVerifyOnEdit = false;
   @Input() deleteLabel = 'Eliminar';
   @Input() editLabel = 'Editar';
   @Input() verifyLabel = 'Verificar';
@@ -500,6 +502,7 @@ export class SolicitudeHeaderComponent {
   }
 
   get resolvedShowVerify(): boolean {
+    if (this.keepVerifyOnEdit && this.state === 'edit') return true;
     return this.roleStateConfig?.showVerify ?? this.showVerify;
   }
 

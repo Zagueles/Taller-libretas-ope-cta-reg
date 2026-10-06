@@ -8,13 +8,13 @@ import { UploaderComponent } from '../uploader/uploader.component';
 import { TooltipDirective } from '../tooltip/tooltip.directive';
 import { FocoDirective } from '../foco/foco.directive';
 
-export type UploadSideNavVariant = 'default' | 'bulk-chart-accounts';
+export type UploadSideNavVariant = 'default' | 'bulk-chart-accounts' | 'document-type';
 
 /**
  * Panel lateral animado de carga de archivos: envuelve `siaf-uploader` y confirma con Aceptar/Cancelar.
  *
  * Es la puerta de entrada normal a la carga en las request-pages (adjuntar el sustento .pdf); la
- * variante `bulk-chart-accounts` agrega los selects y el enlace de plantilla de la carga masiva.
+ * variante `bulk-chart-accounts` agrega los selects y el enlace de plantilla de la carga masiva, y `document-type` el select «Tipo de documento» del sustento (Figma 162:9647).
  *
  * «Aceptar» confirma el archivo que terminó de cargar y sigue en su tarjeta: si se quita con su × o el panel se vuelve
  * a abrir (el uploader aparece vacío), queda deshabilitado hasta cargar otro.
@@ -24,8 +24,11 @@ export type UploadSideNavVariant = 'default' | 'bulk-chart-accounts';
  *   ajuste (tipo y clase), catálogo de eventos, eventos contables y apertura contable.
  * - Con `variant="bulk-chart-accounts"` en la carga masiva del plan de cuentas: tipo de plan, plan a reemplazar y
  *   enlace a la plantilla Excel (`templateHref`).
+ * - Con `variant="document-type"` cuando el sustento se clasifica (constancia, captura de pantalla…): el padre pasa
+ *   `documentTypeOptions` y lleva `documentTypeValue`; «Aceptar» exige el tipo y el archivo.
  * - Con `accept`, `acceptedLabel`, `title` y `description` propios para subir un Excel, como el archivo de eventos de
  *   la carga masiva (SCM).
+ * - Con `multiple`, `confirmedFiles` entrega todos los archivos cargados (por ejemplo, varios sustentos del mismo tipo).
  * - `confirmed` para adjuntar el archivo a la solicitud: `fileSelected` avisa apenas termina de cargar, antes de que
  *   el usuario acepte, y el archivo todavía se puede quitar o cancelar.
  * @evitar
@@ -103,6 +106,17 @@ export type UploadSideNavVariant = 'default' | 'bulk-chart-accounts';
                 </section>
               }
 
+              @if (variant === 'document-type') {
+                <siaf-input
+                  [label]="documentTypeLabel"
+                  type="select"
+                  [required]="true"
+                  [options]="documentTypeOptions"
+                  [value]="documentTypeValue"
+                  (valueChange)="onDocumentTypeChanged($event)"
+                />
+              }
+
               @if (variant === 'bulk-chart-accounts' && templateHref) {
                 <p class="m-0 text-sm leading-normal tracking-[0.0249px] text-[var(--sys-color-text-neutral-medium)]">
                   Sube un archivo Excel en el formato correcto.<br />
@@ -115,12 +129,13 @@ export type UploadSideNavVariant = 'default' | 'bulk-chart-accounts';
                     descárgalo aquí.
                   </a>
                 </p>
-              } @else {
+              } @else if (description) {
                 <p class="m-0 text-sm leading-normal text-text">{{ description }}</p>
               }
 
               <siaf-uploader
                 [accept]="accept"
+                [multiple]="multiple"
                 [hint]="hint"
                 [maxSizeMb]="maxSizeMb"
                 (fileSelected)="onFileSelected($event)"
@@ -164,6 +179,8 @@ export class UploadSideNavComponent implements OnChanges {
   @Input() acceptedLabel = 'Solo admite archivos .pdf';
   @Input() hint = 'Se permiten archivos de 10 MB como máximo';
   @Input() maxSizeMb = 10;
+  /** Permite elegir (o soltar) varios archivos: `confirmedFiles` los emite todos; `confirmed` sigue emitiendo el primero. */
+  @Input() multiple = false;
   @Input() templateHref = '';
   @Input() templateDownloadName = '';
   @Input() planTypeOptions: TextFieldOption[] = [];
@@ -171,10 +188,17 @@ export class UploadSideNavComponent implements OnChanges {
   @Input() planTypeValue = '';
   @Input() replacementPlanValue = '';
   @Input() replacementPlanRequired = false;
+  /** Variante `document-type`: etiqueta, opciones y valor del select «Tipo de documento». */
+  @Input() documentTypeLabel = 'Tipo de documento';
+  @Input() documentTypeOptions: TextFieldOption[] = [];
+  @Input() documentTypeValue = '';
 
   @Output() closed = new EventEmitter<void>();
   @Output() fileSelected = new EventEmitter<File>();
   @Output() confirmed = new EventEmitter<File>();
+  /** Todos los archivos que terminaron de cargar, en el orden en que terminaron. */
+  @Output() confirmedFiles = new EventEmitter<File[]>();
+  @Output() documentTypeValueChange = new EventEmitter<string>();
   @Output() planTypeValueChange = new EventEmitter<string>();
   @Output() replacementPlanValueChange = new EventEmitter<string>();
 
@@ -186,6 +210,10 @@ export class UploadSideNavComponent implements OnChanges {
   get confirmDisabled(): boolean {
     if (!this.selectedFile()) {
       return true;
+    }
+
+    if (this.variant === 'document-type') {
+      return !this.documentTypeValue;
     }
 
     if (this.variant !== 'bulk-chart-accounts') {
@@ -213,6 +241,10 @@ export class UploadSideNavComponent implements OnChanges {
     this.archivos.update((lista) => lista.filter((archivo) => archivo !== file));
   }
 
+  onDocumentTypeChanged(value: string | number | string[]): void {
+    this.documentTypeValueChange.emit(this.textValue(value));
+  }
+
   onPlanTypeChanged(value: string | number | string[]): void {
     this.planTypeValueChange.emit(this.textValue(value));
   }
@@ -228,6 +260,7 @@ export class UploadSideNavComponent implements OnChanges {
     }
 
     this.confirmed.emit(archivo);
+    this.confirmedFiles.emit([...this.archivos()]);
   }
 
   private textValue(value: string | number | string[]): string {
