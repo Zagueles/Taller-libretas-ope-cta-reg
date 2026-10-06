@@ -16,7 +16,7 @@ import { USUARIOS_DEMO, UsuarioDemo } from './usuarios-demo';
  */
 
 const CLAVE = 'taller-siaf-rp:datos';
-const VERSION = 2;
+const VERSION = 3;
 
 export interface NotificacionMock extends NotificacionResponse {
   /** Destinatario: un usuario puntual o, si no hay, todos los perfiles con este rol. */
@@ -167,8 +167,9 @@ function crearDatosIniciales(): DatosTaller {
     secuencia: 0,
     favoritos: {},
   };
+  // Un solo usuario de demostración: las solicitudes iniciales las crea con su perfil de creador y las resuelve con el de aprobador.
   const ana = USUARIOS_DEMO[0];
-  const luis = USUARIOS_DEMO[1];
+  const luis = USUARIOS_DEMO[0];
 
   for (const semilla of SEMILLAS) {
     const id = nuevoId(datos, 'sol');
@@ -245,14 +246,14 @@ function crearDatosIniciales(): DatosTaller {
     datos.notificaciones.push(aviso(s, 'DOCUMENTO_VERIFICADO', 'Solicitud por aprobar', `La solicitud ${s.numero} fue verificada y espera su aprobación.`, false, { paraRolCodigo: 'APROBADOR' }));
   }
   for (const s of porEstado('OBSERVADO')) {
-    datos.notificaciones.push(aviso(s, 'DOCUMENTO_OBSERVADO', 'Solicitud observada', `La solicitud ${s.numero} fue observada: revise el comentario y subsane.`, false, { paraUsuarioId: ana.id }));
+    datos.notificaciones.push(aviso(s, 'DOCUMENTO_OBSERVADO', 'Solicitud observada', `La solicitud ${s.numero} fue observada: revise el comentario y subsane.`, false, { paraRolCodigo: 'CREADOR' }));
   }
   for (const s of porEstado('RECHAZADO')) {
-    datos.notificaciones.push(aviso(s, 'DOCUMENTO_RECHAZADO', 'Solicitud rechazada', `La solicitud ${s.numero} fue rechazada.`, true, { paraUsuarioId: ana.id }));
+    datos.notificaciones.push(aviso(s, 'DOCUMENTO_RECHAZADO', 'Solicitud rechazada', `La solicitud ${s.numero} fue rechazada.`, true, { paraRolCodigo: 'CREADOR' }));
   }
   const ultimaAprobada = porEstado('APROBADO').at(-1);
   if (ultimaAprobada) {
-    datos.notificaciones.push(aviso(ultimaAprobada, 'DOCUMENTO_APROBADO', 'Solicitud aprobada', `La solicitud ${ultimaAprobada.numero} fue aprobada.`, true, { paraUsuarioId: ana.id }));
+    datos.notificaciones.push(aviso(ultimaAprobada, 'DOCUMENTO_APROBADO', 'Solicitud aprobada', `La solicitud ${ultimaAprobada.numero} fue aprobada.`, true, { paraRolCodigo: 'CREADOR' }));
   }
 
   return datos;

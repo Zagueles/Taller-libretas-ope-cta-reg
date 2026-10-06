@@ -13,6 +13,12 @@ import { ButtonComponent } from '../../../../../shared/ui/button/button.componen
 import { DocumentSummaryCardComponent } from '../../../../../shared/ui/document-summary-card/document-summary-card.component';
 import { ReadonlyFieldComponent } from '../../../../../shared/ui/readonly-field/readonly-field.component';
 import { ReportTableColumn, ReportTableComponent, ReportTableRow } from '../../../../../shared/ui/report-table/report-table.component';
+import { ConsultasFiltrosChipsComponent, FiltroChip } from '../../../../../shared/components/consultas-filtros-chips/consultas-filtros-chips.component';
+import { SideNavComponent } from '../../../../../shared/ui/side-nav/side-nav.component';
+import { DateTimePickerComponent } from '../../../../../shared/ui/date-time-picker/date-time-picker.component';
+import { TextFieldComponent } from '../../../../../shared/ui/text-field/text-field.component';
+import { ColumnasPanelGrupo, ReportColumnsPanelComponent } from '../../../../../shared/components/report-columns-panel/report-columns-panel.component';
+import { IconComponent } from '../../../../../shared/ui/icon/icon.component';
 import { SnackbarComponent } from '../../../../../shared/ui/snackbar/snackbar.component';
 import { volverAlOrigen } from '../../../../../shared/utils/volver.util';
 import { buildProcessBreadcrumbs } from '../../../../../shared/utils/breadcrumbs.util';
@@ -41,6 +47,15 @@ const CUENTAS = [
   { id: 'mef-dgtp-cut', nombre: 'MEF - DGTP - CUT', numero: '11040103570200000000', moneda: 'PEN' },
   { id: 'mef-dgtp', nombre: 'MEF - DGTP', numero: '12073303572000000003', moneda: 'USD' },
 ];
+
+/** Un filtro personalizado aplicado a los registros del documento. */
+interface FiltroDocumento {
+  id: string;
+  campo: string;
+  campoLabel: string;
+  condicion: string;
+  valor: string;
+}
 
 const COLUMNAS: ReportTableColumn[] = [
   { key: 'sec', label: 'Sec.', group: 'Acreditación', width: 90 },
@@ -73,6 +88,12 @@ const COLUMNAS: ReportTableColumn[] = [
     ReadonlyFieldComponent,
     ReportTableComponent,
     SnackbarComponent,
+    SideNavComponent,
+    ConsultasFiltrosChipsComponent,
+    DateTimePickerComponent,
+    TextFieldComponent,
+    ReportColumnsPanelComponent,
+    IconComponent,
     DetailHistoryTabsComponent,
     SolicitudeFormCardComponent,
     SolicitudeInfoCardComponent,
@@ -140,8 +161,28 @@ const COLUMNAS: ReportTableColumn[] = [
         </siaf-solicitude-form-card>
 
         <siaf-solicitude-form-card title="Registros de operaciones en las libretas">
-          <siaf-form-table-search [value]="busqueda()" (valueChange)="busqueda.set($any($event))" />
-          <siaf-report-table [columns]="columnas" [rows]="filas()" rowKey="sec" [clickableRows]="true" ariaLabel="Registros de operaciones en las libretas del documento" (rowClicked)="abrirRegistro($event)" />
+          <div class="relative flex flex-col gap-siaf-md">
+            <siaf-form-table-search
+              [value]="busqueda()"
+              [filterCount]="filtros().length"
+              filterLabel="Filtros"
+              moreLabel="Columnas visibles"
+              (valueChange)="busqueda.set($any($event))"
+              (filter)="abrirFiltros()"
+              (more)="panelColumnasAbierto.set(true)"
+            />
+
+            @if (filtros().length) {
+              <siaf-consultas-filtros-chips
+                data-filtros-aplicados
+                [chips]="chipsFiltros()"
+                [removable]="true"
+                (removed)="quitarFiltro($event.id ?? '')"
+                (cleared)="borrarFiltros()"
+              />
+            }
+          </div>
+          <siaf-report-table [columns]="columnasVisibles()" [rows]="filas()" rowKey="sec" [clickableRows]="true" ariaLabel="Registros de operaciones en las libretas del documento" (rowClicked)="abrirRegistro($event)" />
         </siaf-solicitude-form-card>
 
         @if (d.motivoRechazo) {
@@ -157,6 +198,60 @@ const COLUMNAS: ReportTableColumn[] = [
       }
     </siaf-solicitude-page-layout>
 
+    <siaf-side-nav
+      [open]="filtroAbierto()"
+      title="Filtros"
+      confirmLabel="Aceptar"
+      [confirmDisabled]="!hayCambiosEnFiltros()"
+      (closed)="cerrarFiltros()"
+      (canceled)="cerrarFiltros()"
+      (confirmed)="aceptarFiltros()"
+    >
+      <div class="flex flex-col gap-siaf-lg" data-filtros-documento>
+        @for (grupo of gruposFiltro(); track grupo.titulo) {
+          <section class="flex flex-col gap-siaf-md">
+            <h3 class="m-0 px-siaf-xs text-sm font-normal uppercase text-[var(--sys-color-text-neutral-high)]">{{ grupo.titulo }}</h3>
+            @for (campo of grupo.campos; track campo.key) {
+              @if (campo.tipo === 'fecha') {
+                <siaf-date-time-picker
+                  [label]="campo.label"
+                  [fullWidth]="true"
+                  [defaultToToday]="false"
+                  [value]="borradorFiltros()[campo.key] ?? ''"
+                  (valueChange)="cambiarBorrador(campo.key, $event)"
+                />
+              } @else if (campo.tipo === 'select') {
+                <siaf-input
+                  type="select"
+                  [label]="campo.label"
+                  [autoSuccess]="false"
+                  [options]="valoresPorCampo()[campo.key] ?? []"
+                  [value]="borradorFiltros()[campo.key] ?? ''"
+                  (valueChange)="cambiarBorrador(campo.key, '' + $event)"
+                />
+              } @else {
+                <siaf-input
+                  [label]="campo.label"
+                  [value]="borradorFiltros()[campo.key] ?? ''"
+                  (valueChange)="cambiarBorrador(campo.key, '' + $event)"
+                />
+              }
+            }
+          </section>
+        }
+      </div>
+    </siaf-side-nav>
+
+    <siaf-report-columns-panel
+      [open]="panelColumnasAbierto()"
+      [grupos]="gruposColumnas"
+      [selected]="columnasElegidas()"
+      [defaults]="todasLasColumnas"
+      [baseKeys]="columnasBase"
+      (closed)="panelColumnasAbierto.set(false)"
+      (applied)="aplicarColumnas($event)"
+    />
+
     <div class="fixed bottom-siaf-lg left-1/2 z-50 w-[min(430px,calc(100vw-32px))] -translate-x-1/2">
       <siaf-snackbar [open]="preparandoDescarga()" tone="neutral" [dismissible]="false" message="Preparando archivo para descargar" />
     </div>
@@ -171,6 +266,30 @@ export class RegistroLibretasDocumentoComponent {
   readonly breadcrumbs = buildProcessBreadcrumbs(PROCESS_ID, PROCESS_ROUTE);
   readonly cuentas = CUENTAS;
   readonly columnas = COLUMNAS;
+
+  // ── Columnas visibles (mismo panel que Consultas y reportes) ──
+  readonly panelColumnasAbierto = signal(false);
+  readonly todasLasColumnas: ReadonlySet<string> = new Set(COLUMNAS.map((c) => c.key));
+  /** Si se ocultan todas, queda la secuencia. */
+  readonly columnasBase: ReadonlySet<string> = new Set(['sec']);
+  readonly columnasElegidas = signal<ReadonlySet<string>>(this.todasLasColumnas);
+  readonly columnasVisibles = computed(() => COLUMNAS.filter((c) => this.columnasElegidas().has(c.key)));
+  readonly gruposColumnas: ColumnasPanelGrupo[] = [...new Set(COLUMNAS.map((c) => c.group ?? c.key))].map((id) => {
+    const columnas = COLUMNAS.filter((c) => (c.group ?? c.key) === id);
+    return {
+      id,
+      label: id === 'Imp. m. cuenta' ? 'Importe en moneda de la cuenta' : id,
+      suelta: !columnas[0].group,
+      columnas: columnas.map((c) => ({ key: c.key, label: c.label === 'Sec.' ? 'Secuencia' : c.label })),
+    };
+  });
+
+  aplicarColumnas(elegidas: Set<string>): void {
+    this.columnasElegidas.set(elegidas);
+    this.panelColumnasAbierto.set(false);
+    // Un filtro sobre una columna que ya no se ve deja de ofrecerse y de aplicarse.
+    this.filtros.update((actual) => actual.filter((f) => elegidas.has(f.campo)));
+  }
   readonly cuentaElegida = signal('mef-dgtp-cut');
   readonly busqueda = signal('');
   readonly preparandoDescarga = signal(false);
@@ -211,9 +330,9 @@ export class RegistroLibretasDocumentoComponent {
     ];
   });
 
-  readonly filas = computed<ReportTableRow[]>(() => {
-    const termino = normalizar(this.busqueda().trim());
-    return this.movimientos()
+  /** Las filas de la cuenta elegida, sin buscar ni filtrar. */
+  private readonly filasCuenta = computed<ReportTableRow[]>(() =>
+    this.movimientos()
       .filter((m) => m.cuentaBancariaId === this.cuentaElegida())
       .map((m) => ({
         sec: m.sec,
@@ -226,8 +345,111 @@ export class RegistroLibretasDocumentoComponent {
         debito: monto(m.debito),
         credito: monto(m.credito),
         saldoFinal: monto(m.saldoFinal),
-      }))
-      .filter((f) => !termino || Object.values(f).some((v) => normalizar(v).includes(termino)));
+      })),
+  );
+
+  // ── Filtros personalizados del documento (Campo · Condición · Valor) ──
+  readonly filtros = signal<FiltroDocumento[]>([]);
+  readonly filtroAbierto = signal(false);
+  readonly chipsFiltros = computed<FiltroChip[]>(() => this.filtros().map((f) => ({ id: f.id, label: f.campoLabel, values: [f.valor] })));
+  private secuenciaFiltro = 0;
+  /** Lo que se va escribiendo en el panel «Filtros» (campo → valor), sin aplicar todavía. */
+  readonly borradorFiltros = signal<Record<string, string>>({});
+
+  /** Los campos del panel: las columnas visibles, por grupo; fecha con selector, códigos y descripciones con lista, importes con texto. */
+  readonly gruposFiltro = computed(() => {
+    const tipoDe = (key: string): 'fecha' | 'select' | 'texto' => (key === 'fecha' ? 'fecha' : ['saldoInicial', 'debito', 'credito', 'saldoFinal'].includes(key) ? 'texto' : 'select');
+    const grupos = new Map<string, { titulo: string; campos: { key: string; label: string; tipo: 'fecha' | 'select' | 'texto' }[] }>();
+    for (const c of this.columnasVisibles()) {
+      const titulo = c.group === 'Imp. m. cuenta' ? 'Importe en moneda de la cuenta' : (c.group ?? c.label);
+      const grupo = grupos.get(titulo) ?? { titulo, campos: [] };
+      grupo.campos.push({ key: c.key, label: c.label === 'Sec.' ? 'Secuencia' : c.label, tipo: tipoDe(c.key) });
+      grupos.set(titulo, grupo);
+    }
+    return [...grupos.values()];
+  });
+
+  /** Valores a elegir de cada campo: los que tiene en las filas de la cuenta elegida. */
+  readonly valoresPorCampo = computed<Record<string, { label: string; value: string }[]>>(() =>
+    Object.fromEntries(
+      COLUMNAS.map((c) => {
+        const valores = [...new Set(this.filasCuenta().map((f) => String(f[c.key] ?? '')).filter(Boolean))];
+        return [c.key, valores.map((v) => ({ label: v, value: v }))];
+      }),
+    ),
+  );
+
+  private filtrosComoBorrador(): Record<string, string> {
+    return Object.fromEntries(this.filtros().map((f) => [f.campo, f.campo === 'fecha' ? this.aIso(f.valor) : f.valor]));
+  }
+
+  readonly hayCambiosEnFiltros = computed(() => {
+    const actual = this.filtrosComoBorrador();
+    const borrador = Object.fromEntries(Object.entries(this.borradorFiltros()).filter(([, v]) => v));
+    return JSON.stringify(Object.entries(actual).sort()) !== JSON.stringify(Object.entries(borrador).sort());
+  });
+
+  /** dd/mm/aaaa → aaaa-mm-dd, que es lo que entiende el selector de fecha. */
+  private aIso(valor: string): string {
+    const [d, m, a] = valor.split('/');
+    return a && m && d ? `${a}-${m}-${d}` : '';
+  }
+
+  abrirFiltros(): void {
+    this.borradorFiltros.set(this.filtrosComoBorrador());
+    this.filtroAbierto.set(true);
+  }
+  cerrarFiltros(): void {
+    this.filtroAbierto.set(false);
+  }
+  cambiarBorrador(campo: string, valor: string): void {
+    this.borradorFiltros.update((actual) => ({ ...actual, [campo]: valor }));
+  }
+  /** «Aceptar»: cada campo con valor pasa a ser un filtro aplicado (la fecha, comparada por su día; los importes, por contenido). */
+  aceptarFiltros(): void {
+    const etiqueta = (key: string): string => {
+      const label = COLUMNAS.find((c) => c.key === key)?.label ?? key;
+      return label === 'Sec.' ? 'Secuencia' : label;
+    };
+    this.filtros.set(
+      Object.entries(this.borradorFiltros())
+        .filter(([, valor]) => !!valor)
+        .map(([campo, valor]) => ({
+          id: `filtro-${++this.secuenciaFiltro}`,
+          campo,
+          campoLabel: etiqueta(campo),
+          condicion: campo === 'fecha' || ['saldoInicial', 'debito', 'credito', 'saldoFinal'].includes(campo) ? 'contains' : 'eq',
+          valor: campo === 'fecha' ? valor.split('-').reverse().join('/') : valor,
+        })),
+    );
+    this.filtroAbierto.set(false);
+  }
+  quitarFiltro(id: string): void {
+    this.filtros.update((actual) => actual.filter((f) => f.id !== id));
+  }
+  borrarFiltros(): void {
+    this.filtros.set([]);
+  }
+
+  private cumpleFiltro(fila: ReportTableRow, filtro: FiltroDocumento): boolean {
+    const valorFila = String(fila[filtro.campo] ?? '').toLocaleLowerCase();
+    const valor = filtro.valor.toLocaleLowerCase();
+    switch (filtro.condicion) {
+      case 'neq': return valorFila !== valor;
+      case 'contains': return valorFila.includes(valor);
+      case 'not_contains': return !valorFila.includes(valor);
+      case 'starts_with': return valorFila.startsWith(valor);
+      case 'ends_with': return valorFila.endsWith(valor);
+      default: return valorFila === valor;
+    }
+  }
+
+  readonly filas = computed<ReportTableRow[]>(() => {
+    const termino = normalizar(this.busqueda().trim());
+    const filtros = this.filtros();
+    return this.filasCuenta()
+      .filter((f) => !termino || Object.values(f).some((v) => normalizar(v).includes(termino)))
+      .filter((f) => filtros.every((filtro) => this.cumpleFiltro(f, filtro)));
   });
 
   /** Descarga el PDF del documento (Figma nodo 4990:17215): una hoja apaisada por cada cuenta bancaria referenciada.

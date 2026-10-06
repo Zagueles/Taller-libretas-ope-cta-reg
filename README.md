@@ -25,28 +25,30 @@ Abrir <http://127.0.0.1:4200>. Otro puerto: `npm start -- --port 4300`.
 La contraseña de todos es **`Taller2026*`**. En el login, el panel «Usuarios de demostración» llena el DNI y la
 contraseña con un clic.
 
+Hay **un solo usuario** de demostración, con tres perfiles que se cambian desde su menú de usuario (Perfil):
+
 | Usuario | DNI | Perfil | Qué puede hacer |
 | --- | --- | --- | --- |
-| Ana Torres Díaz | `11111111` | Creador | Crear, grabar, editar, verificar y eliminar solicitudes |
-| Luis Ramírez Soto | `22222222` | Aprobador | Aprobar, observar (con comentario) o rechazar lo verificado |
-| Carla Mendoza Ríos | `33333333` | Creador y Aprobador | Lo mismo que los dos anteriores: cambia de perfil desde su menú de usuario |
+| Carla Mendoza Ríos | `33333333` | Creador | Crear, grabar, editar, verificar y eliminar solicitudes |
+| | | Aprobador | Aprobar, observar (con comentario) o rechazar lo verificado |
+| | | Visualizador de consultas | Solo consulta documentos, registros y reportes (sin «Crear» ni acciones) |
 
-«Olvidé mi contraseña» también funciona: con el correo de un usuario (por ejemplo `ana.torres@taller.pe`) el código de
+«Olvidé mi contraseña» también funciona: con el correo de un usuario (`carla.mendoza@taller.pe`) el código de
 verificación es `123456`.
 
 ## Recorrido sugerido para la clase
 
-1. **Login** como Ana. El escritorio virtual muestra la bandeja, los contadores y sus notificaciones.
+1. **Login** como Carla (perfil Creador). El escritorio virtual muestra la bandeja, los contadores y sus notificaciones.
 2. **Procesos → Gestión de tesorería → Registro de cuentas bancarias → Documentos y registros**. La pestaña Documentos
    es la bandeja; Registros, las cuentas ya aprobadas (con el historial de la solicitud que las creó).
 3. **Crear documento → Solicitud de Registro de Cuenta Bancaria**: llenar el formulario, adjuntar un PDF de sustento
    y **Grabar**. La solicitud recibe su número (`PCB-SRCB-00013-2026-MEF-OGA`) y queda Elaborada; luego **Verificar**.
-4. **Cerrar sesión** y entrar como Luis: tiene la notificación «Solicitud por aprobar». Abrir la solicitud y
+4. **Cambiar de perfil** a Aprobador desde el menú del usuario: tiene la notificación «Solicitud por aprobar». Abrir la solicitud y
    **Aprobar** (la cuenta aparece en Registros con el código `CB-0009`), **Observar** o **Rechazar** (piden comentario).
-5. Volver a entrar como Ana: le llega el aviso. Una solicitud observada se corrige y se vuelve a verificar, pero ya no
+5. Volver al perfil Creador: le llega el aviso. Una solicitud observada se corrige y se vuelve a verificar, pero ya no
    se puede eliminar.
-6. Entrar como Carla y cambiar de perfil desde el menú del usuario: el avatar pasa de «CR» a «AP» y cambian la bandeja,
-   los botones y las notificaciones.
+6. Cambiar de perfil desde el menú del usuario: el avatar pasa de «CR» a «AP» y a «VD» (visualizador de consultas) y
+   cambian la bandeja, los botones y las notificaciones.
 7. **Consultas y reportes**: elegir el rango de fechas de apertura y consultar. Probar los filtros, la **vista de
    gráficas** (KPI, barras, dona y línea) y **Exportar** a Excel, CSV o PDF.
 8. **Catálogo de componentes** en `/ui-kit` (enlace «Ver componentes» del login): cada componente con su ficha, sus

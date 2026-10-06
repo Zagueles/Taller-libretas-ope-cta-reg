@@ -97,6 +97,7 @@ export const REGISTRO_LIBRETAS_DOCUMENTS_CONFIG: DocumentsRecordsConfig = {
   lockDefaultColumns: true,
   rememberTab: true,
   columnsTreePanel: true,
+  recordFilterFieldsFromColumns: true,
   headerGroupLabels: { 'Imp. m. cuenta': 'Importe en moneda de la cuenta' },
   selectionDownload: true,
   recordRowAction: { icon: 'description', label: 'Ver documento PDF' },

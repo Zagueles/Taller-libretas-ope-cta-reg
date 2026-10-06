@@ -107,6 +107,8 @@ export type DocumentsRecordsConfig = {
   rememberTab?: boolean;
   /** «Columnas visibles» como en Consultas y reportes (`siaf-report-columns-panel`): árbol por grupo de cabecera, «Seleccionar todas», «Restablecer» y «Aplicar»; en vez de la lista plana «Ocultar o mostrar columnas». */
   columnsTreePanel?: boolean;
+  /** Los «Filtros personalizados» de Registros ofrecen como campos las columnas visibles de la tabla (y como valores, los de esa columna en las filas), en vez de `recordFilterCampoOptions`. */
+  recordFilterFieldsFromColumns?: boolean;
   /** Nombre completo, en el panel «Columnas visibles», de un grupo de cabecera abreviado (`'Imp. m. cuenta'` → «Importe en moneda de la cuenta»). */
   headerGroupLabels?: Record<string, string>;
   /** Con filas elegidas, la barra de selección suma «Descargar» y la página emite `selectionDownloaded`. */

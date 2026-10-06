@@ -130,7 +130,7 @@ export const MAX_NIVELES = 3;
                           [autoSuccess]="false"
                           [options]="opcionesCampo()"
                           [value]="condicion.field"
-                          (valueChange)="cambiarCondicion(condicion.id, { field: $any($event) })"
+                          (valueChange)="cambiarCondicion(condicion.id, { field: $any($event), value: '', valueTo: '' })"
                         />
                         <siaf-input
                           class="flex-1"
@@ -160,17 +160,39 @@ export const MAX_NIVELES = 3;
                             />
                           }
                         } @else {
-                          <siaf-input
-                            [label]="condicion.operator === 'between' ? 'Valor desde' : 'Valor'"
-                            [value]="condicion.value ?? ''"
-                            (valueChange)="cambiarCondicion(condicion.id, { value: $any($event) })"
-                          />
-                          @if (condicion.operator === 'between') {
+                          <!-- Con valores conocidos del campo: lista de selección; si no, texto libre. -->
+                          @if (opcionesValor(condicion.field).length) {
                             <siaf-input
-                              label="Valor hasta"
-                              [value]="condicion.valueTo ?? ''"
-                              (valueChange)="cambiarCondicion(condicion.id, { valueTo: $any($event) })"
+                              type="select"
+                              [autoSuccess]="false"
+                              [label]="condicion.operator === 'between' ? 'Valor desde' : 'Valor'"
+                              [options]="opcionesValor(condicion.field)"
+                              [value]="condicion.value ?? ''"
+                              (valueChange)="cambiarCondicion(condicion.id, { value: $any($event) })"
                             />
+                            @if (condicion.operator === 'between') {
+                              <siaf-input
+                                type="select"
+                                  [autoSuccess]="false"
+                                label="Valor hasta"
+                                [options]="opcionesValor(condicion.field)"
+                                [value]="condicion.valueTo ?? ''"
+                                (valueChange)="cambiarCondicion(condicion.id, { valueTo: $any($event) })"
+                              />
+                            }
+                          } @else {
+                            <siaf-input
+                              [label]="condicion.operator === 'between' ? 'Valor desde' : 'Valor'"
+                              [value]="condicion.value ?? ''"
+                              (valueChange)="cambiarCondicion(condicion.id, { value: $any($event) })"
+                            />
+                            @if (condicion.operator === 'between') {
+                              <siaf-input
+                                label="Valor hasta"
+                                [value]="condicion.valueTo ?? ''"
+                                (valueChange)="cambiarCondicion(condicion.id, { valueTo: $any($event) })"
+                              />
+                            }
                           }
                         }
                       }
@@ -362,6 +384,13 @@ export class AdvancedFiltersPanelComponent implements OnChanges {
       if (this.open) this.cargarBorrador();
       this.anim.actualizar(this.open);
     }
+  }
+
+  /** Valores que el campo tiene en el resultado (los entrega la pantalla); vacío = texto libre. */
+  @Input() valueOptions: Record<string, TextFieldOption[]> = {};
+
+  opcionesValor(clave: string): TextFieldOption[] {
+    return this.valueOptions[clave] ?? [];
   }
 
   esCampoFecha(clave: string): boolean {

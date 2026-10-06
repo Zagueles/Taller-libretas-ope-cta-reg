@@ -31,6 +31,7 @@ import { ReportTableColumn, ReportTableComponent } from '../../ui/report-table/r
 import { TableSkeletonComponent } from '../../ui/table-skeleton/table-skeleton.component';
 import { TabsComponent } from '../../ui/tabs/tabs.component';
 import { TagComponent } from '../../ui/tag/tag.component';
+import type { TextFieldOption } from '../../ui/text-field/text-field.component';
 import { AdvancedFiltersPanelComponent } from '../advanced-filters-panel/advanced-filters-panel.component';
 import { ColumnasPanelGrupo, ReportColumnsPanelComponent } from '../report-columns-panel/report-columns-panel.component';
 import { FavoritesPanelComponent, FavoritoActual, FavoritoDetalle, FavoritoNuevo, FavoritoResumen } from '../favorites-panel/favorites-panel.component';
@@ -559,6 +560,7 @@ let siguienteId = 0;
     <siaf-advanced-filters-panel
       [open]="panelAvanzadoAbierto()"
       [fields]="configuracion().advancedFilterFields ?? []"
+      [valueOptions]="valoresAvanzados()"
       [value]="avanzados()"
       (closed)="panelAvanzadoAbierto.set(false)"
       (applied)="aplicarAvanzados($event)"
@@ -689,6 +691,20 @@ export class QueryReportPageComponent {
     niveles: this.avanzados().levels.map((clave) => this.configuracion().advancedFilterFields?.find((c) => c.key === clave)?.label ?? clave),
     tipoResultado: this.avanzados().resultType,
   }));
+
+  /** Valores a elegir en «Valor» de cada campo de «Filtros avanzados»: los distintos que trae el resultado (hasta 300). */
+  readonly valoresAvanzados = computed<Record<string, TextFieldOption[]>>(() => {
+    const filas = this.resultado()?.rows ?? [];
+    const salida: Record<string, TextFieldOption[]> = {};
+    for (const campo of this.configuracion().advancedFilterFields ?? []) {
+      if (campo.type === 'date') continue;
+      const valores = [...new Set(filas.map((f) => String(f[campo.key] ?? '')).filter(Boolean))];
+      if (valores.length && valores.length <= 300) {
+        salida[campo.key] = valores.sort((a, b) => a.localeCompare(b, 'es', { numeric: true })).map((v) => ({ label: v, value: v }));
+      }
+    }
+    return salida;
+  });
 
   readonly filasFiltradas = computed<QueryReportRow[]>(() => this.aplicarFiltros(this.resultado()?.rows ?? []));
 

@@ -2,6 +2,7 @@ export type UserRole =
   | 'creator'
   | 'reviewer'
   | 'approver'
+  | 'viewer'
   | 'admin_sistema'
   | 'admin_entidad'
   | 'sin_permisos';
@@ -10,6 +11,7 @@ export type UserRole =
 export const ROL_MAP: Record<string, UserRole> = {
   CREADOR: 'creator',
   APROBADOR: 'approver',
+  VISUALIZADOR: 'viewer',
   REVISOR: 'reviewer',
   ADMIN_SISTEMA: 'admin_sistema',
   ADMIN_ENTIDAD: 'admin_entidad',
@@ -65,6 +67,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   creator: 'Creador',
   reviewer: 'Revisor',
   approver: 'Aprobador',
+  viewer: 'Visualizador de consultas',
   admin_sistema: 'Administrador del Sistema',
   admin_entidad: 'Administrador de Entidad',
   sin_permisos: 'Sin permisos asignados'
@@ -92,6 +95,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'document.approve', 'document.observe', 'document.reject',
     'document.read', 'chart_account.read', 'chart_account.approve',
   ],
+  // Solo consulta: ve documentos, registros y reportes, sin ninguna acción sobre ellos.
+  viewer: ['document.read', 'chart_account.read'],
   admin_entidad: [
     'document.read', 'chart_account.read',
     'user.read', 'user.create', 'user.update', 'user.disable',

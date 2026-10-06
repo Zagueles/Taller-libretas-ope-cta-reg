@@ -4,6 +4,8 @@ import { ButtonComponent } from '../../ui/button/button.component';
 import { TagComponent } from '../../ui/tag/tag.component';
 
 export interface FiltroChip {
+  /** Identifica el chip al quitarlo (con `removable`). */
+  id?: string;
   label: string;
   values: string[];
 }
@@ -21,11 +23,13 @@ export interface FiltroChip {
  * - Arriba de los resultados de Consultas y reportes (plan de cuentas, asiento de ajuste, catálogo de tipos de
  *   asiento y libros contables) para mostrar con qué criterios se buscó.
  * - Con varios criterios o varios valores por criterio: cada chip lee «Etiqueta: valor, valor» en una sola línea.
- * - Para volver al inicio de la consulta con un solo botón: «Quitar filtros» emite `cleared`.
+ * - Sin título y con `removable`, debajo del buscador de un panel con filtros (la vista de un documento): chips neutros,
+ *   cada uno con su × (emite `removed`), sin tarjeta ni título, y el botón «Borrar filtros».
+ * - Para volver al inicio de la consulta con un solo botón: «Quitar filtros» (o «Borrar filtros») emite `cleared`.
  * @evitar
  * - Para elegir o cambiar un filtro: los chips no son interactivos; usar `siaf-filter-pill` (opciones cerradas) o
  *   `siaf-custom-filter` (condiciones).
- * - Para quitar un solo criterio: no hay × por chip; usar `siaf-filter-pill`, que limpia su propio valor.
+ * - `removable` si la pantalla no escucha `removed`: la × se pintaría y no haría nada.
  * - Rehacer la sección con `siaf-tag` sueltos en cada módulo: ya estuvo clonada en tres.
  * - Para el bloque «Parámetros aplicados» de la Guía de Estructura de Pantallas (tarjetas con ícono, nombre y valor):
  *   es otro componente, `siaf-parametros-aplicados`. Las consultas de hoy siguen con estos chips.
@@ -61,15 +65,17 @@ export interface FiltroChip {
     }
   `,
   template: `
-    <section class="flex flex-col gap-siaf-md rounded-siaf-md bg-surface px-siaf-lg py-siaf-md">
-      <h3 class="m-0 text-xs font-bold uppercase tracking-wide text-[var(--sys-color-text-neutral-medium)]">
-        Filtros aplicados de búsqueda
-      </h3>
+    <section class="flex flex-col gap-siaf-md" [class]="removable ? '' : 'rounded-siaf-md bg-surface px-siaf-lg py-siaf-md'">
+      @if (!removable) {
+        <h3 class="m-0 text-xs font-bold uppercase tracking-wide text-[var(--sys-color-text-neutral-medium)]">
+          Filtros aplicados de búsqueda
+        </h3>
+      }
       <div class="flex min-w-0 items-center">
         <div class="chips-scroll flex min-w-0 flex-1 items-center gap-siaf-sm overflow-x-auto">
           @for (chip of chips; track chip.label) {
             <!-- Los valores van como texto tras la etiqueta: entre dos span, Angular quita el espacio. -->
-            <siaf-tag class="shrink-0" variant="input" [selected]="true">
+            <siaf-tag class="shrink-0" variant="input" [selected]="!removable" [removable]="removable" [removeLabel]="'Quitar filtro ' + chip.label" (removed)="removed.emit(chip)">
               <span class="font-medium">{{ chip.label }}:</span> {{ chip.values.join(', ') }}
             </siaf-tag>
           }
@@ -83,7 +89,7 @@ export interface FiltroChip {
             ariaLabel="Quitar todos los filtros"
             (click)="cleared.emit()"
           >
-            Quitar filtros
+            {{ removable ? 'Borrar filtros' : 'Quitar filtros' }}
           </siaf-button>
         </div>
       </div>
@@ -93,5 +99,9 @@ export interface FiltroChip {
 })
 export class ConsultasFiltrosChipsComponent {
   @Input() chips: FiltroChip[] = [];
+  /** Variante sin título ni tarjeta: chips neutros con su × (emite `removed`) y el botón «Borrar filtros». */
+  @Input() removable = false;
   @Output() cleared = new EventEmitter<void>();
+  /** La × de un chip (solo con `removable`). */
+  @Output() removed = new EventEmitter<FiltroChip>();
 }

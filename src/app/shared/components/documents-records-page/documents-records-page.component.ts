@@ -18,6 +18,8 @@ import type { DocumentsQuery, DocumentsRecordsColumn, DocumentsRecordsConfig, Do
 import { AccountHistoryPanelComponent } from '../account-history-panel/account-history-panel.component';
 import { AsientoHistoryPanelComponent } from '../asiento-history-panel/asiento-history-panel.component';
 import { ButtonComponent } from '../../ui/button/button.component';
+import type { CascadingMenuGroup } from '../../ui/cascading-menu/cascading-menu.component';
+import type { TextFieldOption } from '../../ui/text-field/text-field.component';
 import { ColumnasPanelGrupo, ReportColumnsPanelComponent } from '../report-columns-panel/report-columns-panel.component';
 import { ColumnVisibilityPanelComponent } from '../../ui/column-visibility-panel/column-visibility-panel.component';
 import { CreateDocumentAccepted, CreateDocumentComponent, CreateDocumentField, CreateDocumentSelection } from '../create-document/create-document.component';
@@ -404,7 +406,9 @@ type DocumentsRecordsRoleMode = 'creator' | 'approver' | 'readOnly';
               <button class="fixed inset-0 z-20 cursor-default bg-transparent" type="button" data-capa-cierre tabindex="-1" aria-hidden="true" (mousedown)="$event.preventDefault()" (click)="closeCustomFilter()"></button>
               <div class="fixed inset-x-siaf-md top-24 z-30 sm:absolute sm:left-[40px] sm:top-[188px] sm:w-[936px] sm:max-w-[calc(100%-80px)]" (click)="$event.stopPropagation()">
                 <siaf-custom-filter
-                  [campoOptions]="activeTab === 'records' && effectiveConfig.recordFilterCampoOptions ? effectiveConfig.recordFilterCampoOptions : effectiveConfig.filterCampoOptions"
+                  [campoOptions]="customFilterCampoOptions ?? (activeTab === 'records' && effectiveConfig.recordFilterCampoOptions ? effectiveConfig.recordFilterCampoOptions : effectiveConfig.filterCampoOptions)"
+                  [valorOptionsByCampo]="customFilterValorByCampo"
+                  [campoGroups]="customFilterCampoGroups"
                   [condicionOptions]="filterCondicionOptions"
                   [valorOptions]="activeTab === 'records' && effectiveConfig.recordFilterValorOptions ? effectiveConfig.recordFilterValorOptions : effectiveConfig.filterValorOptions"
                   [initialRows]="customFilterInitialRows"
@@ -1126,7 +1130,37 @@ export class DocumentsRecordsPageComponent implements OnChanges {
     }
   }
 
+  /** Con `recordFilterFieldsFromColumns`: los campos del filtro personalizado son las columnas visibles de Registros. */
+  customFilterCampoOptions: TextFieldOption[] | null = null;
+  customFilterValorByCampo: Record<string, TextFieldOption[]> | null = null;
+  customFilterCampoGroups: CascadingMenuGroup[] | null = null;
+
+  private prepararCamposDelFiltro(): void {
+    this.customFilterCampoOptions = null;
+    this.customFilterValorByCampo = null;
+    this.customFilterCampoGroups = null;
+    if (this.activeTab !== 'records' || !this.effectiveConfig.recordFilterFieldsFromColumns) return;
+    const columnas = this.visibleColumns;
+    this.customFilterCampoOptions = columnas.map((c) => ({ label: c.headerGroup ? `${this.effectiveConfig.headerGroupLabels?.[c.headerGroup] ?? c.headerGroup} · ${c.label}` : c.label, value: c.key }));
+    // Los campos por su grupo de cabecera (Acreditación ▸ Sec., Fecha…); las columnas sueltas, directas.
+    const grupos = new Map<string, CascadingMenuGroup>();
+    for (const c of columnas) {
+      const id = c.headerGroup ?? c.key;
+      const grupo = grupos.get(id) ?? { id, label: (c.headerGroup && this.effectiveConfig.headerGroupLabels?.[c.headerGroup]) || c.headerGroup || c.label, options: [] };
+      if (c.headerGroup) grupo.options.push({ id: c.key, label: c.label });
+      grupos.set(id, grupo);
+    }
+    this.customFilterCampoGroups = [...grupos.values()];
+    this.customFilterValorByCampo = Object.fromEntries(
+      columnas.map((c) => {
+        const valores = [...new Set(this.recordRows.map((row) => String(row[c.key] ?? '')).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es', { numeric: true }));
+        return [c.key, valores.map((v) => ({ label: v, value: v }))];
+      }),
+    );
+  }
+
   openCustomFilterForCreate(): void {
+    this.prepararCamposDelFiltro();
     this.closeToolbarMenus();
     this.editingCustomFilterId = '';
     this.customFilterInitialRows = [];
@@ -1134,6 +1168,7 @@ export class DocumentsRecordsPageComponent implements OnChanges {
   }
 
   editCustomAppliedFilter(filter: AppliedCustomFilter): void {
+    this.prepararCamposDelFiltro();
     this.closeToolbarMenus();
     this.editingCustomFilterId = filter.id;
     this.customFilterInitialRows = [{ campo: filter.campo, condicion: filter.condicion, valor: filter.valor }];
@@ -1389,7 +1424,11 @@ export class DocumentsRecordsPageComponent implements OnChanges {
   }
 
   private getFilterCampoLabel(campo: string): string {
-    return this.effectiveConfig.filterCampoOptions.find((option) => option.value === campo)?.label ?? campo;
+    return (
+      this.customFilterCampoOptions?.find((option) => option.value === campo)?.label ??
+      this.effectiveConfig.filterCampoOptions.find((option) => option.value === campo)?.label ??
+      campo
+    );
   }
 
   private createCustomFilterId(): string {

@@ -181,7 +181,8 @@ function notificar(datos: DatosTaller, s: SolicitudResponse, estado: EstadoDocum
   };
   const texto = textos[estado];
   if (!texto) return;
-  const destino = estado === 'VERIFICADO' ? { paraRolCodigo: 'APROBADOR' as const } : { paraUsuarioId: s.creador?.id };
+  // Con un solo usuario de demostración y varios perfiles, el aviso va al perfil (rol), no a la persona.
+  const destino = { paraRolCodigo: estado === 'VERIFICADO' ? ('APROBADOR' as const) : ('CREADOR' as const) };
   datos.notificaciones.push({
     id: nuevoId(datos, 'not'),
     tipo: `DOCUMENTO_${estado}`,

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, forwardRef, inject, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
+import { ElementRef, ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, forwardRef, inject, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 import { IconComponent } from '../icon/icon.component';
@@ -112,43 +112,83 @@ export type TextFieldState = 'enabled' | 'error' | 'success';
         }
 
         @if (type === 'select') {
+          @if (searchable) {
+            <!-- Autocompletado: se escribe para filtrar la lista y se elige una opción (no admite texto libre). -->
+            <div
+              class="relative flex h-10 w-full items-center rounded-siaf-md border bg-surface px-siaf-md text-sm text-text transition"
+              [class.z-40]="selectOpen"
+              [class]="controlClass"
+              [class.opacity-60]="disabled"
+            >
+              <input
+                class="min-w-0 flex-1 bg-transparent text-sm text-text outline-none placeholder:text-[var(--sys-color-text-neutral-low)] disabled:cursor-not-allowed"
+                type="text"
+                role="combobox"
+                aria-autocomplete="list"
+                aria-haspopup="listbox"
+                [attr.aria-expanded]="selectOpen"
+                [attr.aria-label]="labelText"
+                [disabled]="disabled"
+                [value]="selectOpen ? busqueda : (hasValue ? selectDisplayText : '')"
+                [placeholder]="hasValue && !selectOpen ? '' : labelText"
+                (focus)="abrirSelect()"
+                (click)="abrirSelect()"
+                (input)="onBuscar($event)"
+                (keydown.arrowDown)="enfocarPrimeraOpcion($event)"
+                (keydown.enter)="elegirUnicaCoincidencia($event)"
+                (keydown.tab)="closeSelect()"
+                (keydown.escape)="cerrarSelectConEscape($event)"
+              />
+              @if (clearable && hasValue && !required) {
+                <span class="inline-flex size-6 shrink-0 items-center justify-center rounded-siaf-sm text-[var(--sys-color-text-neutral-medium)] hover:bg-[var(--sys-color-bg-states-light-enabled)]" role="button" tabindex="-1" [attr.aria-label]="'Limpiar ' + labelText" (click)="clearSelectValue($event)">
+                  <siaf-icon name="close" [size]="18" />
+                </span>
+              }
+              <siaf-icon class="shrink-0 text-text transition" [class.rotate-180]="selectOpen" name="expand_more" [size]="24" (click)="toggleSelect()" />
+            </div>
+          } @else {
           <button
-            class="flex h-10 w-full items-center rounded-siaf-md border bg-surface px-siaf-md text-left text-sm text-text outline-none transition disabled:cursor-not-allowed disabled:border-[var(--sys-color-border-states-disabled)] disabled:bg-[var(--sys-color-bg-surfaces-disabled)] disabled:text-[var(--sys-color-text-neutral-disabled)]"
-            [class]="controlClass"
-            type="button"
-            [disabled]="disabled"
-            [attr.aria-expanded]="selectOpen"
-            [attr.aria-label]="labelText"
-            aria-haspopup="listbox"
-            (click)="toggleSelect()"
-            (keydown.escape)="cerrarSelectConEscape($event)"
-          >
-            <span class="min-w-0 flex-1 truncate" siafTooltip [class.text-[var(--sys-color-text-neutral-low)]]="!hasValue">
-              {{ selectDisplayText }}@if (!hasValue && required) { <span class="text-[var(--sys-color-text-feedback-danger)]">*</span> }
-            </span>
-            @if (clearable && hasValue && !required) {
-              <span
-                class="inline-flex size-6 shrink-0 items-center justify-center rounded-siaf-sm text-[var(--sys-color-text-neutral-medium)] transition hover:bg-[var(--sys-color-bg-states-light-enabled)]"
-                role="button"
-                tabindex="-1"
-                [attr.aria-label]="'Limpiar ' + labelText"
-                (click)="clearSelectValue($event)"
-              >
-                <siaf-icon name="close" [size]="18" />
+              class="flex h-10 w-full items-center rounded-siaf-md border bg-surface px-siaf-md text-left text-sm text-text outline-none transition disabled:cursor-not-allowed disabled:border-[var(--sys-color-border-states-disabled)] disabled:bg-[var(--sys-color-bg-surfaces-disabled)] disabled:text-[var(--sys-color-text-neutral-disabled)]"
+              [class]="controlClass"
+              type="button"
+              [disabled]="disabled"
+              [attr.aria-expanded]="selectOpen"
+              [attr.aria-label]="labelText"
+              aria-haspopup="listbox"
+              (click)="toggleSelect()"
+              (keydown.escape)="cerrarSelectConEscape($event)"
+            >
+              <span class="min-w-0 flex-1 truncate" siafTooltip [class.text-[var(--sys-color-text-neutral-low)]]="!hasValue">
+                {{ selectDisplayText }}@if (!hasValue && required) { <span class="text-[var(--sys-color-text-feedback-danger)]">*</span> }
               </span>
-            }
-            <siaf-icon class="shrink-0 text-text transition" [class.rotate-180]="selectOpen" name="expand_more" [size]="24" />
-          </button>
+              @if (clearable && hasValue && !required) {
+                <span
+                  class="inline-flex size-6 shrink-0 items-center justify-center rounded-siaf-sm text-[var(--sys-color-text-neutral-medium)] transition hover:bg-[var(--sys-color-bg-states-light-enabled)]"
+                  role="button"
+                  tabindex="-1"
+                  [attr.aria-label]="'Limpiar ' + labelText"
+                  (click)="clearSelectValue($event)"
+                >
+                  <siaf-icon name="close" [size]="18" />
+                </span>
+              }
+              <siaf-icon class="shrink-0 text-text transition" [class.rotate-180]="selectOpen" name="expand_more" [size]="24" />
+            </button>
+          }
 
           @if (selectOpen) {
             <button class="fixed inset-0 z-30 cursor-default bg-transparent" type="button" data-capa-cierre tabindex="-1" aria-hidden="true" (mousedown)="$event.preventDefault()" (click)="closeSelect()"></button>
             <div class="relative z-40 mt-siaf-xs sm:absolute sm:left-0 sm:right-0 sm:top-[calc(100%+4px)] sm:mt-0" siafFoco [siafFocoAtrapar]="false" (siafFocoEscape)="closeSelect()" (siafFocoSalida)="closeSelect()">
-              <siaf-select-options
-                [options]="selectOptions"
-                [selectedValue]="selectValue"
-                [selectedValues]="selectValues"
-                (selected)="onOptionSelected($event)"
-              />
+              @if (searchable && !selectOptions.length) {
+                <div class="rounded-siaf-md bg-[var(--sys-color-bg-surfaces-surface-highest)] px-siaf-md py-siaf-sm text-sm text-[var(--sys-color-text-neutral-medium)] shadow-siaf-elevation-2" role="status">Sin resultados para «{{ busqueda }}»</div>
+              } @else {
+                <siaf-select-options
+                  [options]="selectOptions"
+                  [selectedValue]="selectValue"
+                  [selectedValues]="selectValues"
+                  (selected)="onOptionSelected($event)"
+                />
+              }
             </div>
           }
         } @else if (type === 'select-multiple') {
@@ -274,6 +314,7 @@ export type TextFieldState = 'enabled' | 'error' | 'success';
 })
 export class TextFieldComponent implements OnChanges, ControlValueAccessor {
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly host = inject(ElementRef<HTMLElement>);
 
   @Input() label = '';
   @Input() placeholder = '';
@@ -289,6 +330,8 @@ export class TextFieldComponent implements OnChanges, ControlValueAccessor {
   @Input() trailingButtonLabel = '';
   @Input() autocomplete = '';
   @Input() clearable = false;
+  /** En `select`: autocompletado. El campo se escribe para filtrar las opciones y se elige una de la lista. */
+  @Input() searchable = false;
   @Input() required = false;
   /** Mantiene el borde neutro después de escribir cuando el contexto no representa una validación. */
   @Input() autoSuccess = true;
@@ -305,6 +348,8 @@ export class TextFieldComponent implements OnChanges, ControlValueAccessor {
 
   focused = false;
   selectOpen = false;
+  /** Texto escrito en un `select` con `searchable` (filtra las opciones mientras la lista está abierta). */
+  busqueda = '';
   internalValue: string | number | string[] = '';
 
   private onChange: (value: string | number | string[]) => void = () => undefined;
@@ -473,6 +518,11 @@ export class TextFieldComponent implements OnChanges, ControlValueAccessor {
   }
 
   get selectOptions(): SelectOption[] {
+    if (this.searchable && this.selectOpen && this.busqueda.trim()) {
+      const normalizar = (t: string): string => t.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+      const termino = normalizar(this.busqueda.trim());
+      return this.options.filter((o) => normalizar(o.label).includes(termino));
+    }
     return this.options;
   }
 
@@ -567,6 +617,40 @@ export class TextFieldComponent implements OnChanges, ControlValueAccessor {
     this.trailingAction.emit();
   }
 
+  /** `searchable`: abre la lista al enfocar o pulsar el campo (sin cerrarla si ya está abierta). */
+  abrirSelect(): void {
+    if (this.disabled || this.selectOpen) return;
+    this.busqueda = '';
+    this.selectOpen = true;
+    this.focused = true;
+    this.cdr.markForCheck();
+  }
+
+  /** `searchable`: Flecha abajo pasa del campo a la lista filtrada. */
+  enfocarPrimeraOpcion(evento: Event): void {
+    if (!this.selectOpen) this.abrirSelect();
+    evento.preventDefault();
+    setTimeout(() => (this.host.nativeElement.querySelector('[role=option]') as HTMLElement | null)?.focus());
+  }
+
+  /** `searchable`: Enter elige la opción cuando el texto la deja como única coincidencia. */
+  elegirUnicaCoincidencia(evento: Event): void {
+    const opciones = this.selectOptions.filter((o) => !(o as SelectOption).disabled);
+    if (this.selectOpen && opciones.length === 1) {
+      evento.preventDefault();
+      this.onOptionSelected(opciones[0].value);
+    }
+  }
+
+  onBuscar(evento: Event): void {
+    this.busqueda = (evento.target as HTMLInputElement).value;
+    if (!this.selectOpen) {
+      this.selectOpen = true;
+      this.focused = true;
+    }
+    this.cdr.markForCheck();
+  }
+
   toggleSelect(): void {
     if (this.disabled) {
       return;
@@ -586,6 +670,7 @@ export class TextFieldComponent implements OnChanges, ControlValueAccessor {
 
   closeSelect(): void {
     this.selectOpen = false;
+    this.busqueda = '';
     this.focused = false;
     this.onTouched();
     this.cdr.markForCheck();

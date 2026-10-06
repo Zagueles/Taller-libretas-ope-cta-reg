@@ -120,7 +120,10 @@ import { COLUMNAS_REPORTE_DE_MUESTRA, FILAS_REPORTE_DE_MUESTRA } from './reporte
         </div>
       }
       @case ('siaf-consultas-filtros-chips') {
-        <siaf-consultas-filtros-chips [chips]="chips" />
+        <div class="flex flex-col gap-siaf-md">
+          <siaf-consultas-filtros-chips [chips]="chips" />
+          <siaf-consultas-filtros-chips [chips]="chips" [removable]="true" />
+        </div>
       }
       @case ('siaf-parametros-aplicados') {
         <siaf-parametros-aplicados [parametros]="parametrosAplicados" />

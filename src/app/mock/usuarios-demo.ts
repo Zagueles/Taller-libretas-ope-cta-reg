@@ -3,9 +3,10 @@ import type { PerfilItem } from '../core/api/auth-api.service';
 /**
  * Usuarios de demostración del taller. Entran con su DNI y la contraseña común.
  *
- * - Ana (creador) registra y verifica solicitudes.
- * - Luis (aprobador) aprueba, observa o rechaza lo verificado.
- * - Carla tiene los dos perfiles: sirve para mostrar el cambio de perfil desde el menú del usuario.
+ * Hay un solo usuario con tres perfiles, para mostrar el cambio de perfil desde el menú del usuario:
+ * - Creador: registra y verifica solicitudes.
+ * - Aprobador: aprueba, observa o rechaza lo verificado.
+ * - Visualizador de consultas: solo consulta documentos, registros y reportes.
  *
  * Son datos de ejemplo: no hay contraseñas reales ni se validan contra un servidor.
  */
@@ -41,42 +42,23 @@ const ENTIDAD = {
   entidadAmbitoCodigo: 'GN',
 };
 
-function perfil(id: string, rolCodigo: 'CREADOR' | 'APROBADOR', rol: string, perfilFuncional: string): PerfilItem {
+function perfil(id: string, rolCodigo: 'CREADOR' | 'APROBADOR' | 'VISUALIZADOR', rol: string, perfilFuncional: string): PerfilItem {
   return { id, ...ENTIDAD, rol, rolCodigo, perfilFuncional };
 }
 
 export const USUARIOS_DEMO: UsuarioDemo[] = [
   {
-    id: 'usr-ana',
-    dni: '11111111',
-    email: 'ana.torres@taller.pe',
-    nombres: 'Ana',
-    apellidoPaterno: 'Torres',
-    apellidoMaterno: 'Díaz',
-    descripcion: 'Creador: registra y verifica solicitudes',
-    perfiles: [perfil('perfil-ana-creador', 'CREADOR', 'Creador', 'Operador de cuentas bancarias')],
-  },
-  {
-    id: 'usr-luis',
-    dni: '22222222',
-    email: 'luis.ramirez@taller.pe',
-    nombres: 'Luis',
-    apellidoPaterno: 'Ramírez',
-    apellidoMaterno: 'Soto',
-    descripcion: 'Aprobador: aprueba, observa o rechaza',
-    perfiles: [perfil('perfil-luis-aprobador', 'APROBADOR', 'Aprobador', 'Aprobador de cuentas bancarias')],
-  },
-  {
-    id: 'usr-carla',
+    id: 'usr-demo',
     dni: '33333333',
     email: 'carla.mendoza@taller.pe',
     nombres: 'Carla',
     apellidoPaterno: 'Mendoza',
     apellidoMaterno: 'Ríos',
-    descripcion: 'Dos perfiles: creador y aprobador (cambia de perfil)',
+    descripcion: 'Tres perfiles: creador, aprobador y visualizador de consultas (cambia de perfil desde el menú del usuario)',
     perfiles: [
-      perfil('perfil-carla-creador', 'CREADOR', 'Creador', 'Operador de cuentas bancarias'),
-      perfil('perfil-carla-aprobador', 'APROBADOR', 'Aprobador', 'Aprobador de cuentas bancarias'),
+      perfil('perfil-demo-creador', 'CREADOR', 'Creador', 'Operador de cuentas bancarias'),
+      perfil('perfil-demo-aprobador', 'APROBADOR', 'Aprobador', 'Aprobador de cuentas bancarias'),
+      perfil('perfil-demo-visualizador', 'VISUALIZADOR', 'Visualizador de consultas', 'Visualizador de consultas'),
     ],
   },
 ];

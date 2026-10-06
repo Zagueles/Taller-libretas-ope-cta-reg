@@ -23,8 +23,9 @@ type LoginTab = 'entidades' | 'proveedores';
         <img class="h-full w-full object-cover" src="assets/figma/login/login-hero.webp" alt="" />
       </section>
 
-      <section class="flex min-h-screen flex-1 items-center justify-center overflow-y-auto px-siaf-lg py-siaf-xxl lg:h-screen lg:min-h-0 lg:flex-[0_0_50%]">
-        <div class="flex w-full max-w-[360px] flex-col items-center gap-12">
+      <!-- El contenido se centra con m-auto (no con items-center): si no cabe en el alto, el panel se desplaza desde arriba en vez de cortar el logo y el final. -->
+      <section class="flex min-h-screen flex-1 overflow-y-auto px-siaf-lg py-siaf-xxl lg:h-screen lg:min-h-0 lg:flex-[0_0_50%]">
+        <div class="m-auto flex w-full max-w-[360px] flex-col items-center gap-12">
 
           <!-- Logos -->
           <header class="flex w-full flex-col items-center gap-siaf-lg">

@@ -37,9 +37,13 @@ describe('mockBackendInterceptor', () => {
     return resultado;
   }
 
-  function entrar(dni: string): HttpHeaders {
-    const { valor } = esperar(http.post<LoginResponse>(`${API}/auth/login`, { dni, password: CONTRASENA_DEMO }));
-    return new HttpHeaders({ Authorization: `Bearer ${valor!.accessToken}` });
+  /** Entra con el usuario de demostración y, si se pide, cambia a ese perfil (creador por defecto). */
+  function entrar(perfil: 'creador' | 'aprobador' | 'visualizador' = 'creador'): HttpHeaders {
+    const { valor } = esperar(http.post<LoginResponse>(`${API}/auth/login`, { dni: '33333333', password: CONTRASENA_DEMO }));
+    const headers = new HttpHeaders({ Authorization: `Bearer ${valor!.accessToken}` });
+    if (perfil === 'creador') return headers;
+    const cambio = esperar(http.patch<{ accessToken: string }>(`${API}/auth/cambiar-perfil`, { perfilId: `perfil-demo-${perfil}` }, { headers }));
+    return new HttpHeaders({ Authorization: `Bearer ${cambio.valor!.accessToken}` });
   }
 
   function archivo(): FormData {
@@ -63,7 +67,7 @@ describe('mockBackendInterceptor', () => {
   afterAll(() => reiniciarDatosDemo());
 
   it('rechaza una contraseña incorrecta con el mensaje que muestra el login', fakeAsync(() => {
-    const { error } = esperar(http.post(`${API}/auth/login`, { dni: '11111111', password: 'otra' }));
+    const { error } = esperar(http.post(`${API}/auth/login`, { dni: '33333333', password: 'otra' }));
 
     expect(error?.status).toBe(401);
     expect(error?.error.message).toContain('DNI o contraseña incorrectos');
@@ -71,16 +75,16 @@ describe('mockBackendInterceptor', () => {
 
   it('entrega los perfiles del usuario y cambia al que se elige', fakeAsync(() => {
     const { valor } = esperar(http.post<LoginResponse>(`${API}/auth/login`, { dni: '33333333', password: CONTRASENA_DEMO }));
-    expect(valor?.perfilesDisponibles.map((p) => p.rolCodigo)).toEqual(['CREADOR', 'APROBADOR']);
+    expect(valor?.perfilesDisponibles.map((p) => p.rolCodigo)).toEqual(['CREADOR', 'APROBADOR', 'VISUALIZADOR']);
 
     const headers = new HttpHeaders({ Authorization: `Bearer ${valor!.accessToken}` });
-    const cambio = esperar(http.patch<{ perfilActivo: { rolCodigo: string } }>(`${API}/auth/cambiar-perfil`, { perfilId: 'perfil-carla-aprobador' }, { headers }));
+    const cambio = esperar(http.patch<{ perfilActivo: { rolCodigo: string } }>(`${API}/auth/cambiar-perfil`, { perfilId: 'perfil-demo-aprobador' }, { headers }));
 
     expect(cambio.valor?.perfilActivo.rolCodigo).toBe('APROBADOR');
   }));
 
   it('la bandeja no muestra solicitudes en NUEVO y pagina si se pide', fakeAsync(() => {
-    const headers = entrar('11111111');
+    const headers = entrar('creador');
     esperar(http.post(`${API}/solicitudes`, { tipoAccion: 'creacion', organoLinea: 'OGA', justificacion: 'Borrador' }, { headers }));
 
     const { valor } = esperar(http.get<{ data: SolicitudResponse[]; total: number }>(`${API}/solicitudes/bandeja-creador?tipos=SRCB&page=1&limit=5`, { headers }));
@@ -90,7 +94,7 @@ describe('mockBackendInterceptor', () => {
   }));
 
   it('recorre el flujo completo: elaborar, verificar y aprobar crea la cuenta y avisa a cada rol', fakeAsync(() => {
-    const ana = entrar('11111111');
+    const ana = entrar('creador');
     const creada = esperar(http.post<SolicitudResponse>(`${API}/solicitudes`, { tipoAccion: 'creacion', organoLinea: 'OGA', justificacion: 'Cuenta nueva' }, { headers: ana }));
     const id = creada.valor!.id;
 
@@ -106,7 +110,7 @@ describe('mockBackendInterceptor', () => {
     expect(esperar(http.patch(`${API}/solicitudes/${id}/estado`, { estadoNuevo: 'APROBADO' }, { headers: ana })).error?.status).toBe(409);
     esperar(http.patch(`${API}/solicitudes/${id}/estado`, { estadoNuevo: 'VERIFICADO' }, { headers: ana }));
 
-    const luis = entrar('22222222');
+    const luis = entrar('aprobador');
     const avisos = esperar(http.get<{ titulo: string; documento: { id: string } }[]>(`${API}/notificaciones`, { headers: luis }));
     expect(avisos.valor?.some((n) => n.documento.id === id && n.titulo === 'Solicitud por aprobar')).toBeTrue();
 
@@ -125,14 +129,14 @@ describe('mockBackendInterceptor', () => {
   }));
 
   it('observar pide comentario y una solicitud observada ya no se puede eliminar', fakeAsync(() => {
-    const luis = entrar('22222222');
+    const luis = entrar('aprobador');
     const bandeja = esperar(http.get<SolicitudResponse[]>(`${API}/solicitudes/bandeja-aprobador?tipos=SRCB`, { headers: luis }));
     const verificada = bandeja.valor!.find((s) => s.estado === 'VERIFICADO')!;
 
     expect(esperar(http.patch(`${API}/solicitudes/${verificada.id}/estado`, { estadoNuevo: 'OBSERVADO' }, { headers: luis })).error?.status).toBe(400);
     esperar(http.patch(`${API}/solicitudes/${verificada.id}/estado`, { estadoNuevo: 'OBSERVADO', comentario: 'Falta la constancia.' }, { headers: luis }));
 
-    const ana = entrar('11111111');
+    const ana = entrar('creador');
     esperar(http.patch(`${API}/solicitudes/${verificada.id}/estado`, { estadoNuevo: 'ELABORADO' }, { headers: ana }));
     const eliminar = esperar(http.patch(`${API}/solicitudes/${verificada.id}/estado`, { estadoNuevo: 'ELIMINADO' }, { headers: ana }));
 

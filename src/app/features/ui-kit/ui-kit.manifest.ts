@@ -881,6 +881,13 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "porDefecto": "null",
         "requerida": false,
         "descripcion": null
+      },
+      {
+        "nombre": "valueOptions",
+        "tipo": "Record<string, TextFieldOption[]>",
+        "porDefecto": "{}",
+        "requerida": false,
+        "descripcion": "Valores que el campo tiene en el resultado (los entrega la pantalla); vacío = texto libre."
       }
     ],
     "eventos": [
@@ -2561,7 +2568,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       "[siafFoco]",
       "siaf-menu"
     ],
-    "sinUso": true
+    "sinUso": false
   },
   {
     "selector": "siaf-chart-legend",
@@ -3311,6 +3318,13 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "porDefecto": "[]",
         "requerida": false,
         "descripcion": null
+      },
+      {
+        "nombre": "removable",
+        "tipo": "boolean",
+        "porDefecto": "false",
+        "requerida": false,
+        "descripcion": "Variante sin título ni tarjeta: chips neutros con su × (emite `removed`) y el botón «Borrar filtros»."
       }
     ],
     "eventos": [
@@ -3318,10 +3332,15 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "nombre": "cleared",
         "tipo": "void",
         "descripcion": null
+      },
+      {
+        "nombre": "removed",
+        "tipo": "FiltroChip",
+        "descripcion": "La × de un chip (solo con `removable`)."
       }
     ],
-    "usar": "- Arriba de los resultados de Consultas y reportes (plan de cuentas, asiento de ajuste, catálogo de tipos de\n  asiento y libros contables) para mostrar con qué criterios se buscó.\n- Con varios criterios o varios valores por criterio: cada chip lee «Etiqueta: valor, valor» en una sola línea.\n- Para volver al inicio de la consulta con un solo botón: «Quitar filtros» emite `cleared`.",
-    "evitar": "- Para elegir o cambiar un filtro: los chips no son interactivos; usar `siaf-filter-pill` (opciones cerradas) o\n  `siaf-custom-filter` (condiciones).\n- Para quitar un solo criterio: no hay × por chip; usar `siaf-filter-pill`, que limpia su propio valor.\n- Rehacer la sección con `siaf-tag` sueltos en cada módulo: ya estuvo clonada en tres.\n- Para el bloque «Parámetros aplicados» de la Guía de Estructura de Pantallas (tarjetas con ícono, nombre y valor):\n  es otro componente, `siaf-parametros-aplicados`. Las consultas de hoy siguen con estos chips.",
+    "usar": "- Arriba de los resultados de Consultas y reportes (plan de cuentas, asiento de ajuste, catálogo de tipos de\n  asiento y libros contables) para mostrar con qué criterios se buscó.\n- Con varios criterios o varios valores por criterio: cada chip lee «Etiqueta: valor, valor» en una sola línea.\n- Sin título y con `removable`, debajo del buscador de un panel con filtros (la vista de un documento): chips neutros,\n  cada uno con su × (emite `removed`), sin tarjeta ni título, y el botón «Borrar filtros».\n- Para volver al inicio de la consulta con un solo botón: «Quitar filtros» (o «Borrar filtros») emite `cleared`.",
+    "evitar": "- Para elegir o cambiar un filtro: los chips no son interactivos; usar `siaf-filter-pill` (opciones cerradas) o\n  `siaf-custom-filter` (condiciones).\n- `removable` si la pantalla no escucha `removed`: la × se pintaría y no haría nada.\n- Rehacer la sección con `siaf-tag` sueltos en cada módulo: ya estuvo clonada en tres.\n- Para el bloque «Parámetros aplicados» de la Guía de Estructura de Pantallas (tarjetas con ícono, nombre y valor):\n  es otro componente, `siaf-parametros-aplicados`. Las consultas de hoy siguen con estos chips.",
     "teclado": "- **Tab**: llega al botón «Quitar filtros»; los chips no reciben foco.\n- **Enter / Espacio**: quitan todos los filtros (emite `cleared`). El botón sigue `siaf-button`.",
     "accesibilidad": "- **1.3.1 Información y relaciones (A)**: `<section>` con título `<h3>` «Filtros aplicados de búsqueda»; cada chip\n  se lee como texto «Etiqueta: valores».\n- **1.4.3 Contraste mínimo (AA)**: el título va en `text-neutral-medium` (14.53:1 / 12.87:1) y los chips son\n  `siaf-tag` `input` elegidos, con `text-neutral-activated` sobre la capa `bg-states-light-selected` (7.69:1 /\n  17.15:1).\n- **Pendiente · 2.5.3 Etiqueta en el nombre (A)**: el botón muestra «Quitar filtros», pero su `ariaLabel` es\n  «Quitar todos los filtros», que no contiene el texto visible tal cual (afecta al control por voz).\n- **Pendiente · 2.1.1 Teclado (A)**: el carril de chips se desplaza sin barra y sin `tabindex`; los chips que no\n  caben quedan cortados y, con teclado, dependen de que el navegador enfoque el contenedor (el lector los lee todos).\n- **Pendiente · 2.4.3 Orden del foco (A)**: en las cuatro Consultas, `cleared` devuelve la pantalla al estado vacío\n  y el bloque desaparece con el foco adentro; el padre debe llevarlo (p. ej. al botón «Búsqueda» de la cabecera).\n- **2.4.7 Foco visible (AA)**: el botón es `siaf-button`: borde `border-states-focus` (5.35:1 / 10.15:1) y capa.\n- **2.5.8 Tamaño del objetivo (AA)**: el botón mide 40 px de alto.",
     "figma": [],
@@ -3372,7 +3391,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       "siaf-button",
       "siaf-tag"
     ],
-    "sinUso": true
+    "sinUso": false
   },
   {
     "selector": "siaf-create-document",
@@ -3637,6 +3656,13 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     "proyectaContenido": false,
     "entradas": [
       {
+        "nombre": "campoGroups",
+        "tipo": "CascadingMenuGroup[] | null",
+        "porDefecto": "null",
+        "requerida": false,
+        "descripcion": "Campos agrupados (grupo de cabecera → columnas): el Campo se elige en un menú de dos niveles en vez de una lista plana."
+      },
+      {
         "nombre": "campoOptions",
         "tipo": "TextFieldOption[]",
         "porDefecto": "[]",
@@ -3670,6 +3696,13 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "porDefecto": "[]",
         "requerida": false,
         "descripcion": null
+      },
+      {
+        "nombre": "valorOptionsByCampo",
+        "tipo": "Record<string, TextFieldOption[]> | null",
+        "porDefecto": "null",
+        "requerida": false,
+        "descripcion": "Valores a elegir según el campo de cada fila; si el campo no está aquí (o no se pasa), se usa `valorOptions`."
       }
     ],
     "eventos": [
@@ -3697,6 +3730,8 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     "aria": {
       "roles": [],
       "atributos": [
+        "aria-expanded",
+        "aria-haspopup",
         "aria-label"
       ]
     },
@@ -3714,6 +3749,24 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         ]
       },
       {
+        "token": "--sys-color-border-states-active",
+        "via": [
+          "var()"
+        ]
+      },
+      {
+        "token": "--sys-color-border-states-enabled",
+        "via": [
+          "var()"
+        ]
+      },
+      {
+        "token": "--sys-color-text-brand-primary",
+        "via": [
+          "var()"
+        ]
+      },
+      {
         "token": "--sys-color-text-neutral-high",
         "via": [
           "text-text"
@@ -3722,7 +3775,8 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       {
         "token": "--sys-color-text-neutral-low",
         "via": [
-          "text-text-muted"
+          "text-text-muted",
+          "var()"
         ]
       },
       {
@@ -3755,6 +3809,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "token": "--sys-gap-base-xxs",
         "via": [
           "p-siaf-xxs",
+          "px-siaf-xxs",
           "py-siaf-xxs"
         ]
       },
@@ -3762,6 +3817,12 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "token": "--sys-radius-md",
         "via": [
           "rounded-siaf-md"
+        ]
+      },
+      {
+        "token": "--sys-radius-sm",
+        "via": [
+          "rounded-siaf-sm"
         ]
       },
       {
@@ -3774,6 +3835,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     "usa": [
       "[siafFoco]",
       "siaf-button",
+      "siaf-cascading-menu",
       "siaf-icon",
       "siaf-input"
     ],
@@ -6971,6 +7033,13 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "descripcion": null
       },
       {
+        "nombre": "searchable",
+        "tipo": "boolean",
+        "porDefecto": "false",
+        "requerida": false,
+        "descripcion": "En `select`: autocompletado. El campo se escribe para filtrar las opciones y se elige una de la lista."
+      },
+      {
         "nombre": "selectAllLabel",
         "tipo": "string",
         "porDefecto": "''",
@@ -7032,9 +7101,12 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     "figma": [],
     "aria": {
       "roles": [
-        "button"
+        "button",
+        "combobox",
+        "status"
       ],
       "atributos": [
+        "aria-autocomplete",
         "aria-expanded",
         "aria-haspopup",
         "aria-hidden",
@@ -7071,6 +7143,12 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "token": "--sys-color-bg-surfaces-surface",
         "via": [
           "bg-surface"
+        ]
+      },
+      {
+        "token": "--sys-color-bg-surfaces-surface-highest",
+        "via": [
+          "var()"
         ]
       },
       {
@@ -7159,6 +7237,12 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         ]
       },
       {
+        "token": "--sys-gap-base-sm",
+        "via": [
+          "py-siaf-sm"
+        ]
+      },
+      {
         "token": "--sys-gap-base-xs",
         "via": [
           "gap-siaf-xs",
@@ -7184,6 +7268,12 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "token": "--sys-radius-sm",
         "via": [
           "rounded-siaf-sm"
+        ]
+      },
+      {
+        "token": "--sys-shadow-elevation-2",
+        "via": [
+          "shadow-siaf-elevation-2"
         ]
       }
     ],

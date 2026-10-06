@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, Out
 import { ButtonComponent } from '../../ui/button/button.component';
 import { IconComponent } from '../../ui/icon/icon.component';
 import { TextFieldComponent, TextFieldOption } from '../../ui/text-field/text-field.component';
+import { CascadingMenuComponent, CascadingMenuGroup, CascadingMenuSelection } from '../../ui/cascading-menu/cascading-menu.component';
 import { FocoDirective } from '../../ui/foco/foco.directive';
 
 export interface FilterRow {
@@ -66,7 +67,7 @@ export interface CustomFilterApplyEvent {
 @Component({
   selector: 'siaf-custom-filter',
   standalone: true,
-  imports: [FocoDirective, ButtonComponent, IconComponent, TextFieldComponent],
+  imports: [FocoDirective, ButtonComponent, CascadingMenuComponent, IconComponent, TextFieldComponent],
   template: `
     <div class="flex max-h-[calc(100vh-96px)] flex-col gap-siaf-md overflow-y-auto rounded-siaf-md bg-surface p-siaf-md shadow-siaf-elevation-1 sm:max-h-none sm:overflow-visible" siafFoco [siafFocoAtrapar]="false" (siafFocoEscape)="cancelar.emit()">
       <div class="flex flex-col gap-siaf-md">
@@ -76,13 +77,34 @@ export interface CustomFilterApplyEvent {
           <div class="flex items-start gap-siaf-sm">
             <div class="grid min-w-0 flex-1 grid-cols-1 gap-siaf-xs sm:grid-cols-3">
               <div class="min-w-0">
-                <siaf-input
-                  label="Campo"
-                  type="select"
-                  [options]="campoOptions"
-                  [value]="row.campo"
-                  (valueChange)="onCampoChange(i, $event)"
-                />
+                @if (campoGroups) {
+                  <!-- Campo en dos niveles: primero el grupo de cabecera y, al costado, su columna. -->
+                  <siaf-cascading-menu [open]="menuCampo === i" [groups]="campoGroups" ariaLabel="Campo" (selected)="onCampoCascada(i, $event)" (closed)="menuCampo = -1">
+                    <span class="relative block">
+                      <span class="absolute -top-2.5 left-3 z-[1] rounded-siaf-sm bg-surface px-siaf-xxs text-xs font-medium leading-normal" [class]="menuCampo === i ? 'text-[var(--sys-color-text-brand-primary)]' : 'text-[var(--sys-color-text-neutral-medium)]'">Campo</span>
+                      <button
+                        class="flex h-10 w-full items-center rounded-siaf-md border bg-surface px-siaf-md text-left text-sm text-text outline-none transition"
+                        [class]="menuCampo === i ? 'border-[var(--sys-color-border-states-active)]' : 'border-[var(--sys-color-border-states-enabled)]'"
+                        type="button"
+                        aria-haspopup="menu"
+                        [attr.aria-expanded]="menuCampo === i"
+                        aria-label="Campo"
+                        (click)="menuCampo = menuCampo === i ? -1 : i"
+                      >
+                        <span class="min-w-0 flex-1 truncate" [class.text-[var(--sys-color-text-neutral-low)]]="!row.campo">{{ etiquetaCampo(row.campo) || 'Campo' }}</span>
+                        <siaf-icon class="shrink-0 transition" [class.rotate-180]="menuCampo === i" name="expand_more" [size]="24" />
+                      </button>
+                    </span>
+                  </siaf-cascading-menu>
+                } @else {
+                  <siaf-input
+                    label="Campo"
+                    type="select"
+                    [options]="campoOptions"
+                    [value]="row.campo"
+                    (valueChange)="onCampoChange(i, $event)"
+                  />
+                }
               </div>
               <div class="min-w-0">
                 <siaf-input
@@ -97,7 +119,7 @@ export interface CustomFilterApplyEvent {
                 <siaf-input
                   label="Valor"
                   type="select"
-                  [options]="valorOptions"
+                  [options]="valorOpcionesDe(row.campo)"
                   [value]="row.valor"
                   (valueChange)="onValorChange(i, $event)"
                 />
@@ -150,13 +172,29 @@ export interface CustomFilterApplyEvent {
 export class CustomFilterComponent implements OnChanges {
   @Input() campoOptions: TextFieldOption[] = [];
   @Input() condicionOptions: TextFieldOption[] = [];
+  /** Campos agrupados (grupo de cabecera → columnas): el Campo se elige en un menú de dos niveles en vez de una lista plana. */
+  @Input() campoGroups: CascadingMenuGroup[] | null = null;
   @Input() valorOptions: TextFieldOption[] = [];
+  /** Valores a elegir según el campo de cada fila; si el campo no está aquí (o no se pasa), se usa `valorOptions`. */
+  @Input() valorOptionsByCampo: Record<string, TextFieldOption[]> | null = null;
   @Input() initialRows: FilterRow[] = [];
   @Input() deleteEnabled = false;
 
   @Output() aplicar = new EventEmitter<CustomFilterApplyEvent>();
   @Output() cancelar = new EventEmitter<void>();
   @Output() eliminar = new EventEmitter<void>();
+
+  /** Fila cuyo menú de Campo está abierto (-1: ninguna). */
+  menuCampo = -1;
+
+  etiquetaCampo(campo: string): string {
+    return this.campoOptions.find((o) => o.value === campo)?.label ?? '';
+  }
+
+  onCampoCascada(index: number, seleccion: CascadingMenuSelection): void {
+    this.onCampoChange(index, seleccion.optionId);
+    this.menuCampo = -1;
+  }
 
   rows: FilterRow[] = [{ campo: '', condicion: '', valor: '' }];
 
@@ -184,6 +222,10 @@ export class CustomFilterComponent implements OnChanges {
 
     const updated = this.rows.filter((_, i) => i !== index);
     this.rows = updated.length > 0 ? updated : [{ campo: '', condicion: '', valor: '' }];
+  }
+
+  valorOpcionesDe(campo: string): TextFieldOption[] {
+    return this.valorOptionsByCampo?.[campo] ?? this.valorOptions;
   }
 
   onCampoChange(index: number, value: string | number | string[]): void {
