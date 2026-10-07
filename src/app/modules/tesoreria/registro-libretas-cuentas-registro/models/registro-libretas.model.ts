@@ -81,6 +81,9 @@ export interface MovimientoLibretaRegistro {
   descripcionDocumento: string;
 }
 
+/** Tipo de cambio de ejemplo de la cuenta en dólares (el de la plantilla): la conversión a moneda nacional usa el de compra. */
+export const TIPO_CAMBIO = { compra: 3.35, venta: 3.32 } as const;
+
 /** Código de entidad consolidada (clasificador institucional). */
 export const CODIGO_ENTIDAD: Record<string, string> = { MEF: '111110009000', IPD: '111110193994', MINCETUR: '111111070000' };
 

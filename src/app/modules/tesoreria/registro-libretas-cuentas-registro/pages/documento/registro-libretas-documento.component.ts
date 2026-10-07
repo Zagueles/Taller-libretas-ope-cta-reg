@@ -25,7 +25,7 @@ import { buildProcessBreadcrumbs } from '../../../../../shared/utils/breadcrumbs
 import { PROCESS_ID, PROCESS_ROUTE, REGISTRO_ROUTE } from '../../config/registro-libretas.rutas';
 import { RegistroLibretasApiService } from '../../api/registro-libretas-api.service';
 import { DetalleDocumentoLibreta, nombreBeneficiario } from '../../models/registro-libretas.model';
-import { generarPdfDocumento } from '../../utils/registro-libretas-export.util';
+import { generarPdfDocumento } from '../../utils/exportacion/pdf-documento.util';
 
 /** Descarga un Blob como archivo. */
 function descargarArchivo(blob: Blob, nombre: string): void {

@@ -18,6 +18,7 @@ import {
   CuentaRegistroCatalogo,
   ENTIDADES,
   MovimientoLibretaRegistro,
+  TIPO_CAMBIO,
   TIPOS_OPERACION,
   UNIDADES_EJECUTORAS,
   nombreBeneficiario,
@@ -33,7 +34,7 @@ const COLUMNAS_MONEDA_EXTRANJERA = new Set(['tipoCotizacion', 'tipoCambioCompra'
 /** Prefijo de los montos en los KPI de la vista de gráficas, según la moneda de la cuenta bancaria de la pestaña activa. */
 const SIMBOLO_MONEDA: Record<'PEN' | 'USD', string> = { PEN: 'S/ ', USD: 'US$ ' };
 
-import { exportarConsultaExcel } from '../../utils/registro-libretas-export.util';
+import { exportarConsultaExcel } from '../../utils/exportacion/excel-consulta.util';
 
 /** Beneficiario y Cuenta de registro van asociados: elegir cualquiera como nivel oculta los dos grupos de cabecera. */
 const GRUPOS_ASOCIADOS = ['Beneficiario', 'Cuenta de registro'];
@@ -337,8 +338,8 @@ export class RegistroLibretasConsultasComponent {
     // Cuentas en dólares: el importe en moneda nacional es el importe por el tipo de cambio (dato de ejemplo).
     // Tipo de cambio SUNAT del día (Compra/Venta), solo relevante para la cuenta en dólares; el sol se convierte 1 a 1.
     const enDolares = CUENTAS_BANCARIAS_INFO.find((c) => c.id === m.cuentaBancariaId)?.moneda === 'USD';
-    const tipoCambioCompra = enDolares ? 3.35 : 1;
-    const tipoCambioVenta = enDolares ? 3.32 : 1;
+    const tipoCambioCompra = enDolares ? TIPO_CAMBIO.compra : 1;
+    const tipoCambioVenta = enDolares ? TIPO_CAMBIO.venta : 1;
     const tipoCambio = tipoCambioVenta;
     return {
       sec: m.sec,

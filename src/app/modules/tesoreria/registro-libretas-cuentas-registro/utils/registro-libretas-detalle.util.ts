@@ -2,6 +2,7 @@ import {
   CODIGO_ENTIDAD,
   CUENTAS_BANCARIAS_INFO,
   CuentaBancariaRegistroInfo,
+  TIPO_CAMBIO,
   MovimientoLibretaRegistro,
   nombreBeneficiario,
   nombreTipoOperacion,
@@ -59,8 +60,7 @@ export function construirDetalleRegistro(m: MovimientoLibretaRegistro, rechazado
   const interno = MOVIMIENTO_INTERNO[m.tipoOperacionCodigo] ?? { codigo: SIN_DATO, descripcion: SIN_DATO, sigla: SIN_DATO };
   const tipo = nombreTipoOperacion(m.tipoOperacionCodigo);
   const enDolares = cuenta.moneda === 'USD';
-  const compra = 3.35;
-  const venta = 3.32;
+  const { compra, venta } = TIPO_CAMBIO;
   const codigoUe = m.entidad === 'MINCETUR' ? '11111107004  - ' : '';
   return {
     rechazado,

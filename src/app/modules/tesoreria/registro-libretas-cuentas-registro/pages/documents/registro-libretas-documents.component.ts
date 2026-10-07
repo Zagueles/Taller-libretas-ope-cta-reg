@@ -10,7 +10,8 @@ import { DOCUMENTO_ROUTE, REGISTRO_ROUTE } from '../../config/registro-libretas.
 import { REGISTRO_LIBRETAS_DOCUMENTS_CONFIG } from '../../config/registro-libretas-documents.config';
 import { CUENTAS_BANCARIAS_INFO, DocumentoLibreta, MovimientoLibretaRegistro, nombreBeneficiario, nombreTipoOperacion } from '../../models/registro-libretas.model';
 import { construirDetalleRegistro } from '../../utils/registro-libretas-detalle.util';
-import { exportarDocumentosExcel, exportarRegistrosExcel, generarPdfRegistro } from '../../utils/registro-libretas-export.util';
+import { exportarDocumentosExcel, exportarRegistrosExcel } from '../../utils/exportacion/excel-descargas.util';
+import { generarPdfRegistro } from '../../utils/exportacion/pdf-registro.util';
 
 const NOMBRE_DOCUMENTO = 'Registro de operaciones en las libretas de las cuentas de registro';
 const ENTIDAD = '009 - Ministerio de Economía y Finanzas';
