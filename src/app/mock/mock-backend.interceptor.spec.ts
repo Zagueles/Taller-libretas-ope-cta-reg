@@ -7,6 +7,7 @@ import type { LoginResponse } from '../core/api/auth-api.service';
 import type { SolicitudResponse } from '../core/api/solicitudes-api.service';
 import type { CuentaBancariaDatos, CuentaBancariaRegistro } from '../modules/tesoreria/cuentas-bancarias/models/cuenta-bancaria.model';
 import { CUENTAS_CONCILIACION, ConciliacionManualDatos, REGISTROS_NO_CONCILIADOS } from '../modules/tesoreria/conciliacion-diaria/models/conciliacion-diaria.model';
+import type { DetalleDocumentoLibreta, DetalleMovimientoLibreta, DocumentoLibreta, MovimientoLibretaRegistro, CuentaRegistroCatalogo } from '../modules/tesoreria/registro-libretas-cuentas-registro/models/registro-libretas.model';
 import { mockBackendInterceptor } from './mock-backend.interceptor';
 import { reiniciarDatosDemo } from './mock-db';
 import { CONTRASENA_DEMO } from './usuarios-demo';
@@ -208,6 +209,47 @@ describe('mockBackendInterceptor', () => {
       const antes = esperar(http.get<CuentaBancariaRegistro[]>(`${API}/cuentas-bancarias`, { headers: luis })).valor!.length;
       esperar(http.patch(`${API}/solicitudes/${id}/estado`, { estadoNuevo: 'APROBADO' }, { headers: luis }));
       expect(esperar(http.get<CuentaBancariaRegistro[]>(`${API}/cuentas-bancarias`, { headers: luis })).valor!.length).toBe(antes);
+    }));
+  });
+
+  describe('libretas de las cuentas de registro (/libretas)', () => {
+    it('filtra los movimientos en el servidor con los parámetros de la URL', fakeAsync(() => {
+      const url = `${API}/libretas/movimientos?desde=2026-09-01&hasta=2026-09-30&cuentasBancarias=mef-dgtp&tiposOperacion=2,3`;
+      const { valor } = esperar(http.get<MovimientoLibretaRegistro[]>(url));
+
+      expect(valor!.length).toBeGreaterThan(0);
+      expect(valor!.every((m) => m.cuentaBancariaId === 'mef-dgtp' && m.fecha.startsWith('2026-09') && ['2', '3'].includes(m.tipoOperacionCodigo))).toBeTrue();
+
+      const todos = esperar(http.get<MovimientoLibretaRegistro[]>(`${API}/libretas/movimientos`));
+      expect(todos.valor!.length).toBeGreaterThan(valor!.length);
+    }));
+
+    it('lista los documentos (con filtro de estado) y entrega el detalle de uno, rechazado incluido', fakeAsync(() => {
+      const rechazados = esperar(http.get<DocumentoLibreta[]>(`${API}/libretas/documentos?estado=Rechazado`));
+      expect(rechazados.valor!.map((d) => d.numero)).toEqual(['000016-2026', '000017-2026', '000018-2026']);
+
+      const detalle = esperar(http.get<DetalleDocumentoLibreta>(`${API}/libretas/documentos/000016-2026`));
+      expect(detalle.valor?.documento.motivoRechazo).toContain('validaciones');
+      expect(detalle.valor?.movimientos.length).toBe(2);
+
+      expect(esperar(http.get(`${API}/libretas/documentos/no-existe`)).error?.status).toBe(404);
+    }));
+
+    it('entrega el registro con su documento, y 404 si no existe', fakeAsync(() => {
+      const normal = esperar(http.get<DetalleMovimientoLibreta>(`${API}/libretas/registros/000001`));
+      expect(normal.valor?.rechazado).toBeFalse();
+      expect(normal.valor?.movimiento.sec).toBe('000001');
+
+      const rechazado = esperar(http.get<DetalleMovimientoLibreta>(`${API}/libretas/registros/000056`));
+      expect(rechazado.valor?.rechazado).toBeTrue();
+
+      expect(esperar(http.get(`${API}/libretas/registros/zzz`)).error?.status).toBe(404);
+    }));
+
+    it('entrega las cuentas de registro de la libreta', fakeAsync(() => {
+      const { valor } = esperar(http.get<CuentaRegistroCatalogo[]>(`${API}/libretas/cuentas-registro`));
+      expect(valor!.length).toBeGreaterThan(0);
+      expect(valor![0].numero).toBeTruthy();
     }));
   });
 

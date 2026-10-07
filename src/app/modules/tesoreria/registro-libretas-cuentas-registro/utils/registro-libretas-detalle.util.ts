@@ -2,8 +2,7 @@ import {
   CODIGO_ENTIDAD,
   CUENTAS_BANCARIAS_INFO,
   CuentaBancariaRegistroInfo,
-  MOVIMIENTOS_LIBRETA_REGISTRO,
-  MOVIMIENTOS_RECHAZADOS,
+  MovimientoLibretaRegistro,
   nombreBeneficiario,
   nombreTipoOperacion,
 } from '../models/registro-libretas.model';
@@ -50,14 +49,12 @@ export interface DetalleRegistro {
 }
 
 /**
- * Arma el detalle de un registro de la libreta (Figma nodo 241:20830) a partir de su secuencia: lo usan tanto la
- * pantalla de detalle (`siaf-registro-libretas-registro`) como el PDF de «Ver documento PDF» de Registros, así
- * quedan siempre iguales.
+ * Arma el detalle de un registro de la libreta (Figma nodo 241:20830) a partir del movimiento que entrega el backend:
+ * lo usan tanto la pantalla de detalle (`siaf-registro-libretas-registro`) como el PDF de «Ver documento PDF» y los
+ * Excel de Registros, así quedan siempre iguales. `rechazado` es de los movimientos de un documento rechazado, que también
+ * se pueden abrir desde la vista de su documento.
  */
-export function construirDetalleRegistro(sec: string): DetalleRegistro | null {
-  // También los de un documento rechazado: se pueden abrir desde la vista de su documento.
-  const m = [...MOVIMIENTOS_LIBRETA_REGISTRO, ...MOVIMIENTOS_RECHAZADOS].find((x) => x.sec === sec);
-  if (!m) return null;
+export function construirDetalleRegistro(m: MovimientoLibretaRegistro, rechazado = false): DetalleRegistro {
   const cuenta = CUENTAS_BANCARIAS_INFO.find((c) => c.id === m.cuentaBancariaId) ?? CUENTAS_BANCARIAS_INFO[0];
   const interno = MOVIMIENTO_INTERNO[m.tipoOperacionCodigo] ?? { codigo: SIN_DATO, descripcion: SIN_DATO, sigla: SIN_DATO };
   const tipo = nombreTipoOperacion(m.tipoOperacionCodigo);
@@ -65,7 +62,6 @@ export function construirDetalleRegistro(sec: string): DetalleRegistro | null {
   const compra = 3.35;
   const venta = 3.32;
   const codigoUe = m.entidad === 'MINCETUR' ? '11111107004  - ' : '';
-  const rechazado = MOVIMIENTOS_RECHAZADOS.some((x) => x.sec === sec);
   return {
     rechazado,
     sec: m.sec,

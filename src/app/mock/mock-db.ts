@@ -14,6 +14,7 @@ import {
   NOMBRE_DOCUMENTO as NOMBRE_CONCILIACION,
   REGISTROS_NO_CONCILIADOS,
 } from '../modules/tesoreria/conciliacion-diaria/models/conciliacion-diaria.model';
+import { DatosLibretas, datosLibretasIniciales } from './libretas-backend';
 import type { QueryReportFavorite } from '../shared/types/query-report.types';
 import { USUARIOS_DEMO, UsuarioDemo } from './usuarios-demo';
 
@@ -23,7 +24,7 @@ import { USUARIOS_DEMO, UsuarioDemo } from './usuarios-demo';
  */
 
 const CLAVE = 'taller-siaf-rp:datos';
-const VERSION = 4;
+const VERSION = 5;
 
 export interface NotificacionMock extends NotificacionResponse {
   /** Destinatario: un usuario puntual o, si no hay, todos los perfiles con este rol. */
@@ -41,6 +42,8 @@ export interface DatosTaller {
   /** Correlativo de la conciliación manual diaria (se reinicia cada año en el sistema real; en el taller es único). */
   correlativoConciliacion: number;
   secuencia: number;
+  /** «Registro de operaciones en las libretas de las cuentas de registro»: movimientos y documentos del sistema. */
+  libretas: DatosLibretas;
   /** Favoritos de «Consultas y reportes», por reporte (clave = ruta del proceso). */
   favoritos: Record<string, QueryReportFavorite[]>;
 }
@@ -181,6 +184,7 @@ function crearDatosIniciales(): DatosTaller {
     correlativoRegistro: 0,
     correlativoConciliacion: 0,
     secuencia: 0,
+    libretas: datosLibretasIniciales(),
     favoritos: {},
   };
   // Un solo usuario de demostración: las solicitudes iniciales las crea con su perfil de creador y las resuelve con el de aprobador.

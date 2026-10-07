@@ -1,12 +1,14 @@
-import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { forkJoin } from 'rxjs';
 
 import { DocumentsRecordsPageComponent } from '../../../../../shared/components/documents-records-page/documents-records-page.component';
 import { PdfViewerModalComponent } from '../../../../../shared/components/pdf-viewer-modal/pdf-viewer-modal.component';
 import { SnackbarComponent } from '../../../../../shared/ui/snackbar/snackbar.component';
 import type { DocumentsRecordsConfig, DocumentsRecordsDownloadEvent, DocumentsRecordsRow } from '../../../../../shared/types/documents-records.types';
+import { RegistroLibretasApiService } from '../../api/registro-libretas-api.service';
 import { DOCUMENTO_ROUTE, REGISTRO_ROUTE } from '../../config/registro-libretas.rutas';
 import { REGISTRO_LIBRETAS_DOCUMENTS_CONFIG } from '../../config/registro-libretas-documents.config';
-import { CUENTAS_BANCARIAS_INFO, DOCUMENTOS_RECHAZADOS, MOVIMIENTOS_LIBRETA_REGISTRO, MOVIMIENTOS_RECHAZADOS, nombreBeneficiario, nombreTipoOperacion } from '../../models/registro-libretas.model';
+import { CUENTAS_BANCARIAS_INFO, DocumentoLibreta, MovimientoLibretaRegistro, nombreBeneficiario, nombreTipoOperacion } from '../../models/registro-libretas.model';
 import { construirDetalleRegistro } from '../../utils/registro-libretas-detalle.util';
 import { exportarDocumentosExcel, exportarRegistrosExcel, generarPdfRegistro } from '../../utils/registro-libretas-export.util';
 
@@ -23,11 +25,6 @@ const unMinutoAntes = (hora: string): string => {
   return `${dos(Math.floor(total / 60))}:${dos(total % 60)}:${dos(s || 0)}`;
 };
 
-/** Un documento por cada número que los movimientos de la libreta referencian (datos simulados). */
-const DOCUMENTOS = [...new Map([...MOVIMIENTOS_LIBRETA_REGISTRO, ...MOVIMIENTOS_RECHAZADOS].map((m) => [m.numeroDocumento, m])).values()].sort((a, b) =>
-  a.numeroDocumento.localeCompare(b.numeroDocumento),
-);
-
 const formatoMonto = new Intl.NumberFormat('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const monto = (valor: number): string => formatoMonto.format(valor);
 
@@ -36,8 +33,8 @@ const fechaHoraVisible = (iso: string): string => `${fechaVisible(iso)} ${iso.sl
 const fechaVisible = (iso: string): string => iso.slice(0, 10).split('-').reverse().join('/');
 
 /** El valor de un campo del detalle del registro (sección y rótulo), para las columnas de «Más columnas». */
-const campoDetalle = (sec: string, seccion: string, caption: string): string =>
-  construirDetalleRegistro(sec)?.secciones.find((s) => s.titulo === seccion)?.campos.find((c) => c.caption === caption)?.value ?? '-';
+const campoDetalle = (m: MovimientoLibretaRegistro, seccion: string, caption: string): string =>
+  construirDetalleRegistro(m).secciones.find((s) => s.titulo === seccion)?.campos.find((c) => c.caption === caption)?.value ?? '-';
 
 /**
  * «Documentos y registros» de Registro de operaciones en las libretas de las cuentas de registro. La pantalla la
@@ -49,7 +46,7 @@ const campoDetalle = (sec: string, seccion: string, caption: string): string =>
   standalone: true,
   imports: [DocumentsRecordsPageComponent, PdfViewerModalComponent, SnackbarComponent],
   template: `
-    <siaf-documents-records-page [config]="pageConfig" (recordActionClicked)="verDocumentoPdf($event)" (selectionDownloaded)="descargarSeleccion($event)" />
+    <siaf-documents-records-page [config]="pageConfig()" (recordActionClicked)="verDocumentoPdf($event)" (selectionDownloaded)="descargarSeleccion($event)" />
     <div class="fixed bottom-siaf-lg left-1/2 z-50 w-[min(430px,calc(100vw-32px))] -translate-x-1/2">
       <siaf-snackbar [open]="preparandoExportacion()" tone="neutral" [dismissible]="false" message="Preparando archivo para exportar" />
     </div>
@@ -57,14 +54,27 @@ const campoDetalle = (sec: string, seccion: string, caption: string): string =>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class RegistroLibretasDocumentsComponent {
+export class RegistroLibretasDocumentsComponent implements OnInit {
+  private readonly api = inject(RegistroLibretasApiService);
+
+  /** Lo que entrega el backend simulado: los documentos del sistema y los movimientos de la libreta. */
+  private readonly documentos = signal<DocumentoLibreta[]>([]);
+  private readonly movimientos = signal<MovimientoLibretaRegistro[]>([]);
+
+  ngOnInit(): void {
+    forkJoin({ documentos: this.api.listarDocumentos(), movimientos: this.api.listarMovimientos() }).subscribe(({ documentos, movimientos }) => {
+      this.documentos.set(documentos);
+      this.movimientos.set(movimientos);
+    });
+  }
+
   readonly pdfAbierto = signal(false);
   readonly pdfBlob = signal<Blob | null>(null);
   readonly pdfNombre = signal('documento.pdf');
   readonly pdfPaginas = signal(1);
   readonly preparandoExportacion = signal(false);
 
-  readonly pageConfig: DocumentsRecordsConfig = {
+  readonly pageConfig = computed((): DocumentsRecordsConfig => ({
     ...REGISTRO_LIBRETAS_DOCUMENTS_CONFIG,
     // Estado y tipo de acción no distinguen nada acá (todos los documentos quedan «Procesado»/«Creación»): los
     // filtros rápidos de la pestaña Documentos son, en su lugar, el número de documento y la fecha de registro.
@@ -74,43 +84,43 @@ export class RegistroLibretasDocumentsComponent {
     documentFilter2Label: 'Fecha de registro',
     documentFilter2Key: 'dateIso',
     documentFilter2Type: 'dateRange',
-    documentRows: DOCUMENTOS.map(
-      (m): DocumentsRecordsRow => ({
+    documentRows: this.documentos().map(
+      (d): DocumentsRecordsRow => ({
         document: NOMBRE_DOCUMENTO,
-        documentId: m.documentoId,
-        number: m.numeroDocumento,
+        documentId: d.documentoId,
+        number: d.numero,
         actionType: 'Creación',
-        status: m.numeroDocumento in DOCUMENTOS_RECHAZADOS ? 'Rechazado' : 'Procesado',
+        status: d.estado,
         system: 'Tesorería',
-        date: fechaVisible(m.fecha),
-        dateIso: m.fecha.slice(0, 10),
-        time: m.fecha.slice(11, 19),
+        date: fechaVisible(d.fecha),
+        dateIso: d.fecha.slice(0, 10),
+        time: d.fecha.slice(11, 19),
         entity: ENTIDAD,
         linkRoute: `/procesos/registro-libretas-cuentas-registro/consultas`,
-        detailRoute: `${DOCUMENTO_ROUTE}/${m.numeroDocumento}`,
+        detailRoute: `${DOCUMENTO_ROUTE}/${d.numero}`,
       }),
     ),
-    recordRows: MOVIMIENTOS_LIBRETA_REGISTRO.map(
+    recordRows: this.movimientos().map(
       (m): DocumentsRecordsRow => ({
         sec: m.sec,
         fecha: fechaHoraVisible(m.fecha),
         cuentaBancariaNumero: CUENTAS_BANCARIAS_INFO.find((c) => c.id === m.cuentaBancariaId)?.numeroCuenta ?? '',
         cuentaBancariaDenominacion: CUENTAS_BANCARIAS_INFO.find((c) => c.id === m.cuentaBancariaId)?.nombre ?? '',
         moneda: CUENTAS_BANCARIAS_INFO.find((c) => c.id === m.cuentaBancariaId)?.moneda ?? '',
-        fechaRegistro: construirDetalleRegistro(m.sec)?.fechaRegistro ?? '-',
-        numeroOperacion: construirDetalleRegistro(m.sec)?.numeroOperacion ?? '-',
-        tipoBeneficiario: campoDetalle(m.sec, 'Beneficiario', 'Tipo'),
-        entidadAdministradoraCodigo: campoDetalle(m.sec, 'Entidad administradora', 'Código'),
-        entidadAdministradoraSigla: campoDetalle(m.sec, 'Entidad administradora', 'Sigla'),
-        movimientoInternoCodigo: campoDetalle(m.sec, 'Movimiento interno', 'Código'),
-        movimientoInternoDescripcion: campoDetalle(m.sec, 'Movimiento interno', 'Descripción'),
-        movimientoInternoSigla: campoDetalle(m.sec, 'Movimiento interno', 'Sigla'),
-        movimientoExternoCodigo: campoDetalle(m.sec, 'Movimiento externo', 'Código'),
-        movimientoExternoDescripcion: campoDetalle(m.sec, 'Movimiento externo', 'Descripción'),
-        documentoCutNumero: campoDetalle(m.sec, 'Documento CUT', 'Número'),
-        documentoCutArchivo: campoDetalle(m.sec, 'Documento CUT', 'Archivo'),
-        documentoCutSigla: campoDetalle(m.sec, 'Documento CUT', 'Sigla'),
-        descripcionDetallada: construirDetalleRegistro(m.sec)?.descripcionDetallada ?? '-',
+        fechaRegistro: construirDetalleRegistro(m).fechaRegistro,
+        numeroOperacion: construirDetalleRegistro(m).numeroOperacion,
+        tipoBeneficiario: campoDetalle(m, 'Beneficiario', 'Tipo'),
+        entidadAdministradoraCodigo: campoDetalle(m, 'Entidad administradora', 'Código'),
+        entidadAdministradoraSigla: campoDetalle(m, 'Entidad administradora', 'Sigla'),
+        movimientoInternoCodigo: campoDetalle(m, 'Movimiento interno', 'Código'),
+        movimientoInternoDescripcion: campoDetalle(m, 'Movimiento interno', 'Descripción'),
+        movimientoInternoSigla: campoDetalle(m, 'Movimiento interno', 'Sigla'),
+        movimientoExternoCodigo: campoDetalle(m, 'Movimiento externo', 'Código'),
+        movimientoExternoDescripcion: campoDetalle(m, 'Movimiento externo', 'Descripción'),
+        documentoCutNumero: campoDetalle(m, 'Documento CUT', 'Número'),
+        documentoCutArchivo: campoDetalle(m, 'Documento CUT', 'Archivo'),
+        documentoCutSigla: campoDetalle(m, 'Documento CUT', 'Sigla'),
+        descripcionDetallada: construirDetalleRegistro(m).descripcionDetallada,
         beneficiarioCodigo: m.beneficiarioCodigo,
         beneficiario: nombreBeneficiario(m.beneficiarioCodigo).toUpperCase(),
         numeroCuentaRegistro: m.numeroCuentaRegistro,
@@ -145,13 +155,13 @@ export class RegistroLibretasDocumentsComponent {
         ],
       };
     },
-  };
+  }));
 
   /** «Ver documento PDF» de una fila de Registros: arma el PDF del registro (jsPDF) y lo abre en el visor nativo. */
   async verDocumentoPdf(row: DocumentsRecordsRow): Promise<void> {
-    const sec = String(row['sec'] ?? '');
-    const generado = await generarPdfRegistro(sec);
-    if (!generado) return;
+    const movimiento = this.movimientos().find((m) => m.sec === String(row['sec'] ?? ''));
+    if (!movimiento) return;
+    const generado = await generarPdfRegistro(construirDetalleRegistro(movimiento));
     this.pdfBlob.set(generado.blob);
     this.pdfNombre.set(generado.nombre);
     this.pdfPaginas.set(generado.paginas);
@@ -180,7 +190,7 @@ export class RegistroLibretasDocumentsComponent {
               evento.filters,
             )
           : exportarRegistrosExcel(
-              evento.rows.map((r) => String(r['sec'] ?? '')),
+              evento.rows.flatMap((r) => this.movimientos().find((m) => m.sec === String(r['sec'] ?? '')) ?? []),
               evento.filters,
               evento.visibleColumns,
             );

@@ -1,5 +1,5 @@
 import { Location } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { SolicitudePageLayoutComponent } from '../../../../../shared/components/solicitude-page-layout/solicitude-page-layout.component';
@@ -8,13 +8,14 @@ import { ReadonlyFieldComponent } from '../../../../../shared/ui/readonly-field/
 import { RecordStatusTagComponent } from '../../../../../shared/ui/record-status-tag/record-status-tag.component';
 import { volverAlOrigen } from '../../../../../shared/utils/volver.util';
 import { buildProcessBreadcrumbs } from '../../../../../shared/utils/breadcrumbs.util';
+import { RegistroLibretasApiService } from '../../api/registro-libretas-api.service';
 import { PROCESS_ID, PROCESS_ROUTE } from '../../config/registro-libretas.rutas';
-import { construirDetalleRegistro } from '../../utils/registro-libretas-detalle.util';
+import { construirDetalleRegistro, DetalleRegistro } from '../../utils/registro-libretas-detalle.util';
 
 /**
  * Detalle de un registro de la libreta (Figma nodo 241:20830, «Detalle de registros»): solo lectura, con la
  * información de la operación financiera, de la cuenta bancaria y el registro de la operación por secciones. Se abre
- * al pulsar una fila de la pestaña Registros de «Documentos y registros». Datos simulados.
+ * al pulsar una fila de la pestaña Registros de «Documentos y registros». El registro lo entrega el backend simulado.
  */
 @Component({
   selector: 'siaf-registro-libretas-registro',
@@ -117,14 +118,24 @@ import { construirDetalleRegistro } from '../../utils/registro-libretas-detalle.
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class RegistroLibretasRegistroComponent {
+export class RegistroLibretasRegistroComponent implements OnInit {
+  private readonly api = inject(RegistroLibretasApiService);
   private readonly ruta = inject(ActivatedRoute);
   private readonly location = inject(Location);
   private readonly router = inject(Router);
 
   readonly breadcrumbs = buildProcessBreadcrumbs(PROCESS_ID, PROCESS_ROUTE);
 
-  readonly registro = computed(() => construirDetalleRegistro(this.ruta.snapshot.paramMap.get('sec') ?? ''));
+  readonly registro = signal<DetalleRegistro | null>(null);
+
+  ngOnInit(): void {
+    const sec = this.ruta.snapshot.paramMap.get('sec') ?? '';
+    // Un registro que no existe (404) deja la pantalla sin contenido, como antes.
+    this.api.obtenerRegistro(sec).subscribe({
+      next: ({ movimiento, rechazado }) => this.registro.set(construirDetalleRegistro(movimiento, rechazado)),
+      error: () => this.registro.set(null),
+    });
+  }
 
   volver(): void {
     volverAlOrigen(this.location, this.router, `${PROCESS_ROUTE}?tab=records`);

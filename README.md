@@ -80,6 +80,10 @@ Para empezar de cero: **Reiniciar datos** en el login (o borrar el almacenamient
 - **`src/app/mock/mock-db.ts`** guarda los datos en el `localStorage` del navegador (clave `taller-siaf-rp:datos`): lo
   que graba un usuario lo ve otro al entrar, en el mismo navegador. Trae 12 solicitudes en todos los estados, 8 cuentas
   registradas y notificaciones. Si cambian la forma de los datos, suban `VERSION` y se regeneran solos.
+- **`src/app/mock/libretas-backend.ts`** y **`libretas-seed.ts`** son el backend de «Registro de operaciones en las libretas de
+  las cuentas de registro»: el seed trae los movimientos y los documentos (rechazados incluidos), y las reglas
+  (filtros de la consulta, documentos, detalle de documento y de registro) son funciones puras que el interceptor expone en
+  `/api/v1/libretas/{movimientos,documentos,documentos/:numero,registros/:sec,cuentas-registro}`.
 - **`src/app/mock/usuarios-demo.ts`** define los usuarios y sus perfiles. El token es un JWT sin firma: la app solo lee
   su vencimiento.
 - Las notificaciones en tiempo real (socket) están apagadas: la campana se actualiza al iniciar sesión y al abrirla.

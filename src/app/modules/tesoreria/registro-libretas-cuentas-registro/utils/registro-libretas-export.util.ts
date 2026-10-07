@@ -1,6 +1,6 @@
 import { cargarToDataURL, cargarWorkbook } from '../../../../shared/utils/librerias-dinamicas.util';
 import type { QueryReportParameters } from '../../../../shared/types/query-report.types';
-import { CUENTAS_BANCARIAS_INFO, MOVIMIENTOS_LIBRETA_REGISTRO, MovimientoLibretaRegistro, movimientosDeDocumento, nombreBeneficiario, nombreTipoOperacion } from '../models/registro-libretas.model';
+import { CUENTAS_BANCARIAS_INFO, DetalleDocumentoLibreta, MovimientoLibretaRegistro, nombreBeneficiario, nombreTipoOperacion } from '../models/registro-libretas.model';
 import { construirDetalleRegistro, DetalleRegistro } from './registro-libretas-detalle.util';
 
 const formatoMonto = new Intl.NumberFormat('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -650,9 +650,7 @@ const MARGEN_QR = 6;
  * secciones que `siaf-registro-libretas-registro`, en hojas A4 con la cabecera y el pie de SIAF·RP. Devuelve el Blob
  * para previsualizarlo en el visor nativo; no lo descarga (eso lo hace el visor con su propio botón).
  */
-export async function generarPdfRegistro(sec: string): Promise<{ blob: Blob; nombre: string; paginas: number } | null> {
-  const detalle = construirDetalleRegistro(sec);
-  if (!detalle) return null;
+export async function generarPdfRegistro(detalle: DetalleRegistro): Promise<{ blob: Blob; nombre: string; paginas: number }> {
 
   const [{ default: jsPDF }, logo, qr] = await Promise.all([
     import('jspdf'),
@@ -861,9 +859,8 @@ export function nombrePdfDocumento(numero: string): string {
  * bancaria que el documento referencia, con su tabla de movimientos (igual a `siaf-registro-libretas-documento`).
  * Se descarga directo, a diferencia de `generarPdfRegistro`, que solo se previsualiza.
  */
-export async function generarPdfDocumento(numero: string): Promise<{ blob: Blob; nombre: string } | null> {
-  const movimientos = movimientosDeDocumento(numero);
-  if (!movimientos.length) return null;
+export async function generarPdfDocumento({ documento, movimientos }: DetalleDocumentoLibreta): Promise<{ blob: Blob; nombre: string }> {
+  const numero = documento.numero;
 
   const [{ default: jsPDF }, { default: autoTable }, logo, qr] = await Promise.all([
     import('jspdf'),
@@ -1142,8 +1139,8 @@ interface ColumnaRegistro {
   valor: (m: MovimientoLibretaRegistro) => string | number;
 }
 
-const campoDetalleExcel = (sec: string, seccion: string, caption: string): string =>
-  construirDetalleRegistro(sec)?.secciones.find((x) => x.titulo === seccion)?.campos.find((c) => c.caption === caption)?.value ?? '-';
+const campoDetalleExcel = (m: MovimientoLibretaRegistro, seccion: string, caption: string): string =>
+  construirDetalleRegistro(m).secciones.find((x) => x.titulo === seccion)?.campos.find((c) => c.caption === caption)?.value ?? '-';
 const cuentaDe = (m: MovimientoLibretaRegistro) => CUENTAS_BANCARIAS_INFO.find((c) => c.id === m.cuentaBancariaId);
 
 /** Todas las columnas posibles de la pestaña Registros, en el orden del Excel; la descarga lleva las que están visibles. */
@@ -1155,7 +1152,7 @@ const COLUMNAS_REGISTRO: ColumnaRegistro[] = [
   { key: 'moneda', rotulo: 'Moneda', ancho: 12, alinea: 'center', valor: (m) => cuentaDe(m)?.moneda ?? '' },
   { key: 'beneficiarioCodigo', grupo: 'Beneficiario', rotulo: 'Código', ancho: 12, alinea: 'left', valor: (m) => m.beneficiarioCodigo },
   { key: 'beneficiario', grupo: 'Beneficiario', rotulo: 'Descripción', ancho: 37, alinea: 'left', valor: (m) => nombreBeneficiario(m.beneficiarioCodigo).toUpperCase() },
-  { key: 'tipoBeneficiario', grupo: 'Beneficiario', rotulo: 'Tipo', ancho: 14, alinea: 'left', valor: (m) => campoDetalleExcel(m.sec, 'Beneficiario', 'Tipo') },
+  { key: 'tipoBeneficiario', grupo: 'Beneficiario', rotulo: 'Tipo', ancho: 14, alinea: 'left', valor: (m) => campoDetalleExcel(m, 'Beneficiario', 'Tipo') },
   { key: 'numeroCuentaRegistro', grupo: 'Cuenta de registro', rotulo: 'Número', ancho: 26.5, alinea: 'left', valor: (m) => m.numeroCuentaRegistro },
   { key: 'descripcionCuentaRegistro', grupo: 'Cuenta de registro', rotulo: 'Descripción', ancho: 73.8, alinea: 'left', valor: (m) => m.descripcionCuentaRegistro },
   { key: 'tipoOperacion', rotulo: 'Tipo de operación', ancho: 32, alinea: 'left', valor: (m) => nombreTipoOperacion(m.tipoOperacionCodigo) },
@@ -1169,19 +1166,19 @@ const COLUMNAS_REGISTRO: ColumnaRegistro[] = [
   { key: 'status', rotulo: 'Estado de registro', ancho: 14, alinea: 'center', valor: () => 'Activo' },
   { key: 'number', grupo: 'Documento', rotulo: 'Número', ancho: 16.7, alinea: 'left', valor: (m) => m.numeroDocumento },
   { key: 'descripcionDocumento', grupo: 'Documento', rotulo: 'Descripción', ancho: 59, alinea: 'left', valor: (m) => m.descripcionDocumento },
-  { key: 'fechaRegistro', rotulo: 'Fecha de registro', ancho: 22, alinea: 'left', valor: (m) => construirDetalleRegistro(m.sec)?.fechaRegistro ?? '-' },
-  { key: 'numeroOperacion', rotulo: 'Número de operación', ancho: 20, alinea: 'left', valor: (m) => construirDetalleRegistro(m.sec)?.numeroOperacion ?? '-' },
-  { key: 'entidadAdministradoraCodigo', grupo: 'Entidad administradora', rotulo: 'Código', ancho: 14, alinea: 'left', valor: (m) => campoDetalleExcel(m.sec, 'Entidad administradora', 'Código') },
-  { key: 'entidadAdministradoraSigla', grupo: 'Entidad administradora', rotulo: 'Sigla', ancho: 14, alinea: 'left', valor: (m) => campoDetalleExcel(m.sec, 'Entidad administradora', 'Sigla') },
-  { key: 'movimientoInternoCodigo', grupo: 'Movimiento interno', rotulo: 'Código', ancho: 14, alinea: 'left', valor: (m) => campoDetalleExcel(m.sec, 'Movimiento interno', 'Código') },
-  { key: 'movimientoInternoDescripcion', grupo: 'Movimiento interno', rotulo: 'Descripción', ancho: 32, alinea: 'left', valor: (m) => campoDetalleExcel(m.sec, 'Movimiento interno', 'Descripción') },
-  { key: 'movimientoInternoSigla', grupo: 'Movimiento interno', rotulo: 'Sigla', ancho: 12, alinea: 'left', valor: (m) => campoDetalleExcel(m.sec, 'Movimiento interno', 'Sigla') },
-  { key: 'movimientoExternoCodigo', grupo: 'Movimiento externo', rotulo: 'Código', ancho: 14, alinea: 'left', valor: (m) => campoDetalleExcel(m.sec, 'Movimiento externo', 'Código') },
-  { key: 'movimientoExternoDescripcion', grupo: 'Movimiento externo', rotulo: 'Descripción', ancho: 24, alinea: 'left', valor: (m) => campoDetalleExcel(m.sec, 'Movimiento externo', 'Descripción') },
-  { key: 'documentoCutNumero', grupo: 'Documento CUT', rotulo: 'Número', ancho: 14, alinea: 'left', valor: (m) => campoDetalleExcel(m.sec, 'Documento CUT', 'Número') },
-  { key: 'documentoCutArchivo', grupo: 'Documento CUT', rotulo: 'Archivo', ancho: 14, alinea: 'left', valor: (m) => campoDetalleExcel(m.sec, 'Documento CUT', 'Archivo') },
-  { key: 'documentoCutSigla', grupo: 'Documento CUT', rotulo: 'Sigla', ancho: 12, alinea: 'left', valor: (m) => campoDetalleExcel(m.sec, 'Documento CUT', 'Sigla') },
-  { key: 'descripcionDetallada', rotulo: 'Descripción detallada', ancho: 32, alinea: 'left', valor: (m) => construirDetalleRegistro(m.sec)?.descripcionDetallada ?? '-' },
+  { key: 'fechaRegistro', rotulo: 'Fecha de registro', ancho: 22, alinea: 'left', valor: (m) => construirDetalleRegistro(m).fechaRegistro },
+  { key: 'numeroOperacion', rotulo: 'Número de operación', ancho: 20, alinea: 'left', valor: (m) => construirDetalleRegistro(m).numeroOperacion },
+  { key: 'entidadAdministradoraCodigo', grupo: 'Entidad administradora', rotulo: 'Código', ancho: 14, alinea: 'left', valor: (m) => campoDetalleExcel(m, 'Entidad administradora', 'Código') },
+  { key: 'entidadAdministradoraSigla', grupo: 'Entidad administradora', rotulo: 'Sigla', ancho: 14, alinea: 'left', valor: (m) => campoDetalleExcel(m, 'Entidad administradora', 'Sigla') },
+  { key: 'movimientoInternoCodigo', grupo: 'Movimiento interno', rotulo: 'Código', ancho: 14, alinea: 'left', valor: (m) => campoDetalleExcel(m, 'Movimiento interno', 'Código') },
+  { key: 'movimientoInternoDescripcion', grupo: 'Movimiento interno', rotulo: 'Descripción', ancho: 32, alinea: 'left', valor: (m) => campoDetalleExcel(m, 'Movimiento interno', 'Descripción') },
+  { key: 'movimientoInternoSigla', grupo: 'Movimiento interno', rotulo: 'Sigla', ancho: 12, alinea: 'left', valor: (m) => campoDetalleExcel(m, 'Movimiento interno', 'Sigla') },
+  { key: 'movimientoExternoCodigo', grupo: 'Movimiento externo', rotulo: 'Código', ancho: 14, alinea: 'left', valor: (m) => campoDetalleExcel(m, 'Movimiento externo', 'Código') },
+  { key: 'movimientoExternoDescripcion', grupo: 'Movimiento externo', rotulo: 'Descripción', ancho: 24, alinea: 'left', valor: (m) => campoDetalleExcel(m, 'Movimiento externo', 'Descripción') },
+  { key: 'documentoCutNumero', grupo: 'Documento CUT', rotulo: 'Número', ancho: 14, alinea: 'left', valor: (m) => campoDetalleExcel(m, 'Documento CUT', 'Número') },
+  { key: 'documentoCutArchivo', grupo: 'Documento CUT', rotulo: 'Archivo', ancho: 14, alinea: 'left', valor: (m) => campoDetalleExcel(m, 'Documento CUT', 'Archivo') },
+  { key: 'documentoCutSigla', grupo: 'Documento CUT', rotulo: 'Sigla', ancho: 12, alinea: 'left', valor: (m) => campoDetalleExcel(m, 'Documento CUT', 'Sigla') },
+  { key: 'descripcionDetallada', rotulo: 'Descripción detallada', ancho: 32, alinea: 'left', valor: (m) => construirDetalleRegistro(m).descripcionDetallada },
 ];
 
 /**
@@ -1189,7 +1186,7 @@ const COLUMNAS_REGISTRO: ColumnaRegistro[] = [
  * cabecera. Lleva las columnas visibles en la tabla (`columnasVisibles`): las de siempre, la cuenta bancaria y las que
  * la persona activó en «Más columnas». Sin ese dato, las predeterminadas.
  */
-export async function exportarRegistrosExcel(secuencias: string[], filtros: FiltroDescarga[], columnasVisibles?: string[]): Promise<void> {
+export async function exportarRegistrosExcel(movimientos: MovimientoLibretaRegistro[], filtros: FiltroDescarga[], columnasVisibles?: string[]): Promise<void> {
   const Workbook = await cargarWorkbook();
   const libro = new Workbook();
   resumenDescarga(libro, 'REGISTROS EXISTENTES', filtros, [10.7, 10.7, 10.7, 10.7, 10.7, 11.8]);
@@ -1219,9 +1216,7 @@ export async function exportarRegistrosExcel(secuencias: string[], filtros: Filt
     i = fin + 1;
   }
 
-  secuencias.forEach((sec, i) => {
-    const m = MOVIMIENTOS_LIBRETA_REGISTRO.find((x) => x.sec === sec);
-    if (!m) return;
+  movimientos.forEach((m, i) => {
     const f = i + 3;
     hoja.getRow(f).height = 25.5;
     columnas.forEach((col, c) => {

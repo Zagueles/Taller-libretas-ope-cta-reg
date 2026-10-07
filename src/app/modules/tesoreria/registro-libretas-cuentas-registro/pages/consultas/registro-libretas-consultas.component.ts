@@ -15,8 +15,8 @@ import {
   BENEFICIARIOS,
   CUENTAS_BANCARIAS_INFO,
   CUENTAS_BANCARIAS_REGISTRO,
+  CuentaRegistroCatalogo,
   ENTIDADES,
-  MOVIMIENTOS_LIBRETA_REGISTRO,
   MovimientoLibretaRegistro,
   TIPOS_OPERACION,
   UNIDADES_EJECUTORAS,
@@ -33,10 +33,6 @@ const COLUMNAS_MONEDA_EXTRANJERA = new Set(['tipoCotizacion', 'tipoCambioCompra'
 /** Prefijo de los montos en los KPI de la vista de gráficas, según la moneda de la cuenta bancaria de la pestaña activa. */
 const SIMBOLO_MONEDA: Record<'PEN' | 'USD', string> = { PEN: 'S/ ', USD: 'US$ ' };
 
-/** Cuentas de registro (FF/SUB FF) distintas entre los movimientos, para el filtro predeterminado. */
-const CUENTAS_REGISTRO_DISTINTAS = [...new Map(MOVIMIENTOS_LIBRETA_REGISTRO.map((m) => [m.numeroCuentaRegistro, m.descripcionCuentaRegistro])).entries()].map(
-  ([value, label]) => ({ value, label }),
-);
 import { exportarConsultaExcel } from '../../utils/registro-libretas-export.util';
 
 /** Beneficiario y Cuenta de registro van asociados: elegir cualquiera como nivel oculta los dos grupos de cabecera. */
@@ -54,16 +50,18 @@ const DETALLE_TIPO_OPERACION: Detalle = Object.fromEntries(
   }),
 );
 
-const DETALLE_CUENTA_REGISTRO: Detalle = Object.fromEntries(
-  MOVIMIENTOS_LIBRETA_REGISTRO.map((m) => [m.numeroCuentaRegistro, { title: m.descripcionCuentaRegistro, description: m.numeroCuentaRegistro }]),
-);
-
-const DETALLE_FF: Detalle = Object.fromEntries(
-  MOVIMIENTOS_LIBRETA_REGISTRO.map((m) => {
-    const [codigo, ...nombre] = m.ffSubFf.split(' ');
-    return [m.ffSubFf, { title: nombre.join(' '), description: codigo }];
-  }),
-);
+/** Las cards del nivel 1 de «Agregado» para la cuenta de registro y el FF/SUB FF, desde las cuentas de registro de la libreta. */
+function detallesDeCuentasRegistro(cuentas: CuentaRegistroCatalogo[]): { cuentaRegistro: Detalle; ff: Detalle } {
+  return {
+    cuentaRegistro: Object.fromEntries(cuentas.map((c) => [c.numero, { title: c.descripcion, description: c.numero }])),
+    ff: Object.fromEntries(
+      cuentas.map((c) => {
+        const [codigo, ...nombre] = c.ffSubFf.split(' ');
+        return [c.ffSubFf, { title: nombre.join(' '), description: codigo }];
+      }),
+    ),
+  };
+}
 
 const TITULO = 'Consultas y reportes de registro de operaciones en las libretas de las cuentas de registro';
 
@@ -111,6 +109,22 @@ export class RegistroLibretasConsultasComponent {
 
   private filasPorCuenta = new Map<string, MovimientoLibretaRegistro[]>();
 
+  constructor() {
+    // Las cuentas de registro de la libreta alimentan el filtro predeterminado y las cards del agregado.
+    this.api.listarCuentasRegistro().subscribe((cuentas) => {
+      const { cuentaRegistro, ff } = detallesDeCuentasRegistro(cuentas);
+      this.config.update((actual) => ({
+        ...actual,
+        advancedFilterFields: actual.advancedFilterFields?.map((campo) =>
+          campo.key === 'numeroCuentaRegistro' ? { ...campo, valueDetails: cuentaRegistro } : campo.key === 'ffSubFf' ? { ...campo, valueDetails: ff } : campo,
+        ),
+        presetFilters: actual.presetFilters?.map((filtro) =>
+          filtro.key === 'numeroCuentaRegistro' ? { ...filtro, options: cuentas.map((c) => ({ value: c.numero, label: c.descripcion })) } : filtro,
+        ),
+      }));
+    });
+  }
+
   readonly resultado = signal<QueryReportResult | null>(null);
   readonly cargando = signal(false);
   readonly preparandoExportacion = signal(false);
@@ -131,7 +145,7 @@ export class RegistroLibretasConsultasComponent {
     advancedFilterFields: [
       { key: 'fechaAcreditacion', label: 'Fecha de acreditación', type: 'date', groupable: true, groupableIn: ['agrupado'], hidesColumns: ['fecha'], groupLabelPrefix: 'Fecha' },
       { key: 'beneficiario', label: 'Beneficiario', groupable: true, groupLabelPrefix: 'Benef.', groupSubtitleColumn: 'cuentaRegistroResumen', hidesGroups: GRUPOS_ASOCIADOS, valueDetails: DETALLE_BENEFICIARIO },
-      { key: 'numeroCuentaRegistro', label: 'Cuenta de registro', groupable: true, groupLabelPrefix: 'CR', hidesGroups: GRUPOS_ASOCIADOS, valueDetails: DETALLE_CUENTA_REGISTRO },
+      { key: 'numeroCuentaRegistro', label: 'Cuenta de registro', groupable: true, groupLabelPrefix: 'CR', hidesGroups: GRUPOS_ASOCIADOS, valueDetails: {} },
       { key: 'tipoOperacion', label: 'Tipo de operación', groupable: true, groupLabelPrefix: 'Op.', hidesColumns: ['tipoOperacion'], valueDetails: DETALLE_TIPO_OPERACION },
       {
         key: 'entidad',
@@ -147,7 +161,7 @@ export class RegistroLibretasConsultasComponent {
         },
       },
       { key: 'unidadEjecutora', label: 'Unidad ejecutora', groupable: true, hierarchy: 2, hidesColumns: ['unidadEjecutora'], groupLabelPrefix: 'UE.' },
-      { key: 'ffSubFf', label: 'FF/Sub FF', groupable: true, groupLabelPrefix: 'FF', hidesColumns: ['ffSubFf'], valueDetails: DETALLE_FF },
+      { key: 'ffSubFf', label: 'FF/Sub FF', groupable: true, groupLabelPrefix: 'FF', hidesColumns: ['ffSubFf'], valueDetails: {} },
       { key: 'numeroDocumento', label: 'Documento' },
     ],
     groupAggregation: { runningBalance: { startColumn: 'saldoInicial', endColumn: 'saldoFinal' }, hiddenColumns: ['sec', 'fecha', 'tipoOperacion', 'entidad', 'unidadEjecutora', 'grupo', 'numeroDocumento', 'descripcionDocumento'] },
@@ -187,7 +201,7 @@ export class RegistroLibretasConsultasComponent {
     // Este reporte solo se exporta a Excel: CSV y PDF no distinguen los grupos de columnas de la tabla.
     exportFormats: ['excel'],
     presetFilters: [
-      { key: 'numeroCuentaRegistro', label: 'Cuenta de registro', options: CUENTAS_REGISTRO_DISTINTAS },
+      { key: 'numeroCuentaRegistro', label: 'Cuenta de registro', options: [] },
       { key: 'entidad', label: 'Entidad', options: ENTIDADES },
     ],
     /** Vista de gráficas (Figma nodo 6091:81845), con las filas que quedan tras buscar y filtrar en la vista de datos. */
@@ -232,21 +246,11 @@ export class RegistroLibretasConsultasComponent {
     const beneficiarios = (parametros['beneficiario'] as string[] | undefined) ?? [];
 
     this.cargando.set(true);
-    this.api.listarMovimientos().subscribe({
-      next: (movimientos) => {
-        const filtrados = movimientos.filter((m) => {
-          const dia = m.fecha.slice(0, 10);
-          return (
-            (!desde || dia >= desde)
-            && (!hasta || dia <= hasta)
-            && cuentasSeleccionadas.includes(m.cuentaBancariaId)
-            && (tiposOperacion.length === 0 || tiposOperacion.includes(m.tipoOperacionCodigo))
-            && (entidades.length === 0 || entidades.includes(m.entidad))
-            && (unidadesEjecutoras.length === 0 || unidadesEjecutoras.includes(m.unidadEjecutora))
-            && (beneficiarios.length === 0 || beneficiarios.includes(m.beneficiarioCodigo))
-          );
-        });
-
+    // El período, las cuentas y los demás filtros los resuelve el servidor.
+    this.api
+      .listarMovimientos({ desde, hasta, cuentasBancarias: cuentasSeleccionadas, tiposOperacion, entidades, unidadesEjecutoras, beneficiarios })
+      .subscribe({
+      next: (filtrados) => {
         const idsConPestana = cuentasSeleccionadas.length ? cuentasSeleccionadas : [...new Set(filtrados.map((m) => m.cuentaBancariaId))];
         const tabs: TabItem[] = idsConPestana.map((id) => ({ id, label: nombreCuentaBancaria(id) }));
 

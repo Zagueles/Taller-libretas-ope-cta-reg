@@ -1,5 +1,5 @@
 import { Location } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { DetailHistoryEntry, DetailHistoryTabsComponent } from '../../../../../shared/components/detail-history-tabs/detail-history-tabs.component';
@@ -23,7 +23,8 @@ import { SnackbarComponent } from '../../../../../shared/ui/snackbar/snackbar.co
 import { volverAlOrigen } from '../../../../../shared/utils/volver.util';
 import { buildProcessBreadcrumbs } from '../../../../../shared/utils/breadcrumbs.util';
 import { PROCESS_ID, PROCESS_ROUTE, REGISTRO_ROUTE } from '../../config/registro-libretas.rutas';
-import { DOCUMENTOS_RECHAZADOS, movimientosDeDocumento, nombreBeneficiario } from '../../models/registro-libretas.model';
+import { RegistroLibretasApiService } from '../../api/registro-libretas-api.service';
+import { DetalleDocumentoLibreta, nombreBeneficiario } from '../../models/registro-libretas.model';
 import { generarPdfDocumento } from '../../utils/registro-libretas-export.util';
 
 /** Descarga un Blob como archivo. */
@@ -258,7 +259,8 @@ const COLUMNAS: ReportTableColumn[] = [
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class RegistroLibretasDocumentoComponent {
+export class RegistroLibretasDocumentoComponent implements OnInit {
+  private readonly api = inject(RegistroLibretasApiService);
   private readonly ruta = inject(ActivatedRoute);
   private readonly location = inject(Location);
   private readonly router = inject(Router);
@@ -293,18 +295,26 @@ export class RegistroLibretasDocumentoComponent {
   readonly cuentaElegida = signal('mef-dgtp-cut');
   readonly busqueda = signal('');
   readonly preparandoDescarga = signal(false);
-  private readonly movimientos = computed(() => {
-    const numero = this.ruta.snapshot.paramMap.get('numero');
-    return movimientosDeDocumento(numero ?? '');
-  });
+  /** El documento con sus movimientos, tal como lo entrega el backend simulado. */
+  private readonly detalle = signal<DetalleDocumentoLibreta | null>(null);
+  private readonly movimientos = computed(() => this.detalle()?.movimientos ?? []);
+
+  ngOnInit(): void {
+    const numero = this.ruta.snapshot.paramMap.get('numero') ?? '';
+    this.api.obtenerDocumento(numero).subscribe({
+      next: (detalle) => this.detalle.set(detalle),
+      error: () => this.detalle.set(null),
+    });
+  }
 
   readonly documento = computed(() => {
+    const detalle = this.detalle();
     const primero = this.movimientos()[0];
-    if (!primero) return null;
-    const motivoRechazo = DOCUMENTOS_RECHAZADOS[primero.numeroDocumento] ?? '';
+    if (!detalle || !primero) return null;
+    const motivoRechazo = detalle.documento.motivoRechazo ?? '';
     return {
-      numero: primero.numeroDocumento,
-      estado: motivoRechazo ? ('Rechazado' as const) : ('Procesado' as const),
+      numero: detalle.documento.numero,
+      estado: detalle.documento.estado,
       motivoRechazo,
       fechaRegistro: `${fechaVisible(primero.fecha)}  18:01:00`,
       fechaProcesado: `${fechaVisible(primero.fecha)}  18:02:00`,
@@ -457,13 +467,13 @@ export class RegistroLibretasDocumentoComponent {
    *  PDF es casi instantáneo, así que se le pone un mínimo de tiempo visible para que alcance a leerse antes de que
    *  aparezca el diálogo «Guardar como» del navegador. */
   async descargar(): Promise<void> {
-    const numero = this.ruta.snapshot.paramMap.get('numero');
-    if (!numero) return;
+    const detalle = this.detalle();
+    if (!detalle) return;
     this.preparandoDescarga.set(true);
     try {
       const minimoVisible = new Promise((resuelve) => setTimeout(resuelve, 1200));
-      const [generado] = await Promise.all([generarPdfDocumento(numero), minimoVisible]);
-      if (generado) descargarArchivo(generado.blob, generado.nombre);
+      const [generado] = await Promise.all([generarPdfDocumento(detalle), minimoVisible]);
+      descargarArchivo(generado.blob, generado.nombre);
     } finally {
       this.preparandoDescarga.set(false);
     }

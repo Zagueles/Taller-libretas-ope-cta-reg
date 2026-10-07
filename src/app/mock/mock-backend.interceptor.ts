@@ -27,6 +27,7 @@ import {
   numeroConciliacion,
   numeroDocumento,
 } from './mock-db';
+import { cuentasRegistro, detalleDocumento, detalleMovimiento, filtrarMovimientos, listarDocumentos } from './libretas-backend';
 import { CONTRASENA_DEMO, USUARIOS_DEMO, UsuarioDemo, buscarUsuarioPorPerfil } from './usuarios-demo';
 
 /**
@@ -442,6 +443,39 @@ const cambiarEstado: Manejador = ({ req, datos, params, sesion }) => {
 const registrosCuentas: Manejador = ({ datos, sesion }) =>
   ok(datos.registros.filter((r) => !sesion || r.entidadSiglas === sesion.perfil.entidadSiglas));
 
+// ─── Registro de operaciones en las libretas de las cuentas de registro ───
+
+/** Una lista en la URL («a,b,c») → arreglo; sin parámetro, vacío (no filtra). */
+const lista = (query: URLSearchParams, clave: string): string[] => (query.get(clave) ?? '').split(',').filter(Boolean);
+
+const movimientosLibreta: Manejador = ({ datos, query }) =>
+  ok(
+    filtrarMovimientos(datos.libretas, {
+      desde: query.get('desde') ?? undefined,
+      hasta: query.get('hasta') ?? undefined,
+      cuentasBancarias: lista(query, 'cuentasBancarias'),
+      tiposOperacion: lista(query, 'tiposOperacion'),
+      entidades: lista(query, 'entidades'),
+      unidadesEjecutoras: lista(query, 'unidadesEjecutoras'),
+      beneficiarios: lista(query, 'beneficiarios'),
+    }),
+  );
+
+const documentosLibreta: Manejador = ({ datos, query }) =>
+  ok(listarDocumentos(datos.libretas, { estado: query.get('estado') ?? undefined, search: query.get('search') ?? undefined }));
+
+const documentoLibreta: Manejador = ({ datos, params }) => {
+  const detalle = detalleDocumento(datos.libretas, decodeURIComponent(params[0]));
+  return detalle ? ok(detalle) : error(404, 'El documento no existe.');
+};
+
+const registroLibreta: Manejador = ({ datos, params }) => {
+  const detalle = detalleMovimiento(datos.libretas, params[0]);
+  return detalle ? ok(detalle) : error(404, 'El registro no existe.');
+};
+
+const cuentasRegistroLibreta: Manejador = ({ datos }) => ok(cuentasRegistro(datos.libretas));
+
 // ─── Enrutador ─────────────────────────────────────────────────────
 
 const RUTAS: [string, RegExp, Manejador][] = [
@@ -471,6 +505,11 @@ const RUTAS: [string, RegExp, Manejador][] = [
   ['GET', /^\/solicitudes\/([^/]+)$/, detalleSolicitud],
   ['PATCH', /^\/solicitudes\/([^/]+)$/, actualizarSolicitud],
   ['GET', /^\/cuentas-bancarias$/, registrosCuentas],
+  ['GET', /^\/libretas\/movimientos$/, movimientosLibreta],
+  ['GET', /^\/libretas\/documentos$/, documentosLibreta],
+  ['GET', /^\/libretas\/documentos\/([^/]+)$/, documentoLibreta],
+  ['GET', /^\/libretas\/registros\/([^/]+)$/, registroLibreta],
+  ['GET', /^\/libretas\/cuentas-registro$/, cuentasRegistroLibreta],
 ];
 
 export const mockBackendInterceptor: HttpInterceptorFn = (req, next): Observable<HttpEvent<unknown>> => {
