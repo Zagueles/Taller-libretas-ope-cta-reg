@@ -67,7 +67,7 @@
         <siaf-conciliacion-registro-edicion [registro]="r" (cancelled)="registroEnEdicion.set(null)" (accepted)="aceptarEdicion($event)" />
       } @else {
         <siaf-solicitude-form-card title="Registros no conciliados">
-          @if (!elaborado()) {
+          @if (!soloLectura()) {
             <siaf-button card-actions variant="filled" icon="search" [iconOnly]="true" [disabled]="!cuenta()" ariaLabel="Buscar registros no conciliados" (click)="abrirRegistros()" />
           }
           @if (!registrosElegidos().length) {
