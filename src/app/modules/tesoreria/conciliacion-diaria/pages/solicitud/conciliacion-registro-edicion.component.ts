@@ -84,6 +84,18 @@ const formato = (valor: string | number): string => comoNumero(valor).toLocaleSt
         />
       </div>
 
+      @if (candidatos().length === 0) {
+        <!-- Sin operaciones: vista vacía con el botón (+) para volver a elegirlas (Figma 327:50141) -->
+        <div class="mt-siaf-md flex flex-col gap-siaf-xs">
+          <div class="flex min-h-10 items-center justify-between gap-siaf-md">
+            <h3 class="m-0 text-sm font-bold uppercase text-text">{{ origenLB ? 'Registro de operaciones bancarias' : 'Libro banco' }}</h3>
+            <siaf-button variant="filled" icon="add" [iconOnly]="true" ariaLabel="Seleccionar una opción" (click)="agregarOperaciones()" />
+          </div>
+          <div class="flex min-h-[49px] items-center rounded-siaf-md bg-[var(--sys-color-bg-surfaces-surface-low)] px-siaf-md py-siaf-sm">
+            <p class="m-0 text-sm text-[var(--sys-color-text-neutral-medium)]">Por favor, haga clic en el botón (+) para seleccionar una opción.</p>
+          </div>
+        </div>
+      } @else {
       <h3 class="m-0 mt-siaf-md text-sm font-bold uppercase text-text">{{ origenLB ? 'Registro de operaciones bancarias' : 'Libro banco' }}</h3>
       <siaf-alert [tone]="aviso().tono" [title]="aviso().titulo" [description]="aviso().descripcion" />
 
@@ -134,12 +146,11 @@ const formato = (valor: string | number): string => comoNumero(valor).toLocaleSt
                   </button>
                 </td>
               </tr>
-            } @empty {
-              <tr><td colspan="6" class="px-siaf-md py-siaf-lg text-center text-text-muted">No quedan operaciones para conciliar.</td></tr>
             }
           </tbody>
         </table>
       </div>
+      }
 
       <div class="flex flex-col gap-siaf-xs">
         <div class="flex min-h-10 items-center justify-between gap-siaf-md">
@@ -321,6 +332,11 @@ export class ConciliacionRegistroEdicionComponent implements OnChanges {
   cambiarCandidato(id: string, campo: 'debito' | 'credito', valor: string | number): void {
     this.candidatos.update((lista) => lista.map((c) => (c.id === id ? { ...c, [campo]: String(valor) } : c)));
     this.marcar(`${id}:${campo}`);
+  }
+
+  /** (+) de la vista vacía: vuelve a ofrecer las operaciones libres de la otra fuente. */
+  agregarOperaciones(): void {
+    this.candidatos.set(CANDIDATOS_BASE.map((c) => ({ ...c, debito: '', credito: '' })));
   }
 
   quitarCandidato(id: string): void {

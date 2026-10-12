@@ -21,6 +21,7 @@ import { SolicitudeInfoCardComponent, SolicitudeInfoField } from '../../../../..
 import { SolicitudePageLayoutComponent } from '../../../../../shared/components/solicitude-page-layout/solicitude-page-layout.component';
 import { TableControlsComponent } from '../../../../../shared/components/table-controls/table-controls.component';
 import { ActionTrackerComponent, ActionTrackerSummary } from '../../../../../shared/ui/action-tracker/action-tracker.component';
+import { AlertComponent } from '../../../../../shared/ui/alert/alert.component';
 import { ButtonComponent } from '../../../../../shared/ui/button/button.component';
 import { DocumentSummaryCardComponent } from '../../../../../shared/ui/document-summary-card/document-summary-card.component';
 import { FlowStatus } from '../../../../../shared/ui/flow-status-tag/flow-status-tag.component';
@@ -44,6 +45,16 @@ import {
   RegistroNoConciliado,
 } from '../../models/conciliacion-diaria.model';
 import { ConciliacionRegistroEdicionComponent } from './conciliacion-registro-edicion.component';
+
+/** Título y detalle de la alerta de «Verificar» según el motivo por el que el registro no concilió (Figma 327:50131). */
+const textoAlertaMotivo = (motivo: string): { titulo: string; descripcion: string } => {
+  switch (motivo) {
+    case 'No existe OBO': return { titulo: 'Falta agregar OBO', descripcion: 'Ingrese el débito y el crédito de la operación bancaria para conciliar.' };
+    case 'No existe RR': return { titulo: 'Falta agregar RR', descripcion: 'Ingrese el débito y el crédito del RR para conciliar.' };
+    case 'Montos diferentes': return { titulo: 'Montos diferentes', descripcion: 'Ajuste las operaciones bancarias para que sumen el mismo monto del Libro Banco.' };
+    default: return { titulo: 'Registro sin conciliar', descripcion: 'Complete la conciliación del registro.' };
+  }
+};
 
 const ENTE_RECTOR = 'DIRECCIÓN GENERAL DEL TESORO PÚBLICO';
 
@@ -71,6 +82,7 @@ const fechaHora = (iso: string): string => {
   standalone: true,
   imports: [
     ActionTrackerComponent,
+    AlertComponent,
     ButtonComponent,
     ConciliacionRegistroEdicionComponent,
     ConciliacionRegistrosTablaComponent,
@@ -259,6 +271,16 @@ export class ConciliacionDiariaSolicitudComponent implements OnInit {
   // ── Modales y avisos ──────────────────────────────────────────────
   readonly modalGrabar = signal(false);
   readonly modalVerificar = signal(false);
+  /** Se activó «Verificar» con registros sin conciliar: las alertas se mantienen y se actualizan mientras se corrigen (Figma 327:49127). */
+  readonly verificacionFallida = signal(false);
+  readonly alertasVerificacion = computed(() => {
+    if (!this.verificacionFallida()) return [];
+    const grupos = new Map<string, string[]>();
+    for (const r of this.registrosElegidos().filter((x) => !x.conciliado)) {
+      grupos.set(r.motivo, [...(grupos.get(r.motivo) ?? []), r.nro]);
+    }
+    return [...grupos].map(([motivo, nros]) => ({ ...textoAlertaMotivo(motivo), nros: nros.join(', '), plural: nros.length > 1 }));
+  });
   readonly modalEliminar = signal(false);
   readonly modalAprobar = signal(false);
   readonly modalObservar = signal(false);
@@ -416,6 +438,13 @@ export class ConciliacionDiariaSolicitudComponent implements OnInit {
   }
 
   // ── Acciones de estado ────────────────────────────────────────────
+  /** «Verificar»: si queda algún registro sin conciliar lo informa con alertas; si no, pide la confirmación. */
+  onVerificar(): void {
+    const pendientes = this.registrosElegidos().some((r) => !r.conciliado);
+    this.verificacionFallida.set(pendientes);
+    if (!pendientes) this.modalVerificar.set(true);
+  }
+
   onConfirmarVerificar(): void {
     this.modalVerificar.set(false);
     this.accion((id) => this.solicitudesApi.cambiarEstado(id, { estadoNuevo: 'VERIFICADO' }), 'creation-verified');
@@ -492,5 +521,6 @@ export class ConciliacionDiariaSolicitudComponent implements OnInit {
     this.registrosElegidos.set(detalle?.registros.map((r) => ({ ...r })) ?? []);
     this.registroEnEdicion.set(null);
     this.marcados.set([]);
+    this.verificacionFallida.set(false);
   }
 }

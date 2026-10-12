@@ -15,7 +15,7 @@
     (canceled)="regresar()"
     (saved)="modalGrabar.set(true)"
     (edited)="editar()"
-    (verified)="modalVerificar.set(true)"
+    (verified)="onVerificar()"
     (deleted)="modalEliminar.set(true)"
     (approved)="abrirAprobar()"
     (observed)="abrirObservar()"
@@ -30,6 +30,9 @@
         </div>
       </div>
     } @else {
+      @for (a of alertasVerificacion(); track a.titulo) {
+        <siaf-alert tone="warning" [title]="a.titulo" [description]="a.descripcion + (a.plural ? ' Registros N° ' : ' Registro N° ') + a.nros + '.'" />
+      }
       @if (elaborado()) {
         <section class="grid gap-siaf-md lg:grid-cols-[1fr_360px]">
           <siaf-solicitude-info-card [fields]="camposEntidad()" />

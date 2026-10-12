@@ -40,4 +40,21 @@ describe('ConciliacionDiariaSolicitudComponent', () => {
     c.registroEnEdicion.set(c.registrosElegidos()[0]);
     expect(c.formValido()).withContext('con un registro a medio editar').toBeFalse();
   });
+
+  it('«Verificar» con registros sin conciliar informa con alertas por motivo y no abre la confirmación', () => {
+    const c = crear();
+    c.registrosElegidos.set(REGISTROS_NO_CONCILIADOS.map((r) => ({ ...r })));
+
+    c.onVerificar();
+
+    expect(c.modalVerificar()).toBeFalse();
+    expect(c.alertasVerificacion().map((a) => a.titulo)).toEqual(['Falta agregar OBO', 'Montos diferentes', 'Falta agregar RR']);
+    expect(c.alertasVerificacion()[0].nros).toBe('4, 2');
+
+    // Al conciliar los registros, las alertas desaparecen y se pide la confirmación.
+    c.registrosElegidos.update((l) => l.map((r) => ({ ...r, conciliado: true })));
+    expect(c.alertasVerificacion()).toEqual([]);
+    c.onVerificar();
+    expect(c.modalVerificar()).toBeTrue();
+  });
 });

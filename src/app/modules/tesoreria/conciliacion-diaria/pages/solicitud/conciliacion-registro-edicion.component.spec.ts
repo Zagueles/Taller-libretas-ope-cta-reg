@@ -99,4 +99,20 @@ describe('ConciliacionRegistroEdicionComponent', () => {
     c.quitarSustento(0);
     expect(c.sustentos()).toEqual([]);
   });
+
+  it('sin operaciones muestra la vista vacía y el (+) las vuelve a ofrecer', () => {
+    const fixture = TestBed.createComponent(ConciliacionRegistroEdicionComponent);
+    fixture.componentRef.setInput('registro', REGISTROS_NO_CONCILIADOS[0]);
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+    c.candidatos().forEach((o) => c.quitarCandidato(o.id));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('haga clic en el botón (+) para seleccionar una opción');
+    expect(fixture.nativeElement.querySelector('table')).toBeNull();
+
+    c.agregarOperaciones();
+    fixture.detectChanges();
+    expect(c.candidatos().length).toBeGreaterThan(0);
+    expect(fixture.nativeElement.textContent).not.toContain('haga clic en el botón (+)');
+  });
 });
