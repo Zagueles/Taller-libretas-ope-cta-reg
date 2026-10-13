@@ -46,13 +46,18 @@ import {
 } from '../../models/conciliacion-diaria.model';
 import { ConciliacionRegistroEdicionComponent } from './conciliacion-registro-edicion.component';
 
-/** Título y detalle de la alerta de «Verificar» según el motivo por el que el registro no concilió (Figma 327:50131). */
-const textoAlertaMotivo = (motivo: string): { titulo: string; descripcion: string } => {
-  switch (motivo) {
-    case 'No existe OBO': return { titulo: 'Falta agregar OBO', descripcion: 'Ingrese el débito y el crédito de la operación bancaria para conciliar.' };
-    case 'No existe RR': return { titulo: 'Falta agregar RR', descripcion: 'Ingrese el débito y el crédito del RR para conciliar.' };
-    case 'Montos diferentes': return { titulo: 'Montos diferentes', descripcion: 'Ajuste las operaciones bancarias para que sumen el mismo monto del Libro Banco.' };
-    default: return { titulo: 'Registro sin conciliar', descripcion: 'Complete la conciliación del registro.' };
+const montoSoles = (valor: string): number => Number(valor.replace(/,/g, '')) || 0;
+const soles = (valor: number): string => `S/ ${valor.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+/** Una línea de la alerta de «Verificar»: qué le falta al registro y qué hacer (Figma 327:49127). */
+const lineaVerificacion = (r: RegistroNoConciliado): string => {
+  const lb = montoSoles(r.lbDebito) + montoSoles(r.lbCredito);
+  const rb = montoSoles(r.rbDebito) + montoSoles(r.rbCredito);
+  switch (r.motivo) {
+    case 'No existe OBO': return `Registro ${r.nro}: No existe operación bancaria, seleccione la operación que corresponde al RR ${r.lbNumero} por ${soles(lb)}.`;
+    case 'No existe RR': return `Registro ${r.nro}: No existe Reporte de Recaudación, seleccione el RR que corresponde a la operación ${r.rbNumero} por ${soles(rb)}.`;
+    case 'Montos diferentes': return `Registro ${r.nro}: Montos diferentes, falta conciliar ${soles(Math.abs(lb - rb))}. Ajuste las operaciones bancarias.`;
+    default: return `Registro ${r.nro}: Complete la conciliación del registro.`;
   }
 };
 
@@ -273,13 +278,10 @@ export class ConciliacionDiariaSolicitudComponent implements OnInit {
   readonly modalVerificar = signal(false);
   /** Se activó «Verificar» con registros sin conciliar: las alertas se mantienen y se actualizan mientras se corrigen (Figma 327:49127). */
   readonly verificacionFallida = signal(false);
-  readonly alertasVerificacion = computed(() => {
-    if (!this.verificacionFallida()) return [];
-    const grupos = new Map<string, string[]>();
-    for (const r of this.registrosElegidos().filter((x) => !x.conciliado)) {
-      grupos.set(r.motivo, [...(grupos.get(r.motivo) ?? []), r.nro]);
-    }
-    return [...grupos].map(([motivo, nros]) => ({ ...textoAlertaMotivo(motivo), nros: nros.join(', '), plural: nros.length > 1 }));
+  /** Un solo aviso de error con una línea por cada registro pendiente. */
+  readonly alertaVerificacion = computed(() => {
+    const pendientes = this.verificacionFallida() ? this.registrosElegidos().filter((r) => !r.conciliado) : [];
+    return pendientes.length ? { titulo: 'No se pudo verificar el documento', descripcion: pendientes.map(lineaVerificacion).join('\n') } : null;
   });
   readonly modalEliminar = signal(false);
   readonly modalAprobar = signal(false);

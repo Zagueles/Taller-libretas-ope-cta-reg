@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, Out
 import { SolicitudeFormCardComponent } from '../../../../../shared/components/solicitude-form-card/solicitude-form-card.component';
 import { AlertComponent } from '../../../../../shared/ui/alert/alert.component';
 import { ButtonComponent } from '../../../../../shared/ui/button/button.component';
+import { DateTimePickerComponent } from '../../../../../shared/ui/date-time-picker/date-time-picker.component';
 import { IconComponent } from '../../../../../shared/ui/icon/icon.component';
 import { TextAreaControlComponent } from '../../../../../shared/ui/text-area-control/text-area-control.component';
 import { TextFieldComponent } from '../../../../../shared/ui/text-field/text-field.component';
@@ -16,7 +17,10 @@ interface SustentoEnEdicion extends SustentoRegistro {
   archivo?: File;
 }
 
-/** Una operación de la otra fuente (OBO o libro banco) con la que se concilia: su débito y crédito se ingresan en línea. */
+/**
+ * Una operación de la otra fuente (OBO o libro banco) con la que se concilia. La primera repite fecha, número y descripción
+ * del registro de origen; las siguientes son otras operaciones: su fecha y número se editan (la descripción no).
+ */
 interface Candidato {
   id: string;
   fecha: string;
@@ -24,12 +28,11 @@ interface Candidato {
   descripcion: string;
   debito: string;
   credito: string;
+  /** Fecha y número se capturan (operaciones agregadas después de la primera). */
+  editable: boolean;
+  /** Fecha y hora elegidas (aaaa-mm-ddThh:mm:ss) de una operación editable. */
+  fechaIso: string;
 }
-
-const CANDIDATOS_BASE: Omit<Candidato, 'debito' | 'credito'>[] = [
-  { id: 'c1', fecha: '01/12/2025 10:00:13', numero: '02698149', descripcion: 'Reporte de Recaudación' },
-  { id: 'c2', fecha: '01/12/2025 11:00:13', numero: '02698150', descripcion: 'Reporte de Recaudación' },
-];
 
 const comoNumero = (valor: string | number): number => Number(String(valor).replace(/,/g, ''));
 const valido = (valor: string | number): boolean => String(valor).trim() !== '' && Number.isFinite(comoNumero(valor));
@@ -44,7 +47,7 @@ const formato = (valor: string | number): string => comoNumero(valor).toLocaleSt
 @Component({
   selector: 'siaf-conciliacion-registro-edicion',
   standalone: true,
-  imports: [AlertComponent, ButtonComponent, IconComponent, SolicitudeFormCardComponent, TextAreaControlComponent, TextFieldComponent, UploadSideNavComponent, UploadedFileCardComponent],
+  imports: [AlertComponent, ButtonComponent, DateTimePickerComponent, IconComponent, SolicitudeFormCardComponent, TextAreaControlComponent, TextFieldComponent, UploadSideNavComponent, UploadedFileCardComponent],
   template: `
     <siaf-solicitude-form-card title="Editar registro no conciliado">
       <div card-actions class="flex items-center gap-siaf-xs">
@@ -84,72 +87,84 @@ const formato = (valor: string | number): string => comoNumero(valor).toLocaleSt
         />
       </div>
 
+      <div class="mt-siaf-md flex min-h-10 items-center justify-between gap-siaf-md">
+        <h3 class="m-0 text-sm font-bold uppercase text-text">{{ origenLB ? 'Registro de operaciones bancarias' : 'Libro banco' }}</h3>
+        <siaf-button variant="filled" icon="add" [iconOnly]="true" ariaLabel="Agregar operación" (click)="agregarOperacion()" />
+      </div>
       @if (candidatos().length === 0) {
-        <!-- Sin operaciones: vista vacía con el botón (+) para volver a elegirlas (Figma 327:50141) -->
-        <div class="mt-siaf-md flex flex-col gap-siaf-xs">
-          <div class="flex min-h-10 items-center justify-between gap-siaf-md">
-            <h3 class="m-0 text-sm font-bold uppercase text-text">{{ origenLB ? 'Registro de operaciones bancarias' : 'Libro banco' }}</h3>
-            <siaf-button variant="filled" icon="add" [iconOnly]="true" ariaLabel="Seleccionar una opción" (click)="agregarOperaciones()" />
-          </div>
-          <div class="flex min-h-[49px] items-center rounded-siaf-md bg-[var(--sys-color-bg-surfaces-surface-low)] px-siaf-md py-siaf-sm">
-            <p class="m-0 text-sm text-[var(--sys-color-text-neutral-medium)]">Por favor, haga clic en el botón (+) para seleccionar una opción.</p>
-          </div>
+        <!-- Sin operaciones: vista vacía (Figma 327:50141) -->
+        <div class="flex min-h-[49px] items-center rounded-siaf-md bg-[var(--sys-color-bg-surfaces-surface-low)] px-siaf-md py-siaf-sm">
+          <p class="m-0 text-sm text-[var(--sys-color-text-neutral-medium)]">Por favor, haga clic en el botón (+) para seleccionar una opción.</p>
         </div>
       } @else {
-      <h3 class="m-0 mt-siaf-md text-sm font-bold uppercase text-text">{{ origenLB ? 'Registro de operaciones bancarias' : 'Libro banco' }}</h3>
-      <siaf-alert [tone]="aviso().tono" [title]="aviso().titulo" [description]="aviso().descripcion" />
+        @if (aviso(); as a) {
+          <siaf-alert tone="success" [title]="a.titulo" [description]="a.descripcion" />
+        }
 
-      <div class="overflow-x-auto">
-        <table class="w-full min-w-[820px] border-collapse text-left text-sm">
-          <thead>
-            <tr class="h-10 bg-[var(--sys-color-bg-surfaces-surface-high)] text-xs font-bold uppercase text-text">
-              <th class="rounded-tl-siaf-sm px-siaf-md">{{ origenLB ? 'F. operación B.' : 'F. operación' }}</th>
-              <th class="px-siaf-md">Número</th>
-              <th class="px-siaf-md">Descripción</th>
-              <th class="w-[240px] px-siaf-md">Débito (S/)</th>
-              <th class="w-[240px] px-siaf-md">Crédito (S/)</th>
-              <th class="w-12 rounded-tr-siaf-sm"></th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (c of candidatos(); track c.id) {
-              <tr class="border-b border-[var(--sys-color-divider-default)] align-top text-[var(--sys-color-text-neutral-medium)]">
-                <td class="px-siaf-md py-siaf-sm">{{ c.fecha }}</td>
-                <td class="px-siaf-md py-siaf-sm">{{ c.numero }}</td>
-                <td class="px-siaf-md py-siaf-sm">{{ c.descripcion }}</td>
-                <td class="px-siaf-md py-siaf-sm">
-                  <siaf-input
-                    placeholder="Ingresar débito"
-                    type="decimal"
-                    [value]="c.debito"
-                    [error]="error(c.id + ':debito', c.debito)"
-                    (valueChange)="cambiarCandidato(c.id, 'debito', $any($event))"
-                  />
-                </td>
-                <td class="px-siaf-md py-siaf-sm">
-                  <siaf-input
-                    placeholder="Ingresar crédito"
-                    type="decimal"
-                    [value]="c.credito"
-                    [error]="error(c.id + ':credito', c.credito)"
-                    (valueChange)="cambiarCandidato(c.id, 'credito', $any($event))"
-                  />
-                </td>
-                <td class="px-siaf-sm py-siaf-sm">
-                  <button
-                    class="inline-flex size-10 items-center justify-center rounded-siaf-md text-text transition hover:bg-surface-muted"
-                    type="button"
-                    [attr.aria-label]="'Quitar la operación ' + c.numero"
-                    (click)="quitarCandidato(c.id)"
-                  >
-                    <siaf-icon name="delete" [size]="24" />
-                  </button>
-                </td>
+        <!-- Sin desplazamiento interno en pantallas anchas: así el calendario del selector no queda recortado -->
+        <div class="max-xl:overflow-x-auto">
+          <table class="w-full min-w-[980px] border-collapse text-left text-sm">
+            <thead>
+              <tr class="h-10 bg-[var(--sys-color-bg-surfaces-surface-high)] text-xs font-bold uppercase text-text">
+                <th class="w-[220px] rounded-tl-siaf-sm px-siaf-md">{{ origenLB ? 'F. operación B.' : 'F. operación' }}</th>
+                <th class="w-[160px] px-siaf-md">Número</th>
+                <th class="px-siaf-md">Descripción</th>
+                <th class="w-[220px] px-siaf-md">Débito (S/)</th>
+                <th class="w-[220px] px-siaf-md">Crédito (S/)</th>
+                <th class="w-12 rounded-tr-siaf-sm"></th>
               </tr>
-            }
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              @for (c of candidatos(); track c.id) {
+                <tr class="border-b border-[var(--sys-color-divider-default)] align-top text-[var(--sys-color-text-neutral-medium)]">
+                  <td class="px-siaf-sm py-siaf-sm">
+                    @if (c.editable) {
+                      <siaf-date-time-picker variant="datetime" placeholder="Seleccionar fecha" [defaultToToday]="false" [value]="c.fechaIso" (valueChange)="cambiarFecha(c.id, $event)" />
+                    } @else {
+                      <siaf-input [value]="c.fecha" [disabled]="true" trailingIcon="calendar_today" />
+                    }
+                  </td>
+                  <td class="px-siaf-sm py-siaf-sm">
+                    @if (c.editable) {
+                      <siaf-input placeholder="Ingresar" [value]="c.numero" (valueChange)="cambiarCandidato(c.id, 'numero', $any($event))" />
+                    } @else {
+                      <siaf-input [value]="c.numero" [disabled]="true" />
+                    }
+                  </td>
+                  <td class="px-siaf-sm py-siaf-sm"><siaf-input [value]="c.descripcion" [disabled]="true" /></td>
+                  <td class="px-siaf-sm py-siaf-sm">
+                    <siaf-input
+                      placeholder="Ingresar débito"
+                      type="decimal"
+                      [value]="c.debito"
+                      [error]="error(c.id + ':debito', c.debito)"
+                      (valueChange)="cambiarCandidato(c.id, 'debito', $any($event))"
+                    />
+                  </td>
+                  <td class="px-siaf-sm py-siaf-sm">
+                    <siaf-input
+                      placeholder="Ingresar crédito"
+                      type="decimal"
+                      [value]="c.credito"
+                      [error]="error(c.id + ':credito', c.credito)"
+                      (valueChange)="cambiarCandidato(c.id, 'credito', $any($event))"
+                    />
+                  </td>
+                  <td class="px-siaf-sm py-siaf-sm">
+                    <button
+                      class="inline-flex size-10 items-center justify-center rounded-siaf-md text-text transition hover:bg-surface-muted"
+                      type="button"
+                      [attr.aria-label]="'Quitar la operación ' + (c.numero || 'sin número')"
+                      (click)="quitarCandidato(c.id)"
+                    >
+                      <siaf-icon name="delete" [size]="24" />
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
       }
 
       <div class="flex flex-col gap-siaf-xs">
@@ -245,6 +260,7 @@ export class ConciliacionRegistroEdicionComponent implements OnChanges {
   readonly debito = signal('');
   readonly credito = signal('');
   readonly candidatos = signal<Candidato[]>([]);
+  private secuencia = 0;
   readonly tocados = signal<ReadonlySet<string>>(new Set());
   /** Documentos de sustento del registro; el de `reemplazo` se cambia al subir uno nuevo. */
   readonly sustentos = signal<SustentoEnEdicion[]>([]);
@@ -272,7 +288,7 @@ export class ConciliacionRegistroEdicionComponent implements OnChanges {
       valido(this.debito()) &&
       valido(this.credito()) &&
       this.candidatos().length > 0 &&
-      this.candidatos().every((c) => valido(c.debito) && valido(c.credito)) &&
+      this.candidatos().every((c) => valido(c.debito) && valido(c.credito) && c.fecha !== '' && c.numero.trim() !== '') &&
       this.sustentos().length > 0 &&
       cumpleMinimoTextoLibre(this.justificacion()),
   );
@@ -283,23 +299,16 @@ export class ConciliacionRegistroEdicionComponent implements OnChanges {
   private readonly sumaCandidatos = computed(() => this.candidatos().reduce((total, c) => total + comoNumero(c.debito || 0) + comoNumero(c.credito || 0), 0));
 
   /**
-   * Aviso de la sección de la otra fuente: amarillo mientras falte conciliar y verde cuando las operaciones ingresadas
-   * están completas y suman el monto del registro de origen.
+   * Aviso de éxito de la sección de la otra fuente cuando las operaciones ingresadas están completas y suman el monto del
+   * registro de origen. Lo que falte no se advierte aquí: lo informa «Verificar» del documento.
    */
-  readonly aviso = computed<{ tono: 'warning' | 'success'; titulo: string; descripcion: string }>(() => {
-    const base = formato(this.montoBase());
+  readonly aviso = computed<{ titulo: string; descripcion: string } | null>(() => {
     const completas = this.candidatos().length > 0 && this.candidatos().every((c) => valido(c.debito) && valido(c.credito));
-    const coincide = completas && Math.abs(this.sumaCandidatos() - this.montoBase()) < 0.005;
+    if (!completas || Math.abs(this.sumaCandidatos() - this.montoBase()) >= 0.005) return null;
     const suma = formato(this.sumaCandidatos());
-    if (this.origenLB) {
-      if (coincide) return { tono: 'success', titulo: 'Registro de operación bancarias', descripcion: `La operación(es) bancaria(s) suman S/ ${suma} y coinciden con el Libro Banco.` };
-      if (this.registro.motivo === 'Montos diferentes') {
-        return { tono: 'warning', titulo: 'Montos diferentes', descripcion: `El Libro Banco registra S/ ${base}: ajuste las operaciones bancarias para que sumen el mismo monto.` };
-      }
-      return { tono: 'warning', titulo: 'No existe operación bancaria', descripcion: `Busque y registre la operación bancaria que corresponde al RR por S/ ${base}.` };
-    }
-    if (coincide) return { tono: 'success', titulo: 'Libro Banco', descripcion: `El RR suma S/ ${suma} y coincide con la operación bancaria.` };
-    return { tono: 'warning', titulo: 'No existe RR', descripcion: `Busque y registre el RR que corresponde a la operación bancaria por S/ ${base}.` };
+    return this.origenLB
+      ? { titulo: 'Registro de operación bancarias', descripcion: `La operación(es) bancaria(s) suman S/ ${suma} y coinciden con el Libro Banco.` }
+      : { titulo: 'Libro Banco', descripcion: `El RR suma S/ ${suma} y coincide con la operación bancaria.` };
   });
 
   ngOnChanges(): void {
@@ -307,11 +316,12 @@ export class ConciliacionRegistroEdicionComponent implements OnChanges {
     this.origenLB = !!r.lbNumero;
     this.debito.set(this.origenLB ? r.lbDebito : r.rbDebito);
     this.credito.set(this.origenLB ? r.lbCredito : r.rbCredito);
-    // «Montos diferentes»: la otra fuente ya existe y viene precargada; en los demás motivos, se ofrecen sus operaciones libres.
+    // «Montos diferentes»: la otra fuente ya existe y viene precargada; si falta (no existe OBO o RR), la sección arranca
+    // vacía y cada (+) agrega una operación.
     this.candidatos.set(
       this.origenLB && r.rbNumero
-        ? [{ id: 'c0', fecha: r.rbFecha, numero: r.rbNumero, descripcion: r.rbDescripcion, debito: r.rbDebito, credito: r.rbCredito }]
-        : CANDIDATOS_BASE.map((c) => ({ ...c, debito: '', credito: '' })),
+        ? [{ id: 'c0', fecha: r.rbFecha, numero: r.rbNumero, descripcion: r.rbDescripcion, debito: r.rbDebito, credito: r.rbCredito, editable: false, fechaIso: '' }]
+        : [],
     );
     this.sustentos.set((r.sustentos ?? []).map((d) => ({ ...d })));
     this.reemplazando.set(null);
@@ -329,14 +339,30 @@ export class ConciliacionRegistroEdicionComponent implements OnChanges {
     this.marcar(campo);
   }
 
-  cambiarCandidato(id: string, campo: 'debito' | 'credito', valor: string | number): void {
+  cambiarCandidato(id: string, campo: 'debito' | 'credito' | 'numero', valor: string | number): void {
     this.candidatos.update((lista) => lista.map((c) => (c.id === id ? { ...c, [campo]: String(valor) } : c)));
     this.marcar(`${id}:${campo}`);
   }
 
-  /** (+) de la vista vacía: vuelve a ofrecer las operaciones libres de la otra fuente. */
-  agregarOperaciones(): void {
-    this.candidatos.set(CANDIDATOS_BASE.map((c) => ({ ...c, debito: '', credito: '' })));
+  /**
+   * (+): agrega una sola operación. La primera repite la fecha, el número y la descripción del registro de origen; las
+   * siguientes son otras operaciones y su fecha y número se capturan (la descripción se mantiene).
+   */
+  agregarOperacion(): void {
+    const lista = this.candidatos();
+    const base = this.base();
+    const id = `c${++this.secuencia}`;
+    const nueva: Candidato = lista.length === 0
+      ? { id, fecha: base.fecha, numero: base.numero, descripcion: base.descripcion, debito: '', credito: '', editable: false, fechaIso: '' }
+      : { id, fecha: '', numero: '', descripcion: base.descripcion, debito: '', credito: '', editable: true, fechaIso: '' };
+    this.candidatos.set([...lista, nueva]);
+  }
+
+  /** Fecha y hora elegidas de una operación editable (aaaa-mm-ddThh:mm:ss): se muestran como dd/mm/aaaa hh:mm:ss. */
+  cambiarFecha(id: string, valor: string): void {
+    const [dia, hora = '00:00:00'] = valor.split('T');
+    const [a, m, d] = dia.split('-');
+    this.candidatos.update((lista) => lista.map((c) => (c.id === id ? { ...c, fechaIso: valor, fecha: valor ? `${d}/${m}/${a} ${hora}` : '' } : c)));
   }
 
   quitarCandidato(id: string): void {
@@ -383,7 +409,8 @@ export class ConciliacionRegistroEdicionComponent implements OnChanges {
     const otro = this.candidatos()[0];
     const propio = { debito: formato(this.debito()), credito: formato(this.credito()) };
     const extra = { sustentos: this.sustentos().map(({ tipo, nombre, tamano }) => ({ tipo, nombre, tamano })), justificacion: this.justificacion() };
-    const contraparte = { fecha: otro.fecha, numero: otro.numero, descripcion: otro.descripcion, debito: formato(otro.debito), credito: formato(otro.credito) };
+    const suma = (campo: 'debito' | 'credito'): string => formato(this.candidatos().reduce((total, c) => total + comoNumero(c[campo]), 0));
+    const contraparte = { fecha: otro.fecha, numero: otro.numero, descripcion: otro.descripcion, debito: suma('debito'), credito: suma('credito') };
     this.accepted.emit(
       this.origenLB
         ? { ...r, lbDebito: propio.debito, lbCredito: propio.credito, rbFecha: contraparte.fecha, rbNumero: contraparte.numero, rbDescripcion: contraparte.descripcion, rbDebito: contraparte.debito, rbCredito: contraparte.credito, motivo: '-', conciliado: true, ...extra }

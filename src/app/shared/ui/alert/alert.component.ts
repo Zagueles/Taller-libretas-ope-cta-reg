@@ -7,7 +7,8 @@ export type AlertTone = 'neutral' | 'info' | 'success' | 'warning' | 'error';
 /**
  * Mensaje de feedback en línea, con tono (neutral/info/éxito/advertencia/error), ícono y cierre opcional.
  * El título, el ícono y la × se apagan por separado (`title` vacío, `leadingIcon`, `showClose`); con varias líneas
- * de texto, el ícono y la × quedan arriba, a la altura del título.
+ * de texto, el ícono y la × quedan arriba, a la altura del título. La descripción respeta los saltos de línea (`\n`):
+ * sirve para listar varios motivos en un solo aviso.
  *
  * Usarlo para avisos fijos dentro de una pantalla o formulario. Para confirmaciones de acciones de
  * solicitud (aprobar, observar, rechazar) el canónico es `siaf-request-approval-modals` con su snackbar.
@@ -76,7 +77,7 @@ export type AlertTone = 'neutral' | 'info' | 'success' | 'warning' | 'error';
             <span class="text-sm font-bold leading-[normal] tracking-[-0.02px]">{{ title }}</span>
           }
           @if (description) {
-            <span class="text-xs font-normal leading-[normal]">{{ description }}</span>
+            <span class="whitespace-pre-line text-xs font-normal leading-[normal]">{{ description }}</span>
           }
           <ng-content />
         </div>

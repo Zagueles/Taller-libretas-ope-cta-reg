@@ -69,7 +69,7 @@ import { RegistroNoConciliado } from '../models/conciliacion-diaria.model';
               <td class="px-siaf-md py-siaf-sm text-right">{{ r.rbCredito }}</td>
               <td class="px-siaf-md py-siaf-sm">{{ r.motivo }}</td>
               <td class="px-siaf-md py-siaf-sm">
-                <siaf-status-tag [tone]="r.conciliado ? 'success' : 'default'" appearance="soft" size="small">{{ r.conciliado ? 'Conciliado' : 'No conciliado' }}</siaf-status-tag>
+                <siaf-status-tag [tone]="r.conciliado && aprobado ? 'success' : 'default'" appearance="soft" size="small">{{ r.conciliado && aprobado ? 'Conciliado' : 'No conciliado' }}</siaf-status-tag>
               </td>
             </tr>
           } @empty {
@@ -84,6 +84,11 @@ import { RegistroNoConciliado } from '../models/conciliacion-diaria.model';
 export class ConciliacionRegistrosTablaComponent {
   @Input() rows: RegistroNoConciliado[] = [];
   /** Agrega la columna de casillas. */
+  /**
+   * El estado pasa a «Conciliado» solo cuando el documento está aprobado: mientras el aprobador no lo apruebe, el registro
+   * ya trabajado sigue como «No conciliado».
+   */
+  @Input() aprobado = false;
   @Input() selectable = false;
   @Input() selectedIds: readonly string[] = [];
 

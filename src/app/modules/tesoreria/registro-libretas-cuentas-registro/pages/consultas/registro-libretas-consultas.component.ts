@@ -64,7 +64,7 @@ function detallesDeCuentasRegistro(cuentas: CuentaRegistroCatalogo[]): { cuentaR
   };
 }
 
-const TITULO = 'Consultas y reportes de registro de operaciones en las libretas de las cuentas de registro';
+const TITULO = 'Consulta y reporte de operaciones en las libretas de las cuentas de registro';
 
 const formatoMonto = new Intl.NumberFormat('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const monto = (valor: number): string => formatoMonto.format(valor);

@@ -30,8 +30,8 @@
         </div>
       </div>
     } @else {
-      @for (a of alertasVerificacion(); track a.titulo) {
-        <siaf-alert tone="warning" [title]="a.titulo" [description]="a.descripcion + (a.plural ? ' Registros N° ' : ' Registro N° ') + a.nros + '.'" />
+      @if (alertaVerificacion(); as a) {
+        <siaf-alert tone="error" [title]="a.titulo" [description]="a.descripcion" />
       }
       @if (elaborado()) {
         <section class="grid gap-siaf-md lg:grid-cols-[1fr_360px]">
@@ -97,6 +97,7 @@
             }
             <siaf-conciliacion-registros-tabla
               [rows]="registrosTabla()"
+              [aprobado]="estado() === 'APROBADO'"
               [selectable]="!soloLectura()"
               [selectedIds]="marcados()"
               (toggled)="alternarMarcado($event)"

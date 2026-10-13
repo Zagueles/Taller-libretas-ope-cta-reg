@@ -35,8 +35,8 @@ type CalendarDay = {
  *   formulario de cuenta contable): usar este componente.
  * - Dejar `defaultToToday` en `true` en filtros o fechas opcionales: pinta la fecha de hoy sin emitirla, así que el
  *   padre sigue vacío. Pasar `[defaultToToday]="false"`.
- * - `variant="datetime"` para capturar una hora: los campos de hora no están conectados; emite solo la fecha y la
- *   muestra con 00:00:00.
+ * - `variant="datetime"` esperando solo la fecha: emite `aaaa-mm-ddThh:mm:ss` (con la hora, minutos y segundos del panel) y
+ *   acepta ese mismo formato en `value`.
  * - Para mostrar una fecha que no se edita: en modo lectura va `readonly-field`, no el selector `[disabled]`.
  * @teclado
  * - **Tab**: enfoca el campo. Al abrir el calendario el foco entra en el día elegido (o en hoy); desde ahí recorre
@@ -233,11 +233,11 @@ type CalendarDay = {
               <div class="mt-siaf-xs border-t border-[var(--sys-color-divider-default)] pt-siaf-xs">
                 <div class="flex items-center gap-siaf-xs py-siaf-xs">
                   <span class="text-xs font-medium text-text">Hora</span>
-                  <input class="h-8 w-[50px] rounded-siaf-md border border-[var(--sys-color-border-states-enabled)] bg-surface px-siaf-md text-center text-sm outline-none focus:border-2 focus:border-[var(--sys-color-border-states-focus)]" maxlength="2" value="00" />
+                  <input class="h-8 w-[50px] rounded-siaf-md border border-[var(--sys-color-border-states-enabled)] bg-surface px-siaf-md text-center text-sm outline-none focus:border-2 focus:border-[var(--sys-color-border-states-focus)]" maxlength="2" inputmode="numeric" [value]="hora" aria-label="Hora" (input)="cambiarHora('hora', $any($event.target).value, $event)" (blur)="normalizarHora()" (click)="$event.stopPropagation()" />
                   <span class="text-xs font-medium text-text">:</span>
-                  <input class="h-8 w-[50px] rounded-siaf-md border border-[var(--sys-color-border-states-enabled)] bg-surface px-siaf-md text-center text-sm outline-none focus:border-2 focus:border-[var(--sys-color-border-states-focus)]" maxlength="2" value="00" />
+                  <input class="h-8 w-[50px] rounded-siaf-md border border-[var(--sys-color-border-states-enabled)] bg-surface px-siaf-md text-center text-sm outline-none focus:border-2 focus:border-[var(--sys-color-border-states-focus)]" maxlength="2" inputmode="numeric" [value]="minuto" aria-label="Minutos" (input)="cambiarHora('minuto', $any($event.target).value, $event)" (blur)="normalizarHora()" (click)="$event.stopPropagation()" />
                   <span class="text-xs font-medium text-text">:</span>
-                  <input class="h-8 w-[50px] rounded-siaf-md border border-[var(--sys-color-border-states-enabled)] bg-surface px-siaf-md text-center text-sm outline-none focus:border-2 focus:border-[var(--sys-color-border-states-focus)]" maxlength="2" value="00" />
+                  <input class="h-8 w-[50px] rounded-siaf-md border border-[var(--sys-color-border-states-enabled)] bg-surface px-siaf-md text-center text-sm outline-none focus:border-2 focus:border-[var(--sys-color-border-states-focus)]" maxlength="2" inputmode="numeric" [value]="segundo" aria-label="Segundos" (input)="cambiarHora('segundo', $any($event.target).value, $event)" (blur)="normalizarHora()" (click)="$event.stopPropagation()" />
                 </div>
 
                 <div class="flex justify-end gap-siaf-xs py-siaf-xs">
@@ -282,6 +282,10 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
   /** Qué muestra el calendario: los días del mes, la grilla de meses o la de años. */
   vista: 'dias' | 'meses' | 'anios' = 'dias';
   selectedDate = '';
+  /** Hora elegida (solo en `datetime`), en dos dígitos. */
+  hora = '00';
+  minuto = '00';
+  segundo = '00';
   viewYear = this.currentDate.getFullYear();
   viewMonth = this.currentDate.getMonth();
 
@@ -316,7 +320,7 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
     }
 
     const [year, month, day] = this.selectedDate.split('-');
-    return this.variant === 'datetime' ? `${day}/${month}/${year} 00:00:00` : `${day}/${month}/${year}`;
+    return this.variant === 'datetime' ? `${day}/${month}/${year} ${this.pad(Number(this.hora) || 0)}:${this.pad(Number(this.minuto) || 0)}:${this.pad(Number(this.segundo) || 0)}` : `${day}/${month}/${year}`;
   }
 
   get monthName(): string {
@@ -481,7 +485,7 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
   selectDate(value: string, event?: Event): void {
     event?.stopPropagation();
     this.selectedDate = value;
-    this.valueChange.emit(value);
+    this.valueChange.emit(this.salida(value));
 
     if (this.variant === 'date') {
       this.closePicker();
@@ -492,7 +496,9 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
     event?.stopPropagation();
     if (!this.selectedDate) {
       this.selectedDate = this.toDateValue(this.viewYear, this.viewMonth, 1);
-      this.valueChange.emit(this.selectedDate);
+      this.valueChange.emit(this.salida(this.selectedDate));
+    } else if (this.variant === 'datetime') {
+      this.valueChange.emit(this.salida(this.selectedDate));
     }
 
     this.closePicker();
@@ -510,8 +516,36 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
     this.viewYear += offset;
   }
 
+  /** Una hora, minuto o segundo: solo dígitos y dentro de su rango; mientras se escribe se respeta el texto y, si ya hay fecha, se vuelve a emitir. */
+  cambiarHora(campo: 'hora' | 'minuto' | 'segundo', texto: string, event?: Event): void {
+    event?.stopPropagation();
+    const digitos = texto.replace(/\D/g, '').slice(0, 2);
+    const maximo = campo === 'hora' ? 23 : 59;
+    this[campo] = digitos === '' ? '' : String(Math.min(maximo, Number(digitos)));
+    if (this.selectedDate) {
+      this.valueChange.emit(this.salida(this.selectedDate));
+    }
+  }
+
+  /** Al salir del campo, la hora vuelve a dos dígitos (vacío es 00). */
+  normalizarHora(): void {
+    this.hora = this.pad(Number(this.hora) || 0);
+    this.minuto = this.pad(Number(this.minuto) || 0);
+    this.segundo = this.pad(Number(this.segundo) || 0);
+  }
+
+  /** Lo que se emite: la fecha (aaaa-mm-dd) o, en `datetime`, fecha y hora (aaaa-mm-ddThh:mm:ss). */
+  private salida(fecha: string): string {
+    const dos = (v: string): string => this.pad(Number(v) || 0);
+    return this.variant === 'datetime' ? `${fecha}T${dos(this.hora)}:${dos(this.minuto)}:${dos(this.segundo)}` : fecha;
+  }
+
   private setSelectedDate(value: string): void {
-    this.selectedDate = value;
+    const hora = value.match(/T(\d{2}):(\d{2}):(\d{2})/);
+    if (hora) {
+      [, this.hora, this.minuto, this.segundo] = hora;
+    }
+    this.selectedDate = value.slice(0, 10);
     this.syncViewToSelection();
   }
 

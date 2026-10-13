@@ -13,6 +13,10 @@ describe('ConciliacionRegistroEdicionComponent', () => {
 
   it('precarga los montos del libro banco y exige los de cada operación a conciliar', () => {
     const c = crear(0);
+    c.agregarOperacion();
+    c.agregarOperacion();
+    c.cambiarFecha('c2', '2025-12-01');
+    c.cambiarCandidato('c2', 'numero', '02698150');
     expect(c.debito()).toBe('0.00');
     expect(c.credito()).toBe('1,267.00');
     expect(c.puedeAceptar()).toBeFalse();
@@ -44,6 +48,7 @@ describe('ConciliacionRegistroEdicionComponent', () => {
 
   it('al aceptar emite el registro conciliado con la contraparte', () => {
     const c = crear(0);
+    c.agregarOperacion();
     const emitidos: unknown[] = [];
     c.accepted.subscribe((r) => emitidos.push(r));
     c.candidatos().forEach((o) => {
@@ -59,23 +64,27 @@ describe('ConciliacionRegistroEdicionComponent', () => {
     expect(emitidos[0]).toEqual(jasmine.objectContaining({ conciliado: true, motivo: '-', rbCredito: '1,267.00', sustentos: [{ tipo: 'Constancia', nombre: 'constancia.pdf', tamano: undefined }], justificacion: 'La operación coincide.' }));
   });
 
-  it('avisa con el copy de cada caso: falta la operación (amarillo) y coinciden los montos (verde)', () => {
+  it('no advierte lo que falta (lo hace «Verificar»): la sección arranca vacía y solo avisa en verde cuando los montos coinciden', () => {
     const c = crear(0);
-    expect(c.aviso()).toEqual({ tono: 'warning', titulo: 'No existe operación bancaria', descripcion: 'Busque y registre la operación bancaria que corresponde al RR por S/ 1,267.00.' });
+    expect(c.candidatos()).withContext('no existe OBO: sin operaciones').toEqual([]);
+    expect(c.aviso()).toBeNull();
 
+    c.agregarOperacion();
+    c.agregarOperacion();
     // 1,000.00 + 267.00 suman el crédito del libro banco (1,267.00).
     c.cambiarCandidato('c1', 'debito', '0');
     c.cambiarCandidato('c1', 'credito', '1000');
     c.cambiarCandidato('c2', 'debito', '0');
     c.cambiarCandidato('c2', 'credito', '100');
-    expect(c.aviso().tono).toBe('warning');
+    expect(c.aviso()).toBeNull();
     c.cambiarCandidato('c2', 'credito', '267');
-    expect(c.aviso()).toEqual({ tono: 'success', titulo: 'Registro de operación bancarias', descripcion: 'La operación(es) bancaria(s) suman S/ 1,267.00 y coinciden con el Libro Banco.' });
+    expect(c.aviso()).toEqual({ titulo: 'Registro de operación bancarias', descripcion: 'La operación(es) bancaria(s) suman S/ 1,267.00 y coinciden con el Libro Banco.' });
   });
 
-  it('en «Montos diferentes» pide ajustar las operaciones hasta igualar el monto', () => {
+  it('en «Montos diferentes» la operación existente viene precargada, sin alerta', () => {
     const c = crear(1);
-    expect(c.aviso()).toEqual(jasmine.objectContaining({ tono: 'warning', titulo: 'Montos diferentes' }));
+    expect(c.candidatos().length).toBe(1);
+    expect(c.aviso()).toBeNull();
   });
 
   it('suma varios sustentos con su tipo en una carga, reemplaza uno y exige al menos uno', () => {
@@ -110,9 +119,25 @@ describe('ConciliacionRegistroEdicionComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('haga clic en el botón (+) para seleccionar una opción');
     expect(fixture.nativeElement.querySelector('table')).toBeNull();
 
-    c.agregarOperaciones();
+    c.agregarOperacion();
     fixture.detectChanges();
-    expect(c.candidatos().length).toBeGreaterThan(0);
+    expect(c.candidatos().length).toBe(1);
     expect(fixture.nativeElement.textContent).not.toContain('haga clic en el botón (+)');
+  });
+
+  it('cada (+) agrega una sola operación: la primera repite el libro banco y las siguientes editan fecha y número', () => {
+    const c = crear(0);
+    c.agregarOperacion();
+    expect(c.candidatos().length).toBe(1);
+    expect(c.candidatos()[0]).toEqual(jasmine.objectContaining({ numero: REGISTROS_NO_CONCILIADOS[0].lbNumero, fecha: REGISTROS_NO_CONCILIADOS[0].lbFecha, editable: false }));
+
+    c.agregarOperacion();
+    const segunda = c.candidatos()[1];
+    expect(c.candidatos().length).toBe(2);
+    expect(segunda).toEqual(jasmine.objectContaining({ numero: '', fecha: '', descripcion: c.candidatos()[0].descripcion, editable: true }));
+
+    c.cambiarFecha(segunda.id, '2025-12-02T14:30:05');
+    c.cambiarCandidato(segunda.id, 'numero', '02698200');
+    expect(c.candidatos()[1]).toEqual(jasmine.objectContaining({ fecha: '02/12/2025 14:30:05', numero: '02698200' }));
   });
 });

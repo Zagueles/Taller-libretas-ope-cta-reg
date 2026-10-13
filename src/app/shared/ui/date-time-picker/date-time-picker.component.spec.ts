@@ -77,3 +77,24 @@ describe('DateTimePickerComponent — elegir mes y año', () => {
     expect(valor).toBe('2026-07-20');
   });
 });
+
+describe('DateTimePickerComponent — variante datetime', () => {
+  it('emite fecha y hora (aaaa-mm-ddThh:mm:ss), la muestra en el campo y lee ese mismo formato', () => {
+    TestBed.configureTestingModule({ imports: [DateTimePickerComponent] });
+    const fixture = TestBed.createComponent(DateTimePickerComponent);
+    fixture.componentRef.setInput('variant', 'datetime');
+    fixture.componentRef.setInput('value', '2026-03-15T08:09:10');
+    fixture.componentRef.setInput('defaultToToday', false);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.displayValue).toBe('15/03/2026 08:09:10');
+
+    const emitidos: string[] = [];
+    fixture.componentInstance.valueChange.subscribe((v) => emitidos.push(v));
+    fixture.componentInstance.cambiarHora('hora', '7');
+    fixture.componentInstance.cambiarHora('minuto', '75');
+    expect(emitidos).toEqual(['2026-03-15T07:09:10', '2026-03-15T07:59:10']);
+    expect(fixture.componentInstance.hora).withContext('mientras se escribe no se completa con ceros').toBe('7');
+    fixture.componentInstance.normalizarHora();
+    expect(fixture.componentInstance.displayValue).toBe('15/03/2026 07:59:10');
+  });
+});
