@@ -44,6 +44,9 @@ import { ParametroAplicado, ParametrosAplicadosComponent } from '../parametros-a
 import { QueryParametersPanelComponent, tieneValor } from '../query-parameters-panel/query-parameters-panel.component';
 import { GraficoCalculado, calcularGrafico, calcularKpis } from './query-report-charts';
 import { cumpleCondicion } from './query-report-conditions';
+import { totalizarSaldos } from '../../utils/saldos-agregados.util';
+
+const formatoSaldo = new Intl.NumberFormat('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const AVANZADOS_VACIO: QueryReportAdvancedFilters = { conditions: [], resultType: 'agrupado', levels: [] };
 
@@ -761,14 +764,15 @@ export class QueryReportPageComponent {
   readonly resumenAgregado = computed(() => {
     const vista = this.vistaAgregado();
     const balance = this.configuracion().groupAggregation?.runningBalance;
-    if (!vista || !balance || !vista.filas.length) return null;
+    const saldos = totalizarSaldos(vista?.filas ?? [], balance, this.configuracion().groupAggregation);
+    if (!vista || !saldos) return null;
     const detalle = vista.campo.valueDetails?.[vista.elegida ?? ''];
     return {
       title: detalle?.title ?? vista.elegida ?? '',
       description: detalle?.description ?? '',
       fields: [
-        { label: 'Saldo inicial', value: vista.filas[0][balance.startColumn] ?? '' },
-        { label: 'Saldo final', value: vista.filas[vista.filas.length - 1][balance.endColumn] ?? '' },
+        { label: 'Saldo inicial', value: formatoSaldo.format(saldos.inicio) },
+        { label: 'Saldo final', value: formatoSaldo.format(saldos.fin) },
       ],
     };
   });

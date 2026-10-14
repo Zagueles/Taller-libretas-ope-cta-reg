@@ -4,6 +4,7 @@ import { IconComponent } from '../icon/icon.component';
 import { TooltipDirective } from '../tooltip/tooltip.directive';
 import type { QueryReportGroupAggregation } from '../../types/query-report.types';
 import type { ReportTableColumn, ReportTableRow } from '../report-table/report-table.component';
+import { totalizarSaldos } from '../../utils/saldos-agregados.util';
 
 /** Un nivel de agrupación: el campo, cómo se llama en el encabezado y su línea secundaria opcional. */
 export interface GroupedTableLevel {
@@ -347,9 +348,9 @@ export class GroupedReportTableComponent implements OnChanges {
       const id = `${rutaPadre}/${nivelActual.key}=${valor}`;
       const prefijo = nivelActual.labelPrefix ?? nivelActual.label;
       const subtitulo = nivelActual.subtitleColumn ? filasGrupo[0]?.[nivelActual.subtitleColumn] : undefined;
-      // Solo el nivel más interno muestra el saldo del grupo en su propio encabezado; los demás quedan en blanco
+      // Solo el nivel más interno, y solo si no cierra con su pie (TOTAL/Subtotal), muestra el saldo del grupo en su encabezado; los demás quedan en blanco
       // (la fila estructural de esta cabecera sigue existiendo, para no desalinear las columnas de saldo).
-      const totalesEncabezado = esUltimoNivel ? this.totalizar(filasGrupo) : { inicio: '', fin: '' };
+      const totalesEncabezado = esUltimoNivel && !this.footerInnermost ? this.totalizar(filasGrupo) : { inicio: '', fin: '' };
 
       nodos.push({ tipo: 'grupo', id, nivel, etiqueta: `${prefijo}: ${valor}`, subtitulo, cantidad: filasGrupo.length, totales: totalesEncabezado });
 
@@ -367,13 +368,9 @@ export class GroupedReportTableComponent implements OnChanges {
     return nodos;
   }
 
-  /** `runningBalance`: primera fila como inicio y última como fin (un saldo que se arrastra, no se suma). */
+  /** Saldo inicial y final del grupo (ver `totalizarSaldos`): una sola vez por cuenta, con el crédito de «Saldo inicial» en el inicial. */
   private totalizar(filas: readonly ReportTableRow[]): Record<string, string> {
-    const balance = this.aggregation?.runningBalance;
-    if (!balance || !filas.length) return { inicio: '', fin: '' };
-    return {
-      inicio: formatoMonto.format(aNumero(filas[0][balance.startColumn])),
-      fin: formatoMonto.format(aNumero(filas[filas.length - 1][balance.endColumn])),
-    };
+    const saldos = totalizarSaldos(filas as readonly Record<string, string | undefined>[], this.aggregation?.runningBalance, this.aggregation);
+    return saldos ? { inicio: formatoMonto.format(saldos.inicio), fin: formatoMonto.format(saldos.fin) } : { inicio: '', fin: '' };
   }
 }

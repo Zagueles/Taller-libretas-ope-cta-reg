@@ -35,7 +35,7 @@ const COLUMNAS_MONEDA_EXTRANJERA = new Set(['tipoCotizacion', 'tipoCambioCompra'
 const SIMBOLO_MONEDA: Record<'PEN' | 'USD', string> = { PEN: 'S/ ', USD: 'US$ ' };
 
 import { campoDetalleRegistro, construirDetalleRegistro } from '../../utils/registro-libretas-detalle.util';
-import { saldosPorCuentaRegistro } from '../../utils/registro-libretas-saldos.util';
+import { saldosPorCuentaRegistro, TIPO_OPERACION_SALDO_INICIAL } from '../../utils/registro-libretas-saldos.util';
 import { exportarConsultaExcel } from '../../utils/exportacion/excel-consulta.util';
 
 /** Beneficiario y Cuenta de registro van asociados: elegir cualquiera como nivel oculta los dos grupos de cabecera. */
@@ -167,7 +167,7 @@ export class RegistroLibretasConsultasComponent {
       { key: 'ffSubFf', label: 'FF/Sub FF', groupable: true, groupLabelPrefix: 'FF', hidesColumns: ['ffSubFf'], valueDetails: {} },
       { key: 'numeroDocumento', label: 'Documento' },
     ],
-    groupAggregation: { runningBalance: { startColumn: 'saldoInicial', endColumn: 'saldoFinal' }, hiddenColumns: ['sec', 'fecha', 'tipoOperacion', 'entidad', 'unidadEjecutora', 'grupo', 'numeroDocumento', 'descripcionDocumento', 'fechaRegistro', 'numeroOperacion', 'tipoBeneficiario', 'entidadAdministradoraCodigo', 'entidadAdministradoraSigla', 'movimientoInternoCodigo', 'movimientoInternoDescripcion', 'movimientoInternoSigla', 'movimientoExternoCodigo', 'movimientoExternoDescripcion', 'documentoCutNumero', 'documentoCutArchivo', 'documentoCutSigla', 'descripcionDetallada'] },
+    groupAggregation: { runningBalance: { startColumn: 'saldoInicial', endColumn: 'saldoFinal' }, accountColumn: 'numeroCuentaRegistro', openingCreditColumn: 'creditoSaldoInicial', hiddenColumns: ['sec', 'fecha', 'tipoOperacion', 'entidad', 'unidadEjecutora', 'grupo', 'numeroDocumento', 'descripcionDocumento', 'fechaRegistro', 'numeroOperacion', 'tipoBeneficiario', 'entidadAdministradoraCodigo', 'entidadAdministradoraSigla', 'movimientoInternoCodigo', 'movimientoInternoDescripcion', 'movimientoInternoSigla', 'movimientoExternoCodigo', 'movimientoExternoDescripcion', 'documentoCutNumero', 'documentoCutArchivo', 'documentoCutSigla', 'descripcionDetallada'] },
     columns: [
       { key: 'sec', label: 'Sec.', panelLabel: 'Secuencia', group: 'Acreditación', width: 90 },
       { key: 'fecha', label: 'Fecha', group: 'Acreditación', width: 130 },
@@ -379,6 +379,8 @@ export class RegistroLibretasConsultasComponent {
       saldoInicial: monto(m.saldoInicial),
       debito: monto(m.debito),
       credito: monto(m.credito),
+      /** Solo para los totales: el crédito del movimiento interno «Saldo inicial» forma parte del saldo inicial. */
+      creditoSaldoInicial: monto(m.tipoOperacionCodigo === TIPO_OPERACION_SALDO_INICIAL ? m.credito : 0),
       fechaRegistro: construirDetalleRegistro(m).fechaRegistro,
       numeroOperacion: construirDetalleRegistro(m).numeroOperacion,
       tipoBeneficiario: campoDetalleRegistro(m, 'Beneficiario', 'Tipo'),

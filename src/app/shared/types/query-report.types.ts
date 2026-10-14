@@ -230,4 +230,8 @@ export interface QueryReportGroupAggregation {
   /** Columnas que no se muestran en «Agregado», porque son por movimiento (secuencia, fecha de acreditación). */
   hiddenColumns?: string[];
   runningBalance: { startColumn: string; endColumn: string };
+  /** Columna que identifica la cuenta (libreta) de cada fila: el saldo de cada cuenta cuenta una sola vez y se suman entre cuentas. */
+  accountColumn?: string;
+  /** Columna con el crédito del movimiento interno «Saldo inicial» de la fila (0 en las demás): se suma al saldo inicial de su cuenta. */
+  openingCreditColumn?: string;
 }
