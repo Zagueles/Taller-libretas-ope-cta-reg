@@ -34,6 +34,7 @@ const COLUMNAS_MONEDA_EXTRANJERA = new Set(['tipoCotizacion', 'tipoCambioCompra'
 /** Prefijo de los montos en los KPI de la vista de gráficas, según la moneda de la cuenta bancaria de la pestaña activa. */
 const SIMBOLO_MONEDA: Record<'PEN' | 'USD', string> = { PEN: 'S/ ', USD: 'US$ ' };
 
+import { campoDetalleRegistro, construirDetalleRegistro } from '../../utils/registro-libretas-detalle.util';
 import { saldosPorCuentaRegistro } from '../../utils/registro-libretas-saldos.util';
 import { exportarConsultaExcel } from '../../utils/exportacion/excel-consulta.util';
 
@@ -166,12 +167,13 @@ export class RegistroLibretasConsultasComponent {
       { key: 'ffSubFf', label: 'FF/Sub FF', groupable: true, groupLabelPrefix: 'FF', hidesColumns: ['ffSubFf'], valueDetails: {} },
       { key: 'numeroDocumento', label: 'Documento' },
     ],
-    groupAggregation: { runningBalance: { startColumn: 'saldoInicial', endColumn: 'saldoFinal' }, hiddenColumns: ['sec', 'fecha', 'tipoOperacion', 'entidad', 'unidadEjecutora', 'grupo', 'numeroDocumento', 'descripcionDocumento'] },
+    groupAggregation: { runningBalance: { startColumn: 'saldoInicial', endColumn: 'saldoFinal' }, hiddenColumns: ['sec', 'fecha', 'tipoOperacion', 'entidad', 'unidadEjecutora', 'grupo', 'numeroDocumento', 'descripcionDocumento', 'fechaRegistro', 'numeroOperacion', 'tipoBeneficiario', 'entidadAdministradoraCodigo', 'entidadAdministradoraSigla', 'movimientoInternoCodigo', 'movimientoInternoDescripcion', 'movimientoInternoSigla', 'movimientoExternoCodigo', 'movimientoExternoDescripcion', 'documentoCutNumero', 'documentoCutArchivo', 'documentoCutSigla', 'descripcionDetallada'] },
     columns: [
       { key: 'sec', label: 'Sec.', panelLabel: 'Secuencia', group: 'Acreditación', width: 90 },
       { key: 'fecha', label: 'Fecha', group: 'Acreditación', width: 130 },
       { key: 'beneficiarioCodigo', label: 'Código', group: 'Beneficiario', width: 90 },
       { key: 'beneficiario', label: 'Descripción', group: 'Beneficiario', width: 230 },
+      { key: 'tipoBeneficiario', label: 'Tipo', group: 'Beneficiario', hiddenByDefault: true, width: 130 },
       { key: 'numeroCuentaRegistro', label: 'Número', group: 'Cuenta de registro', width: 300 },
       { key: 'descripcionCuentaRegistro', label: 'Descripción', group: 'Cuenta de registro', width: 320 },
       { key: 'ffSubFf', label: 'FF/SUB FF', group: 'Cuenta de registro', width: 260, ungroupWhenGroupHidden: true },
@@ -189,6 +191,20 @@ export class RegistroLibretasConsultasComponent {
       { key: 'debitoMN', label: 'Débito', group: 'Imp. m. nacional', hiddenByDefault: true, align: 'right', width: 120 },
       { key: 'creditoMN', label: 'Crédito', group: 'Imp. m. nacional', hiddenByDefault: true, align: 'right', width: 130 },
       { key: 'saldoFinalMN', label: 'Saldo final', group: 'Imp. m. nacional', hiddenByDefault: true, align: 'right', width: 140 },
+      // «Más columnas» del detalle del registro (las mismas de la pestaña Registros): ocultas hasta que se activen.
+      { key: 'fechaRegistro', label: 'Fecha de registro', hiddenByDefault: true, width: 170 },
+      { key: 'numeroOperacion', label: 'Número de operación', hiddenByDefault: true, width: 170 },
+      { key: 'entidadAdministradoraCodigo', label: 'Código', group: 'Entidad administradora', hiddenByDefault: true, width: 120 },
+      { key: 'entidadAdministradoraSigla', label: 'Sigla', group: 'Entidad administradora', hiddenByDefault: true, width: 120 },
+      { key: 'movimientoInternoCodigo', label: 'Código', group: 'Movimiento interno', hiddenByDefault: true, width: 120 },
+      { key: 'movimientoInternoDescripcion', label: 'Descripción', group: 'Movimiento interno', hiddenByDefault: true, width: 260 },
+      { key: 'movimientoInternoSigla', label: 'Sigla', group: 'Movimiento interno', hiddenByDefault: true, width: 100 },
+      { key: 'movimientoExternoCodigo', label: 'Código', group: 'Movimiento externo', hiddenByDefault: true, width: 120 },
+      { key: 'movimientoExternoDescripcion', label: 'Descripción', group: 'Movimiento externo', hiddenByDefault: true, width: 200 },
+      { key: 'documentoCutNumero', label: 'Número', group: 'Documento CUT', hiddenByDefault: true, width: 130 },
+      { key: 'documentoCutArchivo', label: 'Archivo', group: 'Documento CUT', hiddenByDefault: true, width: 130 },
+      { key: 'documentoCutSigla', label: 'Sigla', group: 'Documento CUT', hiddenByDefault: true, width: 100 },
+      { key: 'descripcionDetallada', label: 'Descripción detallada', hiddenByDefault: true, width: 260 },
       { key: 'numeroDocumento', label: 'Número', group: 'Documento', width: 150, kind: 'link' },
       { key: 'descripcionDocumento', label: 'Descripción', group: 'Documento', width: 300 },
       { key: 'saldoFinal', label: 'Saldo final', group: 'Imp. m. cuenta', align: 'right', width: 135, fixed: true },
@@ -363,6 +379,20 @@ export class RegistroLibretasConsultasComponent {
       saldoInicial: monto(m.saldoInicial),
       debito: monto(m.debito),
       credito: monto(m.credito),
+      fechaRegistro: construirDetalleRegistro(m).fechaRegistro,
+      numeroOperacion: construirDetalleRegistro(m).numeroOperacion,
+      tipoBeneficiario: campoDetalleRegistro(m, 'Beneficiario', 'Tipo'),
+      entidadAdministradoraCodigo: campoDetalleRegistro(m, 'Entidad administradora', 'Código'),
+      entidadAdministradoraSigla: campoDetalleRegistro(m, 'Entidad administradora', 'Sigla'),
+      movimientoInternoCodigo: campoDetalleRegistro(m, 'Movimiento interno', 'Código'),
+      movimientoInternoDescripcion: campoDetalleRegistro(m, 'Movimiento interno', 'Descripción'),
+      movimientoInternoSigla: campoDetalleRegistro(m, 'Movimiento interno', 'Sigla'),
+      movimientoExternoCodigo: campoDetalleRegistro(m, 'Movimiento externo', 'Código'),
+      movimientoExternoDescripcion: campoDetalleRegistro(m, 'Movimiento externo', 'Descripción'),
+      documentoCutNumero: campoDetalleRegistro(m, 'Documento CUT', 'Número'),
+      documentoCutArchivo: campoDetalleRegistro(m, 'Documento CUT', 'Archivo'),
+      documentoCutSigla: campoDetalleRegistro(m, 'Documento CUT', 'Sigla'),
+      descripcionDetallada: construirDetalleRegistro(m).descripcionDetallada,
       numeroDocumento: m.numeroDocumento,
       documentoId: m.documentoId,
       descripcionDocumento: m.descripcionDocumento,

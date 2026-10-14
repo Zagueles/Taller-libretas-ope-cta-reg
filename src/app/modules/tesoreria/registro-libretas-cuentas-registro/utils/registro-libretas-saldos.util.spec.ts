@@ -57,6 +57,16 @@ describe('registro-libretas-saldos', () => {
     });
   });
 
+  describe('crédito del movimiento interno «Saldo inicial»', () => {
+    it('forma parte del saldo inicial total y no del abono del periodo; el saldo final no cambia', () => {
+      const apertura = { ...mov('000001', 'A', 0, 0, 1000), tipoOperacionCodigo: '1' } as MovimientoLibretaRegistro; // 0 → 1,000
+      const abono = { ...mov('000002', 'A', 1000, 0, 200), tipoOperacionCodigo: '2' } as MovimientoLibretaRegistro; // 1,000 → 1,200
+      expect(saldosPorCuentaRegistro([apertura, abono])).toEqual({ saldoInicial: 1000, saldoFinal: 1200, saldoInicialMN: 1000, saldoFinalMN: 1200 });
+      // Sin la apertura en el resultado, el saldo inicial es el del primer registro.
+      expect(saldosPorCuentaRegistro([abono]).saldoInicial).toBe(1000);
+    });
+  });
+
   describe('RN-044/045: moneda nacional encadenada', () => {
     it('el saldo inicial MN de cada registro es el final MN del anterior, aunque cambie el tipo de cambio', () => {
       const a = mov('000001', 'A', 100, 0, 10); // TC 3.0 → SI 300, SF 330

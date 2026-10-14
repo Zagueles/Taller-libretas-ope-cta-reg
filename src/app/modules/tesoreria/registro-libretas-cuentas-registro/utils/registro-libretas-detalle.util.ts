@@ -149,3 +149,7 @@ export function construirDetalleRegistro(m: MovimientoLibretaRegistro, rechazado
     descripcionDetallada: `Registro de ${tipo.split(' - ')[1]?.toLowerCase() ?? tipo.toLowerCase()}`,
   };
 }
+
+/** El valor de un campo del detalle del registro (sección y rótulo), para las columnas de «Más columnas». */
+export const campoDetalleRegistro = (m: MovimientoLibretaRegistro, seccion: string, caption: string): string =>
+  construirDetalleRegistro(m).secciones.find((x) => x.titulo === seccion)?.campos.find((c) => c.caption === caption)?.value ?? '-';

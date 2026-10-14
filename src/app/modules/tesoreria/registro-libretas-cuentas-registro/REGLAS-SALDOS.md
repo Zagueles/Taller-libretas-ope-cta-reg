@@ -26,6 +26,7 @@ Leyenda: ✅ implementado y probado · ⚠️ parcial · ⏸️ descartado por a
 ## Consultas y reportes (RN-066 a RN-073)
 
 - [x] **RN-069 (agregada)** Para cada cuenta de registro se considera **una sola vez** el saldo final del último registro; **no se suman** los saldos de distintas secuencias de una misma libreta. ✅ Aplicado también a los totales del agrupado (antes se tomaba el saldo del primer y último movimiento del grupo, incoherente con varias cuentas de registro).
+- [x] **Saldo inicial total** de una cuenta de registro = saldo inicial de su primer registro **+ el crédito del movimiento interno «Saldo inicial»** (tipo de operación «Saldos iniciales»), que forma parte del saldo inicial y no del abono del periodo. ✅ (`saldosPorCuentaRegistro`; el saldo final no cambia).
 - [x] **Saldos de la cuenta bancaria** = suma, por cuenta de registro, de su saldo inicial del primer registro y su saldo final del último, dentro del resultado consultado. ✅ Se derivan de las libretas; ya no hay saldos fijos en `CUENTAS_BANCARIAS_INFO`.
 - [ ] **RN-071** Los saldos en moneda de la cuenta van diferenciados por moneda; si se consolida entre monedas, se usa moneda nacional. ⚠️ Cada cuenta bancaria va aparte; no existe la consolidación conjunta en MN.
 - [x] **RN-073** La exportación lleva el mismo conjunto de datos que la consulta activa. ✅

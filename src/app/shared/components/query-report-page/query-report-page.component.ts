@@ -973,10 +973,10 @@ export class QueryReportPageComponent {
 
   readonly columnasActivas = computed<ReadonlySet<string>>(() => this.columnasElegidas() ?? this.columnasDeFabrica());
 
-  /** Las que quedan si se ocultan todas: las de los grupos base. */
+  /** Las que quedan si se ocultan todas: las de los grupos base. Una columna `hiddenByDefault` de un grupo base sigue siendo opcional. */
   readonly columnasBase = computed<ReadonlySet<string>>(() => {
     const base = this.configuracion().columnsPanel?.baseGroups ?? [];
-    return new Set(this.configuracion().columns.filter((c) => c.group && base.includes(c.group)).map((c) => c.key));
+    return new Set(this.configuracion().columns.filter((c) => c.group && base.includes(c.group) && !c.hiddenByDefault).map((c) => c.key));
   });
 
   /** Columnas de la configuración que se ven ahora. */
