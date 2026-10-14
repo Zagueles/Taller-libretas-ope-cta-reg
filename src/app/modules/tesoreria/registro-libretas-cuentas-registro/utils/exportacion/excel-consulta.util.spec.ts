@@ -3,6 +3,7 @@ import type { Row, Worksheet } from 'exceljs';
 import type { QueryReportParameters } from '../../../../../shared/types/query-report.types';
 import { datosLibretasIniciales, filtrarMovimientos } from '../../../../../mock/libretas-backend';
 import { CUENTAS_BANCARIAS_INFO, MovimientoLibretaRegistro, TIPO_CAMBIO } from '../../models/registro-libretas.model';
+import { saldosPorCuentaRegistro } from '../registro-libretas-saldos.util';
 import { AgrupacionExcel, construirLibroConsulta } from './excel-consulta.util';
 
 /**
@@ -76,8 +77,8 @@ describe('construirLibroConsulta', () => {
 
       expect(textos(hoja.getRow(2))[0]).toBe('Cta. Bancaria:');
       expect(textos(hoja.getRow(2))[1]).toContain(cuenta.numeroCuenta);
-      expect(hoja.getRow(3).getCell(2).value).toBe(cuenta.saldoInicial);
-      expect(hoja.getRow(4).getCell(2).value).toBe(cuenta.saldoFinal);
+      expect(hoja.getRow(3).getCell(2).value).toBe(saldosPorCuentaRegistro(movimientos).saldoInicial);
+      expect(hoja.getRow(4).getCell(2).value).toBe(saldosPorCuentaRegistro(movimientos).saldoFinal);
       const datos = filas(hoja, 8);
       expect(datos.length).toBe(movimientos.length);
       expect(datos.map((f) => String(f.getCell(1).value))).toEqual(movimientos.map((m) => m.sec));
@@ -131,6 +132,17 @@ describe('construirLibroConsulta', () => {
       expect(cabeceras(hoja)).not.toContain('ENTIDAD');
       expect(cabeceras(hoja)).not.toContain('UNIDAD EJECUTORA');
       expect(cabeceras(hoja)).toContain('GRUPO');
+    });
+
+    it('RN-069: el total de una entidad suma una sola vez el saldo de cada cuenta de registro (inicial del primero, final del último)', async () => {
+      // Todo octubre: MINCETUR tiene varias cuentas de registro, así que no basta el primer y el último movimiento.
+      const movs = filtrarMovimientos(libretas, { cuentasBancarias: [CUT], desde: '2026-07-01', hasta: '2026-10-31' });
+      const hoja = await hojaDe(movs, agrupacion('agrupado', ['entidad'], ['entidad']));
+      const total = filas(hoja, 8).find((f) => primerTexto(f).startsWith('Ent.: MINCETUR'))!;
+      const esperado = saldosPorCuentaRegistro(movs.filter((m) => m.entidad === 'MINCETUR'));
+      const columnas = cabeceras(hoja);
+      expect(total.getCell(columnas.indexOf('SALDO INICIAL') + 1).value).toBe(esperado.saldoInicial);
+      expect(total.getCell(columnas.lastIndexOf('SALDO FINAL') >= 0 ? columnas.indexOf('SALDO FINAL') + 1 : 1).value).toBe(esperado.saldoFinal);
     });
 
     it('agrupado de dos niveles: título por grupo, movimientos en el nivel más profundo, «Subtotal» al cerrar el segundo y «TOTAL» al cerrar el primero', async () => {

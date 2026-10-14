@@ -1,5 +1,6 @@
 import type { QueryReportParameters } from '../../../../../shared/types/query-report.types';
 import { cargarWorkbook } from '../../../../../shared/utils/librerias-dinamicas.util';
+import { saldosMNPorMovimiento, saldosPorCuentaRegistro, claveMovimiento } from '../registro-libretas-saldos.util';
 import { CUENTAS_BANCARIAS_INFO, MovimientoLibretaRegistro, nombreBeneficiario, nombreTipoOperacion, TIPO_CAMBIO } from '../../models/registro-libretas.model';
 import { AZUL, BLANCO, BORDES, CELESTE, GRIS, aFecha, relleno } from './estilos-excel.util';
 import { descargar, fechaHoraVisible, fechaVisible } from './formato-exportacion.util';
@@ -179,6 +180,8 @@ function hojaAgrupada(
 
   const primerImporte = Math.min(...['saldoInicial', 'saldoInicialMN'].map(indice).filter((n) => n > 0));
   const colCompra = indice('tipoCambioCompra');
+  const compraGrupo = enDolares ? TIPO_CAMBIO.compra : 1;
+  const mnPorMovimiento = saldosMNPorMovimiento(movimientos, () => compraGrupo);
   const niveles = agrupacion.niveles;
   let f = filaGrupo + 2;
 
@@ -211,11 +214,11 @@ function hojaAgrupada(
     hoja.getCell(f, 1).value = texto;
     hoja.getCell(f, 1).numFmt = '@';
     if (conSaldos) {
-      const primero = valoresMovimiento(filas[0], enDolares);
-      const ultimo = valoresMovimiento(filas[filas.length - 1], enDolares);
-      [['saldoInicial', primero], ['saldoFinal', ultimo], ['saldoInicialMN', primero], ['saldoFinalMN', ultimo]].forEach(([clave, origen]) => {
-        const c = indice(clave as string);
-        if (c) hoja.getCell(f, c).value = (origen as Record<string, string | number>)[clave as string];
+      // RN-069: una sola vez el saldo de cada cuenta de registro (inicial del primer registro, final del último), sumadas.
+      const saldos = saldosPorCuentaRegistro(filas, () => compraGrupo);
+      (['saldoInicial', 'saldoFinal', 'saldoInicialMN', 'saldoFinalMN'] as const).forEach((clave) => {
+        const c = indice(clave);
+        if (c) hoja.getCell(f, c).value = saldos[clave];
       });
     }
     f++;
@@ -227,6 +230,7 @@ function hojaAgrupada(
       filas.forEach((m) => {
         pintar(f, null, false, 0, 40.5, niveles.length);
         const v = valoresMovimiento(m, enDolares);
+        Object.assign(v, mnPorMovimiento.get(claveMovimiento(m)));
         columnas.forEach((c, i) => {
           const celda = hoja.getCell(f, i + 1);
           if (enDolares && c.soloDolares) {
@@ -431,12 +435,13 @@ export async function construirLibroConsulta(
     });
     if (!agrupacion) (enDolares ? ANCHOS_USD : ANCHOS_PEN).forEach((ancho, i) => (hoja.getColumn(i + 1).width = ancho));
 
+    const saldosCuenta = saldosPorCuentaRegistro(movimientos);
     // Cabecera de la cuenta: «Cta. Bancaria» (gris), saldo inicial y saldo final (B:D combinadas).
     [2, 3, 4].forEach((f) => (hoja.getRow(f).height = 36));
     const cabecera: [number, string, string | number, boolean][] = [
       [2, 'Cta. Bancaria:', etiquetaCuenta(cuenta), true],
-      [3, 'Saldo inicial', cuenta?.saldoInicial ?? 0, false],
-      [4, 'Saldo final', cuenta?.saldoFinal ?? 0, false],
+      [3, 'Saldo inicial', saldosCuenta.saldoInicial, false],
+      [4, 'Saldo final', saldosCuenta.saldoFinal, false],
     ];
     cabecera.forEach(([f, rotulo, valor, esCuenta]) => {
       hoja.mergeCells(f, 2, f, 4);
@@ -497,6 +502,7 @@ export async function construirLibroConsulta(
     const totalColumnas = columnaDocumento + 1;
     const letra = (c: number): string => String.fromCharCode(64 + c);
 
+    const mnPlano = saldosMNPorMovimiento(movimientos, () => (enDolares ? TIPO_CAMBIO.compra : 1));
     movimientos.forEach((m, i) => {
       const f = filaGrupo + 2 + i;
       hoja.getRow(f).height = 40.5;
@@ -522,8 +528,10 @@ export async function construirLibroConsulta(
       let siguiente = fijos.length + 1;
       if (enDolares) {
         // Moneda nacional = importe de la cuenta × tipo de cambio de compra (fórmula viva, como la plantilla).
+        const encadenado = mnPlano.get(claveMovimiento(m))!;
         [m.saldoInicial, m.debito, m.credito, m.saldoFinal].forEach((importe, k) => {
-          hoja.getCell(f, siguiente + k).value = { formula: `${letra(primerImporte + k)}${f}*M${f}`, result: importe * TIPO_CAMBIO.compra };
+          const resultado = k === 0 ? encadenado.saldoInicialMN : k === 3 ? encadenado.saldoFinalMN : importe * TIPO_CAMBIO.compra;
+          hoja.getCell(f, siguiente + k).value = { formula: `${letra(primerImporte + k)}${f}*M${f}`, result: resultado };
         });
         siguiente += 4;
       }

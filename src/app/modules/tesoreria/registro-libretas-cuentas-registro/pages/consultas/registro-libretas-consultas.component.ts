@@ -34,6 +34,7 @@ const COLUMNAS_MONEDA_EXTRANJERA = new Set(['tipoCotizacion', 'tipoCambioCompra'
 /** Prefijo de los montos en los KPI de la vista de gráficas, según la moneda de la cuenta bancaria de la pestaña activa. */
 const SIMBOLO_MONEDA: Record<'PEN' | 'USD', string> = { PEN: 'S/ ', USD: 'US$ ' };
 
+import { saldosPorCuentaRegistro } from '../../utils/registro-libretas-saldos.util';
 import { exportarConsultaExcel } from '../../utils/exportacion/excel-consulta.util';
 
 /** Beneficiario y Cuenta de registro van asociados: elegir cualquiera como nivel oculta los dos grupos de cabecera. */
@@ -267,6 +268,7 @@ export class RegistroLibretasConsultasComponent {
   mostrarPestana(cuentaId: string): void {
     const filas = this.filasPorCuenta.get(cuentaId) ?? [];
     const cuenta = CUENTAS_BANCARIAS_INFO.find((c) => c.id === cuentaId);
+    const saldosCuenta = saldosPorCuentaRegistro(filas);
 
     // Tipo de cambio e importe en moneda nacional solo interesan en la cuenta en dólares: en soles no hay nada que
     // convertir. Se muestran solos al entrar a esa pestaña, sin que el usuario tenga que ir a «Columnas visibles».
@@ -290,8 +292,8 @@ export class RegistroLibretasConsultasComponent {
             title: cuenta.nombre,
             description: `${cuenta.numeroCuenta} - ${cuenta.moneda}`,
             fields: [
-              { label: 'Saldo inicial', value: monto(cuenta.saldoInicial) },
-              { label: 'Saldo final', value: monto(cuenta.saldoFinal) },
+              { label: 'Saldo inicial', value: monto(saldosCuenta.saldoInicial) },
+              { label: 'Saldo final', value: monto(saldosCuenta.saldoFinal) },
             ],
           }
         : null,

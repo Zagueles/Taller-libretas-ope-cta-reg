@@ -43,19 +43,17 @@ export const BENEFICIARIOS: OpcionCatalogo[] = [
   { value: '000009', label: 'Tesoro Público' },
 ];
 
-/** Cuenta bancaria en soles/dólares que agrupa los movimientos (pestañas del resultado). */
+/** Cuenta bancaria en soles/dólares que agrupa los movimientos (pestañas del resultado). Sus saldos no se guardan: se derivan de sus libretas (`registro-libretas-saldos.util.ts`). */
 export interface CuentaBancariaRegistroInfo {
   id: string;
   nombre: string;
   numeroCuenta: string;
   moneda: string;
-  saldoInicial: number;
-  saldoFinal: number;
 }
 
 export const CUENTAS_BANCARIAS_INFO: CuentaBancariaRegistroInfo[] = [
-  { id: 'mef-dgtp-cut', nombre: 'MEF - DGTP - CUT', numeroCuenta: '11040103570200000000', moneda: 'PEN', saldoInicial: 1_028_000, saldoFinal: 1_170_753 },
-  { id: 'mef-dgtp', nombre: 'MEF - DGTP', numeroCuenta: '12073303572000000003', moneda: 'USD', saldoInicial: 3_500_000, saldoFinal: 3_560_000 },
+  { id: 'mef-dgtp-cut', nombre: 'MEF - DGTP - CUT', numeroCuenta: '11040103570200000000', moneda: 'PEN' },
+  { id: 'mef-dgtp', nombre: 'MEF - DGTP', numeroCuenta: '12073303572000000003', moneda: 'USD' },
 ];
 
 /** Un movimiento (cargo o abono) en la libreta de una cuenta de registro. */
