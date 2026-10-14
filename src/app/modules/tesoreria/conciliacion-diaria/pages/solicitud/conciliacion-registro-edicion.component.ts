@@ -1,9 +1,7 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, Output, computed, signal } from '@angular/core';
 
 import { SolicitudeFormCardComponent } from '../../../../../shared/components/solicitude-form-card/solicitude-form-card.component';
-import { AlertComponent } from '../../../../../shared/ui/alert/alert.component';
 import { ButtonComponent } from '../../../../../shared/ui/button/button.component';
-import { DateTimePickerComponent } from '../../../../../shared/ui/date-time-picker/date-time-picker.component';
 import { IconComponent } from '../../../../../shared/ui/icon/icon.component';
 import { TextAreaControlComponent } from '../../../../../shared/ui/text-area-control/text-area-control.component';
 import { TextFieldComponent } from '../../../../../shared/ui/text-field/text-field.component';
@@ -18,8 +16,8 @@ interface SustentoEnEdicion extends SustentoRegistro {
 }
 
 /**
- * Una operación de la otra fuente (OBO o libro banco) con la que se concilia. La primera repite fecha, número y descripción
- * del registro de origen; las siguientes son otras operaciones: su fecha y número se editan (la descripción no).
+ * Una operación de la otra fuente (OBO o libro banco) con la que se concilia. Todas repiten la fecha, el número y la
+ * descripción del registro de origen: solo se ingresan su débito y su crédito.
  */
 interface Candidato {
   id: string;
@@ -28,10 +26,6 @@ interface Candidato {
   descripcion: string;
   debito: string;
   credito: string;
-  /** Fecha y número se capturan (operaciones agregadas después de la primera). */
-  editable: boolean;
-  /** Fecha y hora elegidas (aaaa-mm-ddThh:mm:ss) de una operación editable. */
-  fechaIso: string;
 }
 
 const comoNumero = (valor: string | number): number => Number(String(valor).replace(/,/g, ''));
@@ -47,7 +41,7 @@ const formato = (valor: string | number): string => comoNumero(valor).toLocaleSt
 @Component({
   selector: 'siaf-conciliacion-registro-edicion',
   standalone: true,
-  imports: [AlertComponent, ButtonComponent, DateTimePickerComponent, IconComponent, SolicitudeFormCardComponent, TextAreaControlComponent, TextFieldComponent, UploadSideNavComponent, UploadedFileCardComponent],
+  imports: [ButtonComponent, IconComponent, SolicitudeFormCardComponent, TextAreaControlComponent, TextFieldComponent, UploadSideNavComponent, UploadedFileCardComponent],
   template: `
     <siaf-solicitude-form-card title="Editar registro no conciliado">
       <div card-actions class="flex items-center gap-siaf-xs">
@@ -97,16 +91,12 @@ const formato = (valor: string | number): string => comoNumero(valor).toLocaleSt
           <p class="m-0 text-sm text-[var(--sys-color-text-neutral-medium)]">Por favor, haga clic en el botón (+) para seleccionar una opción.</p>
         </div>
       } @else {
-        @if (aviso(); as a) {
-          <siaf-alert tone="success" [title]="a.titulo" [description]="a.descripcion" />
-        }
-
-        <!-- Sin desplazamiento interno en pantallas anchas: así el calendario del selector no queda recortado -->
-        <div class="max-xl:overflow-x-auto">
-          <table class="w-full min-w-[980px] border-collapse text-left text-sm">
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[900px] border-collapse text-left text-sm">
             <thead>
               <tr class="h-10 bg-[var(--sys-color-bg-surfaces-surface-high)] text-xs font-bold uppercase text-text">
-                <th class="w-[220px] rounded-tl-siaf-sm px-siaf-md">{{ origenLB ? 'F. operación B.' : 'F. operación' }}</th>
+                <th class="w-20 rounded-tl-siaf-sm px-siaf-md">Sec.</th>
+                <th class="w-[220px] px-siaf-md">{{ origenLB ? 'F. operación B.' : 'F. operación' }}</th>
                 <th class="w-[160px] px-siaf-md">Número</th>
                 <th class="px-siaf-md">Descripción</th>
                 <th class="w-[220px] px-siaf-md">Débito (S/)</th>
@@ -115,23 +105,12 @@ const formato = (valor: string | number): string => comoNumero(valor).toLocaleSt
               </tr>
             </thead>
             <tbody>
-              @for (c of candidatos(); track c.id) {
+              @for (c of candidatos(); track c.id; let i = $index) {
                 <tr class="border-b border-[var(--sys-color-divider-default)] align-top text-[var(--sys-color-text-neutral-medium)]">
-                  <td class="px-siaf-sm py-siaf-sm">
-                    @if (c.editable) {
-                      <siaf-date-time-picker variant="datetime" placeholder="Seleccionar fecha" [defaultToToday]="false" [value]="c.fechaIso" (valueChange)="cambiarFecha(c.id, $event)" />
-                    } @else {
-                      <siaf-input [value]="c.fecha" [disabled]="true" trailingIcon="calendar_today" />
-                    }
-                  </td>
-                  <td class="px-siaf-sm py-siaf-sm">
-                    @if (c.editable) {
-                      <siaf-input placeholder="Ingresar" [value]="c.numero" (valueChange)="cambiarCandidato(c.id, 'numero', $any($event))" />
-                    } @else {
-                      <siaf-input [value]="c.numero" [disabled]="true" />
-                    }
-                  </td>
-                  <td class="px-siaf-sm py-siaf-sm"><siaf-input [value]="c.descripcion" [disabled]="true" /></td>
+                  <td class="px-siaf-md py-siaf-md">{{ secuenciaDe(i) }}</td>
+                  <td class="px-siaf-md py-siaf-md">{{ c.fecha }}</td>
+                  <td class="px-siaf-md py-siaf-md">{{ c.numero }}</td>
+                  <td class="px-siaf-md py-siaf-md">{{ c.descripcion }}</td>
                   <td class="px-siaf-sm py-siaf-sm">
                     <siaf-input
                       placeholder="Ingresar débito"
@@ -163,6 +142,14 @@ const formato = (valor: string | number): string => comoNumero(valor).toLocaleSt
                 </tr>
               }
             </tbody>
+            <tfoot>
+              <tr class="h-12 bg-[var(--sys-color-bg-surfaces-surface-low)] text-sm font-bold text-text">
+                <td class="rounded-bl-siaf-sm px-siaf-md" colspan="4">TOTAL</td>
+                <td class="px-siaf-md">{{ totalDebito() }}</td>
+                <td class="px-siaf-md">{{ totalCredito() }}</td>
+                <td class="rounded-br-siaf-sm"></td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       }
@@ -288,28 +275,19 @@ export class ConciliacionRegistroEdicionComponent implements OnChanges {
       valido(this.debito()) &&
       valido(this.credito()) &&
       this.candidatos().length > 0 &&
-      this.candidatos().every((c) => valido(c.debito) && valido(c.credito) && c.fecha !== '' && c.numero.trim() !== '') &&
+      this.candidatos().every((c) => valido(c.debito) && valido(c.credito)) &&
       this.sustentos().length > 0 &&
       cumpleMinimoTextoLibre(this.justificacion()),
   );
 
-  /** Monto del registro de origen (el débito o el crédito: el otro va en cero). */
-  private readonly montoBase = computed(() => comoNumero(this.debito() || 0) + comoNumero(this.credito() || 0));
-  /** Suma de lo ingresado en las operaciones con las que se concilia. */
-  private readonly sumaCandidatos = computed(() => this.candidatos().reduce((total, c) => total + comoNumero(c.debito || 0) + comoNumero(c.credito || 0), 0));
+  /** Totales de las columnas Débito y Crédito de las operaciones ingresadas. */
+  readonly totalDebito = computed(() => formato(this.candidatos().reduce((total, c) => total + comoNumero(c.debito || 0), 0)));
+  readonly totalCredito = computed(() => formato(this.candidatos().reduce((total, c) => total + comoNumero(c.credito || 0), 0)));
 
-  /**
-   * Aviso de éxito de la sección de la otra fuente cuando las operaciones ingresadas están completas y suman el monto del
-   * registro de origen. Lo que falte no se advierte aquí: lo informa «Verificar» del documento.
-   */
-  readonly aviso = computed<{ titulo: string; descripcion: string } | null>(() => {
-    const completas = this.candidatos().length > 0 && this.candidatos().every((c) => valido(c.debito) && valido(c.credito));
-    if (!completas || Math.abs(this.sumaCandidatos() - this.montoBase()) >= 0.005) return null;
-    const suma = formato(this.sumaCandidatos());
-    return this.origenLB
-      ? { titulo: 'Registro de operación bancarias', descripcion: `La operación(es) bancaria(s) suman S/ ${suma} y coinciden con el Libro Banco.` }
-      : { titulo: 'Libro Banco', descripcion: `El RR suma S/ ${suma} y coincide con la operación bancaria.` };
-  });
+  /** Secuencia de la fila en la tabla, a cuatro dígitos. */
+  secuenciaDe(indice: number): string {
+    return String(indice + 1).padStart(4, '0');
+  }
 
   ngOnChanges(): void {
     const r = this.registro;
@@ -320,7 +298,7 @@ export class ConciliacionRegistroEdicionComponent implements OnChanges {
     // vacía y cada (+) agrega una operación.
     this.candidatos.set(
       this.origenLB && r.rbNumero
-        ? [{ id: 'c0', fecha: r.rbFecha, numero: r.rbNumero, descripcion: r.rbDescripcion, debito: r.rbDebito, credito: r.rbCredito, editable: false, fechaIso: '' }]
+        ? [{ id: 'c0', fecha: r.rbFecha, numero: r.rbNumero, descripcion: r.rbDescripcion, debito: r.rbDebito, credito: r.rbCredito }]
         : [],
     );
     this.sustentos.set((r.sustentos ?? []).map((d) => ({ ...d })));
@@ -339,30 +317,16 @@ export class ConciliacionRegistroEdicionComponent implements OnChanges {
     this.marcar(campo);
   }
 
-  cambiarCandidato(id: string, campo: 'debito' | 'credito' | 'numero', valor: string | number): void {
+  cambiarCandidato(id: string, campo: 'debito' | 'credito', valor: string | number): void {
     this.candidatos.update((lista) => lista.map((c) => (c.id === id ? { ...c, [campo]: String(valor) } : c)));
     this.marcar(`${id}:${campo}`);
   }
 
-  /**
-   * (+): agrega una sola operación. La primera repite la fecha, el número y la descripción del registro de origen; las
-   * siguientes son otras operaciones y su fecha y número se capturan (la descripción se mantiene).
-   */
+  /** (+): agrega una sola operación, que repite la fecha, el número y la descripción del registro de origen; solo se ingresan su débito y crédito. */
   agregarOperacion(): void {
-    const lista = this.candidatos();
     const base = this.base();
     const id = `c${++this.secuencia}`;
-    const nueva: Candidato = lista.length === 0
-      ? { id, fecha: base.fecha, numero: base.numero, descripcion: base.descripcion, debito: '', credito: '', editable: false, fechaIso: '' }
-      : { id, fecha: '', numero: '', descripcion: base.descripcion, debito: '', credito: '', editable: true, fechaIso: '' };
-    this.candidatos.set([...lista, nueva]);
-  }
-
-  /** Fecha y hora elegidas de una operación editable (aaaa-mm-ddThh:mm:ss): se muestran como dd/mm/aaaa hh:mm:ss. */
-  cambiarFecha(id: string, valor: string): void {
-    const [dia, hora = '00:00:00'] = valor.split('T');
-    const [a, m, d] = dia.split('-');
-    this.candidatos.update((lista) => lista.map((c) => (c.id === id ? { ...c, fechaIso: valor, fecha: valor ? `${d}/${m}/${a} ${hora}` : '' } : c)));
+    this.candidatos.update((lista) => [...lista, { id, fecha: base.fecha, numero: base.numero, descripcion: base.descripcion, debito: '', credito: '' }]);
   }
 
   quitarCandidato(id: string): void {
@@ -413,8 +377,8 @@ export class ConciliacionRegistroEdicionComponent implements OnChanges {
     const contraparte = { fecha: otro.fecha, numero: otro.numero, descripcion: otro.descripcion, debito: suma('debito'), credito: suma('credito') };
     this.accepted.emit(
       this.origenLB
-        ? { ...r, lbDebito: propio.debito, lbCredito: propio.credito, rbFecha: contraparte.fecha, rbNumero: contraparte.numero, rbDescripcion: contraparte.descripcion, rbDebito: contraparte.debito, rbCredito: contraparte.credito, motivo: '-', conciliado: true, ...extra }
-        : { ...r, rbDebito: propio.debito, rbCredito: propio.credito, lbFecha: contraparte.fecha, lbNumero: contraparte.numero, lbDescripcion: contraparte.descripcion, lbEntidad: 'SUNAT', lbDebito: contraparte.debito, lbCredito: contraparte.credito, motivo: '-', conciliado: true, ...extra },
+        ? { ...r, lbDebito: propio.debito, lbCredito: propio.credito, rbFecha: contraparte.fecha, rbNumero: contraparte.numero, rbDescripcion: contraparte.descripcion, rbDebito: contraparte.debito, rbCredito: contraparte.credito, conciliado: true, ...extra }
+        : { ...r, rbDebito: propio.debito, rbCredito: propio.credito, lbFecha: contraparte.fecha, lbNumero: contraparte.numero, lbDescripcion: contraparte.descripcion, lbEntidad: 'SUNAT', lbDebito: contraparte.debito, lbCredito: contraparte.credito, conciliado: true, ...extra },
     );
   }
 

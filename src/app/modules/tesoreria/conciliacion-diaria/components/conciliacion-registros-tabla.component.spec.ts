@@ -16,4 +16,16 @@ describe('ConciliacionRegistrosTablaComponent', () => {
     expect(estados(false)).toEqual(['No conciliado']);
     expect(estados(true)).toEqual(['Conciliado']);
   });
+
+  it('el motivo de inconsistencia se conserva hasta que se aprueba y entonces pasa a «-»', () => {
+    const celdaMotivo = (aprobado: boolean): string => {
+      const fixture = TestBed.createComponent(ConciliacionRegistrosTablaComponent);
+      fixture.componentRef.setInput('rows', [{ ...REGISTROS_NO_CONCILIADOS[0], conciliado: true }]);
+      fixture.componentRef.setInput('aprobado', aprobado);
+      fixture.detectChanges();
+      return (fixture.nativeElement as HTMLElement).textContent!;
+    };
+    expect(celdaMotivo(false)).toContain(REGISTROS_NO_CONCILIADOS[0].motivo);
+    expect(celdaMotivo(true)).not.toContain(REGISTROS_NO_CONCILIADOS[0].motivo);
+  });
 });

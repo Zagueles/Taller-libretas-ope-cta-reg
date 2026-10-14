@@ -16,7 +16,7 @@ import { RegistroNoConciliado } from '../models/conciliacion-diaria.model';
   template: `
     <div class="siaf-sidepanel-table-scroll">
       <table class="w-full min-w-[1500px] border-collapse text-left text-sm">
-        <thead class="text-xs font-bold uppercase text-text">
+        <thead class="whitespace-nowrap text-xs font-bold uppercase text-text">
           <tr class="h-10 bg-[var(--sys-color-bg-surfaces-surface-high)] text-center">
             @if (selectable) {
               <th rowspan="2" class="w-12 rounded-tl-siaf-sm px-siaf-sm"></th>
@@ -67,7 +67,7 @@ import { RegistroNoConciliado } from '../models/conciliacion-diaria.model';
               <td class="px-siaf-md py-siaf-sm">{{ r.rbDescripcion }}</td>
               <td class="px-siaf-md py-siaf-sm text-right">{{ r.rbDebito }}</td>
               <td class="px-siaf-md py-siaf-sm text-right">{{ r.rbCredito }}</td>
-              <td class="px-siaf-md py-siaf-sm">{{ r.motivo }}</td>
+              <td class="px-siaf-md py-siaf-sm">{{ r.conciliado && aprobado ? '-' : r.motivo }}</td>
               <td class="px-siaf-md py-siaf-sm">
                 <siaf-status-tag [tone]="r.conciliado && aprobado ? 'success' : 'default'" appearance="soft" size="small">{{ r.conciliado && aprobado ? 'Conciliado' : 'No conciliado' }}</siaf-status-tag>
               </td>
@@ -86,7 +86,7 @@ export class ConciliacionRegistrosTablaComponent {
   /** Agrega la columna de casillas. */
   /**
    * El estado pasa a «Conciliado» solo cuando el documento está aprobado: mientras el aprobador no lo apruebe, el registro
-   * ya trabajado sigue como «No conciliado».
+   * ya trabajado sigue como «No conciliado» y conserva su motivo de inconsistencia (que pasa a «-» al aprobarse).
    */
   @Input() aprobado = false;
   @Input() selectable = false;

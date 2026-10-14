@@ -15,8 +15,6 @@ describe('ConciliacionRegistroEdicionComponent', () => {
     const c = crear(0);
     c.agregarOperacion();
     c.agregarOperacion();
-    c.cambiarFecha('c2', '2025-12-01');
-    c.cambiarCandidato('c2', 'numero', '02698150');
     expect(c.debito()).toBe('0.00');
     expect(c.credito()).toBe('1,267.00');
     expect(c.puedeAceptar()).toBeFalse();
@@ -61,30 +59,30 @@ describe('ConciliacionRegistroEdicionComponent', () => {
     c.justificacion.set('La operación coincide.');
     c.aceptar();
     expect(emitidos.length).toBe(1);
-    expect(emitidos[0]).toEqual(jasmine.objectContaining({ conciliado: true, motivo: '-', rbCredito: '1,267.00', sustentos: [{ tipo: 'Constancia', nombre: 'constancia.pdf', tamano: undefined }], justificacion: 'La operación coincide.' }));
+    expect(emitidos[0]).toEqual(jasmine.objectContaining({ conciliado: true, motivo: REGISTROS_NO_CONCILIADOS[0].motivo, rbCredito: '1,267.00', sustentos: [{ tipo: 'Constancia', nombre: 'constancia.pdf', tamano: undefined }], justificacion: 'La operación coincide.' }));
   });
 
-  it('no advierte lo que falta (lo hace «Verificar»): la sección arranca vacía y solo avisa en verde cuando los montos coinciden', () => {
+  it('la sección arranca vacía y no muestra alertas (lo que falte lo informa «Verificar»)', () => {
     const c = crear(0);
     expect(c.candidatos()).withContext('no existe OBO: sin operaciones').toEqual([]);
-    expect(c.aviso()).toBeNull();
+  });
 
+  it('la tabla totaliza débito y crédito de las operaciones ingresadas', () => {
+    const c = crear(0);
     c.agregarOperacion();
     c.agregarOperacion();
-    // 1,000.00 + 267.00 suman el crédito del libro banco (1,267.00).
-    c.cambiarCandidato('c1', 'debito', '0');
-    c.cambiarCandidato('c1', 'credito', '1000');
-    c.cambiarCandidato('c2', 'debito', '0');
-    c.cambiarCandidato('c2', 'credito', '100');
-    expect(c.aviso()).toBeNull();
-    c.cambiarCandidato('c2', 'credito', '267');
-    expect(c.aviso()).toEqual({ titulo: 'Registro de operación bancarias', descripcion: 'La operación(es) bancaria(s) suman S/ 1,267.00 y coinciden con el Libro Banco.' });
+    c.cambiarCandidato('c1', 'credito', '9000');
+    c.cambiarCandidato('c2', 'credito', '753');
+    c.cambiarCandidato('c2', 'debito', '1.5');
+    expect(c.totalCredito()).toBe('9,753.00');
+    expect(c.totalDebito()).toBe('1.50');
+    expect(c.secuenciaDe(0)).toBe('0001');
+    expect(c.secuenciaDe(1)).toBe('0002');
   });
 
   it('en «Montos diferentes» la operación existente viene precargada, sin alerta', () => {
     const c = crear(1);
     expect(c.candidatos().length).toBe(1);
-    expect(c.aviso()).toBeNull();
   });
 
   it('suma varios sustentos con su tipo en una carga, reemplaza uno y exige al menos uno', () => {
@@ -125,19 +123,20 @@ describe('ConciliacionRegistroEdicionComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('haga clic en el botón (+)');
   });
 
-  it('cada (+) agrega una sola operación: la primera repite el libro banco y las siguientes editan fecha y número', () => {
+  it('cada (+) agrega una sola operación que repite la fecha, el número y la descripción del registro de origen', () => {
     const c = crear(0);
     c.agregarOperacion();
-    expect(c.candidatos().length).toBe(1);
-    expect(c.candidatos()[0]).toEqual(jasmine.objectContaining({ numero: REGISTROS_NO_CONCILIADOS[0].lbNumero, fecha: REGISTROS_NO_CONCILIADOS[0].lbFecha, editable: false }));
-
     c.agregarOperacion();
-    const segunda = c.candidatos()[1];
+    const origen = REGISTROS_NO_CONCILIADOS[0];
     expect(c.candidatos().length).toBe(2);
-    expect(segunda).toEqual(jasmine.objectContaining({ numero: '', fecha: '', descripcion: c.candidatos()[0].descripcion, editable: true }));
+    c.candidatos().forEach((o) => expect(o).toEqual(jasmine.objectContaining({ numero: origen.lbNumero, fecha: origen.lbFecha, descripcion: origen.lbDescripcion })));
+  });
 
-    c.cambiarFecha(segunda.id, '2025-12-02T14:30:05');
-    c.cambiarCandidato(segunda.id, 'numero', '02698200');
-    expect(c.candidatos()[1]).toEqual(jasmine.objectContaining({ fecha: '02/12/2025 14:30:05', numero: '02698200' }));
+  it('en el otro origen (registro de operaciones bancarias) las operaciones repiten sus datos', () => {
+    const c = crear(3);
+    c.agregarOperacion();
+    c.agregarOperacion();
+    const origen = REGISTROS_NO_CONCILIADOS[3];
+    c.candidatos().forEach((o) => expect(o).toEqual(jasmine.objectContaining({ numero: origen.rbNumero, fecha: origen.rbFecha })));
   });
 });
