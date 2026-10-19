@@ -56,107 +56,112 @@ const formato = (valor: string | number): string => comoNumero(valor).toLocaleSt
         <siaf-input label="Motivo de inconsistencia" [value]="registro.motivo" [disabled]="true" trailingIcon="info" />
       </div>
 
-      <!-- Misma estructura que los demás encabezados de sección (alto de 40 px, como si llevara su botón) -->
-      <div class="flex min-h-10 items-center">
-        <h3 class="m-0 text-sm font-bold uppercase text-text">{{ origenLB ? 'Libro banco' : 'Registro de operaciones bancarias' }}</h3>
-      </div>
-      <div class="grid gap-siaf-lg md:grid-cols-2 xl:grid-cols-4">
-        <siaf-input [label]="origenLB ? 'Fecha de operación' : 'Fecha de operación B.'" [value]="base().fecha" [disabled]="true" trailingIcon="calendar_today" />
-        <siaf-input label="Número" [value]="base().numero" [disabled]="true" />
-        <siaf-input label="Descripción" [value]="base().descripcion" [disabled]="true" />
-        @if (origenLB) {
-          <siaf-input label="Entidad administradora del ingreso" [value]="base().entidad" [disabled]="true" />
-        }
-        <siaf-input
-          label="Débito"
-          type="decimal"
-          [required]="true"
-          [value]="debito()"
-          [error]="error('debito', debito())"
-          (valueChange)="cambiarBase('debito', $any($event))"
-        />
-        <siaf-input
-          label="Crédito"
-          type="decimal"
-          [required]="true"
-          [value]="credito()"
-          [error]="error('credito', credito())"
-          (valueChange)="cambiarBase('credito', $any($event))"
-        />
+      <!-- Cada sección: encabezado de 40 px y 8 px hasta su contenido, como «Documento sustento» -->
+      <div class="flex flex-col gap-siaf-xs">
+          <!-- Mismo encabezado que los demás (alto de 40 px, como si llevara su botón) -->
+        <div class="flex min-h-10 items-center">
+          <h3 class="m-0 text-sm font-bold uppercase text-text">{{ origenLB ? 'Libro banco' : 'Registro de operaciones bancarias' }}</h3>
+        </div>
+        <div class="grid gap-siaf-lg md:grid-cols-2 xl:grid-cols-4">
+          <siaf-input [label]="origenLB ? 'Fecha de operación' : 'Fecha de operación B.'" [value]="base().fecha" [disabled]="true" trailingIcon="calendar_today" />
+          <siaf-input label="Número" [value]="base().numero" [disabled]="true" />
+          <siaf-input label="Descripción" [value]="base().descripcion" [disabled]="true" />
+          @if (origenLB) {
+            <siaf-input label="Entidad administradora del ingreso" [value]="base().entidad" [disabled]="true" />
+          }
+          <siaf-input
+            label="Débito"
+            type="decimal"
+            [required]="true"
+            [value]="debito()"
+            [error]="error('debito', debito())"
+            (valueChange)="cambiarBase('debito', $any($event))"
+          />
+          <siaf-input
+            label="Crédito"
+            type="decimal"
+            [required]="true"
+            [value]="credito()"
+            [error]="error('credito', credito())"
+            (valueChange)="cambiarBase('credito', $any($event))"
+          />
+        </div>
       </div>
 
-      <div class="flex min-h-10 items-center justify-between gap-siaf-md">
-        <h3 class="m-0 text-sm font-bold uppercase text-text">{{ origenLB ? 'Registro de operaciones bancarias' : 'Libro banco' }}</h3>
-        <siaf-button variant="filled" icon="search" [iconOnly]="true" [ariaLabel]="'Buscar ' + tituloBusqueda().toLowerCase()" (click)="abrirBusqueda()" />
-      </div>
-      @if (candidatos().length === 0) {
-        <!-- Sin operaciones: vista vacía (Figma 327:50141) -->
-        <div class="flex min-h-[49px] items-center rounded-siaf-md bg-[var(--sys-color-bg-surfaces-surface-low)] px-siaf-md py-siaf-sm">
-          <p class="m-0 text-sm text-[var(--sys-color-text-neutral-medium)]">Por favor, haga clic en el botón de búsqueda para seleccionar una opción.</p>
+      <div class="flex flex-col gap-siaf-xs">
+        <div class="flex min-h-10 items-center justify-between gap-siaf-md">
+          <h3 class="m-0 text-sm font-bold uppercase text-text">{{ origenLB ? 'Registro de operaciones bancarias' : 'Libro banco' }}</h3>
+          <siaf-button variant="filled" icon="search" [iconOnly]="true" [ariaLabel]="'Buscar ' + tituloBusqueda().toLowerCase()" (click)="abrirBusqueda()" />
         </div>
-      } @else {
-        <div class="overflow-x-auto">
-          <table class="w-full min-w-[900px] border-collapse text-left text-sm">
-            <thead>
-              <tr class="h-10 bg-[var(--sys-color-bg-surfaces-surface-high)] text-xs font-bold uppercase text-text">
-                <th class="w-20 rounded-tl-siaf-sm px-siaf-md">Sec.</th>
-                <th class="w-[220px] px-siaf-md">{{ origenLB ? 'F. operación B.' : 'F. operación' }}</th>
-                <th class="w-[160px] px-siaf-md">Número</th>
-                <th class="px-siaf-md">Descripción</th>
-                <th class="w-[220px] px-siaf-md">Débito (S/)</th>
-                <th class="w-[220px] px-siaf-md">Crédito (S/)</th>
-                <th class="w-12 rounded-tr-siaf-sm"></th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (c of candidatos(); track c.id; let i = $index) {
-                <tr class="border-b border-[var(--sys-color-divider-default)] align-top text-[var(--sys-color-text-neutral-medium)]">
-                  <td class="px-siaf-md py-siaf-md">{{ secuenciaDe(i) }}</td>
-                  <td class="px-siaf-md py-siaf-md">{{ c.fecha }}</td>
-                  <td class="px-siaf-md py-siaf-md">{{ c.numero }}</td>
-                  <td class="px-siaf-md py-siaf-md">{{ c.descripcion }}</td>
-                  <td class="px-siaf-sm py-siaf-sm">
-                    <siaf-input
-                      placeholder="Ingresar débito"
-                      type="decimal"
-                      [value]="c.debito"
-                      [error]="error(c.id + ':debito', c.debito)"
-                      (valueChange)="cambiarCandidato(c.id, 'debito', $any($event))"
-                    />
-                  </td>
-                  <td class="px-siaf-sm py-siaf-sm">
-                    <siaf-input
-                      placeholder="Ingresar crédito"
-                      type="decimal"
-                      [value]="c.credito"
-                      [error]="error(c.id + ':credito', c.credito)"
-                      (valueChange)="cambiarCandidato(c.id, 'credito', $any($event))"
-                    />
-                  </td>
-                  <td class="px-siaf-sm py-siaf-sm">
-                    <button
-                      class="inline-flex size-10 items-center justify-center rounded-siaf-md text-text transition hover:bg-surface-muted"
-                      type="button"
-                      [attr.aria-label]="'Quitar la operación ' + (c.numero || 'sin número')"
-                      (click)="quitarCandidato(c.id)"
-                    >
-                      <siaf-icon name="delete" [size]="24" />
-                    </button>
-                  </td>
+        @if (candidatos().length === 0) {
+          <!-- Sin operaciones: vista vacía (Figma 327:50141) -->
+          <div class="flex min-h-[49px] items-center rounded-siaf-md bg-[var(--sys-color-bg-surfaces-surface-low)] px-siaf-md py-siaf-sm">
+            <p class="m-0 text-sm text-[var(--sys-color-text-neutral-medium)]">Por favor, haga clic en el botón de búsqueda para seleccionar una opción.</p>
+          </div>
+        } @else {
+          <div class="overflow-x-auto">
+            <table class="w-full min-w-[900px] border-collapse text-left text-sm">
+              <thead>
+                <tr class="h-10 bg-[var(--sys-color-bg-surfaces-surface-high)] text-xs font-bold uppercase text-text">
+                  <th class="w-20 rounded-tl-siaf-sm px-siaf-md">Sec.</th>
+                  <th class="w-[220px] px-siaf-md">{{ origenLB ? 'F. operación B.' : 'F. operación' }}</th>
+                  <th class="w-[160px] px-siaf-md">Número</th>
+                  <th class="px-siaf-md">Descripción</th>
+                  <th class="w-[220px] px-siaf-md">Débito (S/)</th>
+                  <th class="w-[220px] px-siaf-md">Crédito (S/)</th>
+                  <th class="w-12 rounded-tr-siaf-sm"></th>
                 </tr>
-              }
-            </tbody>
-            <tfoot>
-              <tr class="h-12 bg-[var(--sys-color-bg-surfaces-surface-low)] text-sm font-bold text-text">
-                <td class="rounded-bl-siaf-sm px-siaf-md" colspan="4">TOTAL</td>
-                <td class="px-siaf-md">{{ totalDebito() }}</td>
-                <td class="px-siaf-md">{{ totalCredito() }}</td>
-                <td class="rounded-br-siaf-sm"></td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      }
+              </thead>
+              <tbody>
+                @for (c of candidatos(); track c.id; let i = $index) {
+                  <tr class="border-b border-[var(--sys-color-divider-default)] align-top text-[var(--sys-color-text-neutral-medium)]">
+                    <td class="px-siaf-md py-siaf-md">{{ secuenciaDe(i) }}</td>
+                    <td class="px-siaf-md py-siaf-md">{{ c.fecha }}</td>
+                    <td class="px-siaf-md py-siaf-md">{{ c.numero }}</td>
+                    <td class="px-siaf-md py-siaf-md">{{ c.descripcion }}</td>
+                    <td class="px-siaf-sm py-siaf-sm">
+                      <siaf-input
+                        placeholder="Ingresar débito"
+                        type="decimal"
+                        [value]="c.debito"
+                        [error]="error(c.id + ':debito', c.debito)"
+                        (valueChange)="cambiarCandidato(c.id, 'debito', $any($event))"
+                      />
+                    </td>
+                    <td class="px-siaf-sm py-siaf-sm">
+                      <siaf-input
+                        placeholder="Ingresar crédito"
+                        type="decimal"
+                        [value]="c.credito"
+                        [error]="error(c.id + ':credito', c.credito)"
+                        (valueChange)="cambiarCandidato(c.id, 'credito', $any($event))"
+                      />
+                    </td>
+                    <td class="px-siaf-sm py-siaf-sm">
+                      <button
+                        class="inline-flex size-10 items-center justify-center rounded-siaf-md text-text transition hover:bg-surface-muted"
+                        type="button"
+                        [attr.aria-label]="'Quitar la operación ' + (c.numero || 'sin número')"
+                        (click)="quitarCandidato(c.id)"
+                      >
+                        <siaf-icon name="delete" [size]="24" />
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+              <tfoot>
+                <tr class="h-12 bg-[var(--sys-color-bg-surfaces-surface-low)] text-sm font-bold text-text">
+                  <td class="rounded-bl-siaf-sm px-siaf-md" colspan="4">TOTAL</td>
+                  <td class="px-siaf-md">{{ totalDebito() }}</td>
+                  <td class="px-siaf-md">{{ totalCredito() }}</td>
+                  <td class="rounded-br-siaf-sm"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        }
+      </div>
 
       <div class="flex flex-col gap-siaf-xs">
         <div class="flex min-h-10 items-center justify-between gap-siaf-md">
