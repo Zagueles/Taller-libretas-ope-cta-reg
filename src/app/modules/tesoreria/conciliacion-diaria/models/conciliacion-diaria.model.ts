@@ -82,3 +82,19 @@ export const REGISTROS_NO_CONCILIADOS: RegistroNoConciliado[] = [
   { id: 'nc-2', nro: '2', lbFecha: '01/12/2025 10:05:06', lbNumero: '02698148', lbDescripcion: DESCRIPCION, lbEntidad: 'SUNAT', lbDebito: '0.00', lbCredito: '31,245.00', rbFecha: '', rbNumero: '', rbDescripcion: '', rbDebito: '', rbCredito: '', motivo: 'No existe OBO' },
   { id: 'nc-1', nro: '1', lbFecha: '', lbNumero: '', lbDescripcion: '', lbEntidad: '', lbDebito: '', lbCredito: '', rbFecha: '01/12/2025 10:00:13', rbNumero: '02698147', rbDescripcion: DESCRIPCION, rbDebito: '0.00', rbCredito: '9,753.00', motivo: 'No existe RR' },
 ];
+
+/** Una operación bancaria (o, en el origen contrario, un registro del libro banco) que se puede elegir para conciliar. */
+export interface OperacionConciliable {
+  id: string;
+  fecha: string;
+  numero: string;
+  descripcion: string;
+  debito: string;
+  credito: string;
+}
+
+/** Operaciones disponibles en el panel «Seleccionar registro de operaciones bancarias» (Figma 461:28376). */
+export const OPERACIONES_CONCILIABLES: OperacionConciliable[] = [
+  { id: 'op-02698150', fecha: '01/12/2025 10:10:08', numero: '02698150', descripcion: 'Reporte de Recaudación', debito: '0.00', credito: '5,068.00' },
+  { id: 'op-02698147', fecha: '01/12/2025 10:00:13', numero: '02698147', descripcion: 'Reporte de Recaudación', debito: '0.00', credito: '9,753.00' },
+];

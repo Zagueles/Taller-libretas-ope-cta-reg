@@ -13,8 +13,9 @@ describe('ConciliacionRegistroEdicionComponent', () => {
 
   it('precarga los montos del libro banco y exige los de cada operación a conciliar', () => {
     const c = crear(0);
-    c.agregarOperacion();
-    c.agregarOperacion();
+    c.abrirBusqueda();
+    c.seleccion.set(['op-02698150', 'op-02698147']);
+    c.aceptarOperaciones();
     expect(c.debito()).toBe('0.00');
     expect(c.credito()).toBe('1,267.00');
     expect(c.puedeAceptar()).toBeFalse();
@@ -29,9 +30,9 @@ describe('ConciliacionRegistroEdicionComponent', () => {
     c.justificacion.set('La operación coincide.');
     expect(c.puedeAceptar()).toBeTrue();
 
-    c.cambiarCandidato('c2', 'credito', '');
+    c.cambiarCandidato('op-02698147', 'credito', '');
     expect(c.puedeAceptar()).toBeFalse();
-    expect(c.error('c2:credito', '')).toContain('obligatorio');
+    expect(c.error('op-02698147:credito', '')).toContain('obligatorio');
   });
 
   it('exige también el débito y el crédito del registro de origen', () => {
@@ -46,7 +47,9 @@ describe('ConciliacionRegistroEdicionComponent', () => {
 
   it('al aceptar emite el registro conciliado con la contraparte', () => {
     const c = crear(0);
-    c.agregarOperacion();
+    c.abrirBusqueda();
+    c.seleccion.set(['op-02698150']);
+    c.aceptarOperaciones();
     const emitidos: unknown[] = [];
     c.accepted.subscribe((r) => emitidos.push(r));
     c.candidatos().forEach((o) => {
@@ -69,11 +72,12 @@ describe('ConciliacionRegistroEdicionComponent', () => {
 
   it('la tabla totaliza débito y crédito de las operaciones ingresadas', () => {
     const c = crear(0);
-    c.agregarOperacion();
-    c.agregarOperacion();
-    c.cambiarCandidato('c1', 'credito', '9000');
-    c.cambiarCandidato('c2', 'credito', '753');
-    c.cambiarCandidato('c2', 'debito', '1.5');
+    c.abrirBusqueda();
+    c.seleccion.set(['op-02698150', 'op-02698147']);
+    c.aceptarOperaciones();
+    c.cambiarCandidato('op-02698150', 'credito', '9000');
+    c.cambiarCandidato('op-02698147', 'credito', '753');
+    c.cambiarCandidato('op-02698147', 'debito', '1.5');
     expect(c.totalCredito()).toBe('9,753.00');
     expect(c.totalDebito()).toBe('1.50');
     expect(c.secuenciaDe(0)).toBe('0001');
@@ -114,29 +118,38 @@ describe('ConciliacionRegistroEdicionComponent', () => {
     const c = fixture.componentInstance;
     c.candidatos().forEach((o) => c.quitarCandidato(o.id));
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('haga clic en el botón (+) para seleccionar una opción');
+    expect(fixture.nativeElement.textContent).toContain('haga clic en el botón de búsqueda para seleccionar una opción');
     expect(fixture.nativeElement.querySelector('table')).toBeNull();
 
-    c.agregarOperacion();
+    c.abrirBusqueda();
+    c.seleccion.set(['op-02698150']);
+    c.aceptarOperaciones();
     fixture.detectChanges();
     expect(c.candidatos().length).toBe(1);
-    expect(fixture.nativeElement.textContent).not.toContain('haga clic en el botón (+)');
+    expect(fixture.nativeElement.textContent).not.toContain('haga clic en el botón de búsqueda');
   });
 
-  it('cada (+) agrega una sola operación que repite la fecha, el número y la descripción del registro de origen', () => {
+  it('el panel de búsqueda agrega una o más operaciones con su propia fecha, número y descripción, y solo falta su débito y crédito', () => {
     const c = crear(0);
-    c.agregarOperacion();
-    c.agregarOperacion();
-    const origen = REGISTROS_NO_CONCILIADOS[0];
-    expect(c.candidatos().length).toBe(2);
-    c.candidatos().forEach((o) => expect(o).toEqual(jasmine.objectContaining({ numero: origen.lbNumero, fecha: origen.lbFecha, descripcion: origen.lbDescripcion })));
+    c.abrirBusqueda();
+    expect(c.operacionesFiltradas().length).toBe(2);
+    c.seleccion.set(['op-02698150', 'op-02698147']);
+    c.aceptarOperaciones();
+    expect(c.candidatos().map((o) => [o.numero, o.fecha, o.debito, o.credito])).toEqual([
+      ['02698150', '01/12/2025 10:10:08', '', ''],
+      ['02698147', '01/12/2025 10:00:13', '', ''],
+    ]);
+    // Las que ya están en la tabla no se vuelven a ofrecer.
+    c.abrirBusqueda();
+    expect(c.operacionesFiltradas()).toEqual([]);
   });
 
-  it('en el otro origen (registro de operaciones bancarias) las operaciones repiten sus datos', () => {
-    const c = crear(3);
-    c.agregarOperacion();
-    c.agregarOperacion();
-    const origen = REGISTROS_NO_CONCILIADOS[3];
-    c.candidatos().forEach((o) => expect(o).toEqual(jasmine.objectContaining({ numero: origen.rbNumero, fecha: origen.rbFecha })));
+  it('el panel filtra por la búsqueda y no suma nada si se cancela', () => {
+    const c = crear(0);
+    c.abrirBusqueda();
+    c.busqueda.set('02698147');
+    expect(c.operacionesFiltradas().map((o) => o.numero)).toEqual(['02698147']);
+    c.busquedaAbierta.set(false);
+    expect(c.candidatos()).toEqual([]);
   });
 });

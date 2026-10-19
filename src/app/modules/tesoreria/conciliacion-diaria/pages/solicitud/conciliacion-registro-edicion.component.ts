@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, Output, computed, signal } from '@angular/core';
 
+import { SelectionColumn, SelectionSideNavComponent } from '../../../../../shared/components/selection-side-nav/selection-side-nav.component';
 import { SolicitudeFormCardComponent } from '../../../../../shared/components/solicitude-form-card/solicitude-form-card.component';
 import { ButtonComponent } from '../../../../../shared/ui/button/button.component';
 import { IconComponent } from '../../../../../shared/ui/icon/icon.component';
@@ -8,7 +9,7 @@ import { TextFieldComponent } from '../../../../../shared/ui/text-field/text-fie
 import { UploadSideNavComponent } from '../../../../../shared/ui/upload-side-nav/upload-side-nav.component';
 import { UploadedFileCardComponent } from '../../../../../shared/ui/uploaded-file-card/uploaded-file-card.component';
 import { cumpleMinimoTextoLibre, MIN_CARACTERES_TEXTO_LIBRE } from '../../../../../shared/utils/texto-libre.util';
-import { RegistroNoConciliado, SustentoRegistro, TIPOS_DOCUMENTO_SUSTENTO } from '../../models/conciliacion-diaria.model';
+import { OPERACIONES_CONCILIABLES, OperacionConciliable, RegistroNoConciliado, SustentoRegistro, TIPOS_DOCUMENTO_SUSTENTO } from '../../models/conciliacion-diaria.model';
 
 /** Un sustento en edición: si se cargó en esta sesión conserva su archivo (para descargarlo). */
 interface SustentoEnEdicion extends SustentoRegistro {
@@ -41,7 +42,7 @@ const formato = (valor: string | number): string => comoNumero(valor).toLocaleSt
 @Component({
   selector: 'siaf-conciliacion-registro-edicion',
   standalone: true,
-  imports: [ButtonComponent, IconComponent, SolicitudeFormCardComponent, TextAreaControlComponent, TextFieldComponent, UploadSideNavComponent, UploadedFileCardComponent],
+  imports: [ButtonComponent, IconComponent, SelectionSideNavComponent, SolicitudeFormCardComponent, TextAreaControlComponent, TextFieldComponent, UploadSideNavComponent, UploadedFileCardComponent],
   template: `
     <siaf-solicitude-form-card title="Editar registro no conciliado">
       <div card-actions class="flex items-center gap-siaf-xs">
@@ -55,7 +56,10 @@ const formato = (valor: string | number): string => comoNumero(valor).toLocaleSt
         <siaf-input label="Motivo de inconsistencia" [value]="registro.motivo" [disabled]="true" trailingIcon="info" />
       </div>
 
-      <h3 class="m-0 mt-siaf-md text-sm font-bold uppercase text-text">{{ origenLB ? 'Libro banco' : 'Registro de operaciones bancarias' }}</h3>
+      <!-- Misma estructura que los demás encabezados de sección (alto de 40 px, como si llevara su botón) -->
+      <div class="flex min-h-10 items-center">
+        <h3 class="m-0 text-sm font-bold uppercase text-text">{{ origenLB ? 'Libro banco' : 'Registro de operaciones bancarias' }}</h3>
+      </div>
       <div class="grid gap-siaf-lg md:grid-cols-2 xl:grid-cols-4">
         <siaf-input [label]="origenLB ? 'Fecha de operación' : 'Fecha de operación B.'" [value]="base().fecha" [disabled]="true" trailingIcon="calendar_today" />
         <siaf-input label="Número" [value]="base().numero" [disabled]="true" />
@@ -81,14 +85,14 @@ const formato = (valor: string | number): string => comoNumero(valor).toLocaleSt
         />
       </div>
 
-      <div class="mt-siaf-md flex min-h-10 items-center justify-between gap-siaf-md">
+      <div class="flex min-h-10 items-center justify-between gap-siaf-md">
         <h3 class="m-0 text-sm font-bold uppercase text-text">{{ origenLB ? 'Registro de operaciones bancarias' : 'Libro banco' }}</h3>
-        <siaf-button variant="filled" icon="add" [iconOnly]="true" ariaLabel="Agregar operación" (click)="agregarOperacion()" />
+        <siaf-button variant="filled" icon="search" [iconOnly]="true" [ariaLabel]="'Buscar ' + tituloBusqueda().toLowerCase()" (click)="abrirBusqueda()" />
       </div>
       @if (candidatos().length === 0) {
         <!-- Sin operaciones: vista vacía (Figma 327:50141) -->
         <div class="flex min-h-[49px] items-center rounded-siaf-md bg-[var(--sys-color-bg-surfaces-surface-low)] px-siaf-md py-siaf-sm">
-          <p class="m-0 text-sm text-[var(--sys-color-text-neutral-medium)]">Por favor, haga clic en el botón (+) para seleccionar una opción.</p>
+          <p class="m-0 text-sm text-[var(--sys-color-text-neutral-medium)]">Por favor, haga clic en el botón de búsqueda para seleccionar una opción.</p>
         </div>
       } @else {
         <div class="overflow-x-auto">
@@ -218,6 +222,32 @@ const formato = (valor: string | number): string => comoNumero(valor).toLocaleSt
       </div>
     </siaf-solicitude-form-card>
 
+
+    <!-- Seleccionar registro de operaciones bancarias (Figma 461:28376): una o más operaciones -->
+    <siaf-selection-side-nav
+      [open]="busquedaAbierta()"
+      [title]="'Seleccionar ' + tituloBusqueda()"
+      mode="multiple"
+      [rows]="operacionesPagina()"
+      [columns]="columnasOperacion"
+      [searchValue]="busqueda()"
+      [selectedIds]="seleccion()"
+      [paginated]="true"
+      [page]="paginaOperaciones()"
+      [totalPages]="totalPaginasOperaciones()"
+      [pageSize]="filasOperaciones()"
+      [rowsPerPage]="filasOperaciones()"
+      [totalItems]="operacionesFiltradas().length"
+      [rowsPerPageOptions]="[10, 25, 50, 100]"
+      (searchChange)="busqueda.set($event); paginaOperaciones.set(1)"
+      (selectionChange)="seleccion.set($event)"
+      (previousPage)="paginaOperaciones.set(paginaOperaciones() - 1)"
+      (nextPage)="paginaOperaciones.set(paginaOperaciones() + 1)"
+      (rowsPerPageChange)="filasOperaciones.set($event); paginaOperaciones.set(1)"
+      (closed)="busquedaAbierta.set(false)"
+      (accepted)="aceptarOperaciones()"
+    />
+
     <siaf-upload-side-nav
       [open]="sustentoAbierto()"
       variant="document-type"
@@ -247,7 +277,38 @@ export class ConciliacionRegistroEdicionComponent implements OnChanges {
   readonly debito = signal('');
   readonly credito = signal('');
   readonly candidatos = signal<Candidato[]>([]);
-  private secuencia = 0;
+  readonly busquedaAbierta = signal(false);
+  readonly busqueda = signal('');
+  readonly seleccion = signal<string[]>([]);
+  readonly filasOperaciones = signal(25);
+  readonly paginaOperaciones = signal(1);
+
+  readonly columnasOperacion: SelectionColumn<OperacionConciliable>[] = [
+    { key: 'fecha', label: 'F. operación B.', widthClass: 'w-[200px]' },
+    { key: 'numero', label: 'Número', widthClass: 'w-[130px]' },
+    { key: 'descripcion', label: 'Descripción' },
+    { key: 'debito', label: 'Débito (S/)', cellClass: 'text-right' },
+    { key: 'credito', label: 'Crédito (S/)', cellClass: 'text-right' },
+  ];
+
+  /** Lo que se busca: si el registro nace del libro banco, operaciones bancarias; si nace de ellas, el libro banco. */
+  readonly tituloBusqueda = computed(() => (this.origenLBSignal() ? 'Registro de operaciones bancarias' : 'Libro banco'));
+  private readonly origenLBSignal = signal(true);
+
+  /** Las que todavía no están en la tabla. */
+  private readonly operacionesDisponibles = computed(() => {
+    const usadas = new Set(this.candidatos().map((c) => c.numero));
+    return OPERACIONES_CONCILIABLES.filter((o) => !usadas.has(o.numero));
+  });
+  readonly operacionesFiltradas = computed(() => {
+    const q = this.busqueda().trim().toLowerCase();
+    return this.operacionesDisponibles().filter((o) => !q || [o.fecha, o.numero, o.descripcion, o.debito, o.credito].some((v) => v.toLowerCase().includes(q)));
+  });
+  readonly totalPaginasOperaciones = computed(() => Math.max(1, Math.ceil(this.operacionesFiltradas().length / this.filasOperaciones())));
+  readonly operacionesPagina = computed(() => {
+    const desde = (Math.min(this.paginaOperaciones(), this.totalPaginasOperaciones()) - 1) * this.filasOperaciones();
+    return this.operacionesFiltradas().slice(desde, desde + this.filasOperaciones());
+  });
   readonly tocados = signal<ReadonlySet<string>>(new Set());
   /** Documentos de sustento del registro; el de `reemplazo` se cambia al subir uno nuevo. */
   readonly sustentos = signal<SustentoEnEdicion[]>([]);
@@ -292,6 +353,7 @@ export class ConciliacionRegistroEdicionComponent implements OnChanges {
   ngOnChanges(): void {
     const r = this.registro;
     this.origenLB = !!r.lbNumero;
+    this.origenLBSignal.set(this.origenLB);
     this.debito.set(this.origenLB ? r.lbDebito : r.rbDebito);
     this.credito.set(this.origenLB ? r.lbCredito : r.rbCredito);
     // «Montos diferentes»: la otra fuente ya existe y viene precargada; si falta (no existe OBO o RR), la sección arranca
@@ -322,11 +384,18 @@ export class ConciliacionRegistroEdicionComponent implements OnChanges {
     this.marcar(`${id}:${campo}`);
   }
 
-  /** (+): agrega una sola operación, que repite la fecha, el número y la descripción del registro de origen; solo se ingresan su débito y crédito. */
-  agregarOperacion(): void {
-    const base = this.base();
-    const id = `c${++this.secuencia}`;
-    this.candidatos.update((lista) => [...lista, { id, fecha: base.fecha, numero: base.numero, descripcion: base.descripcion, debito: '', credito: '' }]);
+  abrirBusqueda(): void {
+    this.seleccion.set([]);
+    this.busqueda.set('');
+    this.paginaOperaciones.set(1);
+    this.busquedaAbierta.set(true);
+  }
+
+  /** «Aceptar» del panel: suma las operaciones elegidas, con su fecha, número y descripción; solo falta ingresar débito y crédito. */
+  aceptarOperaciones(): void {
+    const elegidas = OPERACIONES_CONCILIABLES.filter((o) => this.seleccion().includes(o.id));
+    this.candidatos.update((lista) => [...lista, ...elegidas.map((o) => ({ id: o.id, fecha: o.fecha, numero: o.numero, descripcion: o.descripcion, debito: '', credito: '' }))]);
+    this.busquedaAbierta.set(false);
   }
 
   quitarCandidato(id: string): void {
