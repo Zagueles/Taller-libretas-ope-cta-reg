@@ -9919,6 +9919,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       "roles": [],
       "atributos": [
         "aria-expanded",
+        "aria-hidden",
         "aria-label"
       ]
     },
@@ -10012,28 +10013,24 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "token": "--sys-gap-base-md",
         "via": [
           "gap-siaf-md",
-          "mr-siaf-md",
           "p-siaf-md",
+          "pl-siaf-md",
           "px-siaf-md"
-        ]
-      },
-      {
-        "token": "--sys-gap-base-sm",
-        "via": [
-          "py-siaf-sm"
         ]
       },
       {
         "token": "--sys-gap-base-xs",
         "via": [
           "gap-siaf-xs",
-          "pt-siaf-xs"
+          "p-siaf-xs",
+          "py-siaf-xs"
         ]
       },
       {
         "token": "--sys-gap-base-xxs",
         "via": [
-          "py-siaf-xxs"
+          "gap-siaf-xxs",
+          "pl-siaf-xxs"
         ]
       },
       {

@@ -80,7 +80,7 @@ export { DEFAULT_PROCESS_TREE, findProcessPathById } from '../../shared/utils/pr
         </h2>
       </header>
 
-      <div class="min-h-0 flex-1 overflow-y-auto bg-[var(--sys-color-bg-surfaces-field,var(--sys-color-bg-surfaces-surface-highest))] px-siaf-md pt-siaf-xs">
+      <div class="min-h-0 flex-1 overflow-y-auto bg-[var(--sys-color-bg-surfaces-field,var(--sys-color-bg-surfaces-surface-highest))] px-siaf-md py-siaf-xs">
         <!-- Campo del design system: etiqueta flotante y borde de éxito, igual
              que el resto de inputs. A diferencia de los buscadores de datos,
              este filtra la NAVEGACIÓN al teclear (paleta de comandos): el
@@ -95,73 +95,75 @@ export { DEFAULT_PROCESS_TREE, findProcessPathById } from '../../shared/utils/pr
         />
 
         <section class="flex w-full flex-col gap-siaf-md overflow-hidden pt-siaf-lg">
-          <h3 class="m-0 px-siaf-md text-sm font-bold leading-normal text-[var(--sys-color-text-neutral-medium)]">
+          <h3 class="m-0 text-[11px] font-medium uppercase leading-normal tracking-[0.66px] text-[var(--sys-color-text-neutral-medium)]">
             {{ subtitle }}
           </h3>
 
-          <div class="flex w-full flex-col gap-1">
+          <div class="flex w-full flex-col gap-siaf-xxs">
             <ng-container *ngTemplateOutlet="treeTemplate; context: { $implicit: filteredNodes, level: 0 }" />
           </div>
         </section>
       </div>
     </aside>
 
+    <!-- Árbol según Figma 268:68981: cada fila es un «summary-item» (8 px de relleno, 8 px entre ícono de 20 px y texto);
+         los hijos van sangrados 16 px con una línea guía a su izquierda y 4 px antes de su primera fila; 4 px entre filas. -->
     <ng-template #treeTemplate let-items let-level="level">
       @for (node of items; track node.id) {
-        <div class="w-full" [class.pl-[27px]]="level > 0">
-          <div class="w-full" [class.border-l]="level > 0" [style.borderColor]="level > 0 ? 'var(--sys-color-divider-strong)' : null" [class.pl-3]="level > 0">
-            <button
-              class="group flex w-full items-center rounded-siaf-sm text-left transition duration-150 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sys-color-border-states-focus)] active:scale-[0.995]"
-              type="button"
-              [class.min-h-12]="level === 0"
-              [class.min-h-8]="level > 0"
-              [class.bg-[var(--sys-color-bg-states-light-selected)]]="isNodeHighlighted(node)"
-              [class.hover:bg-[var(--sys-color-bg-states-light-hover)]]="!isNodeHighlighted(node)"
-              [class.active:bg-[var(--sys-color-bg-states-light-pressed)]]="!isNodeHighlighted(node)"
-              [class.px-siaf-md]="true"
-              [class.py-siaf-sm]="level === 0"
-              [class.py-siaf-xxs]="level > 0"
-              [attr.aria-expanded]="hasChildren(node) ? isExpanded(node) : null"
-              (click)="activate(node)"
-            >
-              @if (hasChildren(node)) {
-                <siaf-icon
-                  class="mr-siaf-md shrink-0 transition-transform duration-150"
-                  [class.text-[var(--sys-color-icon-states-active)]]="isNodeHighlighted(node)"
-                  [class.text-[var(--sys-color-icon-states-enabled)]]="!isNodeHighlighted(node)"
-                  name="arrow_drop_down"
-                  [size]="level === 0 ? 24 : 20"
-                  [class.-rotate-90]="!isExpanded(node)"
-                />
-              } @else if (!node.moduleRoute && !node.hideIcon) {
-                <!-- Los nodos «Próximamente» (sin hijos ni pantalla) muestran la misma flecha que Figma, solo
-                     decorativa. Una hoja con pantalla (con moduleRoute) es el último nivel y va sin ícono inicial. -->
-                <siaf-icon
-                  class="mr-siaf-md shrink-0"
-                  [class.text-[var(--sys-color-icon-states-active)]]="isNodeHighlighted(node)"
-                  [class.text-[var(--sys-color-icon-states-enabled)]]="!isNodeHighlighted(node)"
-                  name="arrow_right"
-                  [size]="level === 0 ? 24 : 20"
-                />
-              }
-
-              <span
-                class="min-w-0 flex-1 text-sm leading-normal"
-                [class.font-bold]="isNodeHighlighted(node)"
-                [class.font-normal]="!isNodeHighlighted(node)"
-                [class.tracking-[-0.02px]]="level === 0"
-                [class.tracking-[0.0249px]]="level > 0"
-                [class.text-[var(--sys-color-text-neutral-activated)]]="isNodeHighlighted(node)"
-                [class.text-[var(--sys-color-text-neutral-medium)]]="!isNodeHighlighted(node)"
-              >
-                {{ node.label }}
-              </span>
-            </button>
-
-            @if (hasChildren(node) && isExpanded(node)) {
-              <ng-container *ngTemplateOutlet="treeTemplate; context: { $implicit: node.children || [], level: level + 1 }" />
+        <div class="flex w-full flex-col">
+          <button
+            class="group flex w-full items-center gap-siaf-xs rounded-siaf-sm p-siaf-xs text-left transition duration-150 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sys-color-border-states-focus)] active:scale-[0.995]"
+            type="button"
+            [class.bg-[var(--sys-color-bg-states-light-selected)]]="isNodeHighlighted(node)"
+            [class.hover:bg-[var(--sys-color-bg-states-light-hover)]]="!isNodeHighlighted(node)"
+            [class.active:bg-[var(--sys-color-bg-states-light-pressed)]]="!isNodeHighlighted(node)"
+            [attr.aria-expanded]="hasChildren(node) ? isExpanded(node) : null"
+            (click)="activate(node)"
+          >
+            @if (hasChildren(node)) {
+              <siaf-icon
+                class="h-5 shrink-0 leading-none transition-transform duration-150"
+                [class.text-[var(--sys-color-icon-states-active)]]="isNodeHighlighted(node)"
+                [class.text-[var(--sys-color-icon-states-enabled)]]="!isNodeHighlighted(node)"
+                name="arrow_drop_down"
+                [size]="20"
+                [class.-rotate-90]="!isExpanded(node)"
+              />
+            } @else if (!node.moduleRoute && !node.hideIcon) {
+              <!-- Los nodos «Próximamente» (sin hijos ni pantalla) muestran la misma flecha que Figma, solo
+                   decorativa. -->
+              <siaf-icon
+                class="h-5 shrink-0 leading-none"
+                [class.text-[var(--sys-color-icon-states-active)]]="isNodeHighlighted(node)"
+                [class.text-[var(--sys-color-icon-states-enabled)]]="!isNodeHighlighted(node)"
+                name="arrow_right"
+                [size]="20"
+              />
+            } @else {
+              <!-- Una hoja con pantalla es el último nivel: sin flecha, pero con su hueco de 20 px para alinear el texto. -->
+              <span class="w-5 shrink-0 self-stretch" aria-hidden="true"></span>
             }
-          </div>
+
+            <span
+              class="min-w-0 flex-1 text-sm leading-5"
+              [class.font-bold]="isNodeHighlighted(node)"
+              [class.font-normal]="!isNodeHighlighted(node)"
+              [class.tracking-[-0.02px]]="isNodeHighlighted(node)"
+              [class.tracking-[0.0249px]]="!isNodeHighlighted(node)"
+              [class.text-[var(--sys-color-text-neutral-activated)]]="isNodeHighlighted(node)"
+              [class.text-[var(--sys-color-text-neutral-medium)]]="!isNodeHighlighted(node)"
+            >
+              {{ node.label }}
+            </span>
+          </button>
+
+          @if (hasChildren(node) && isExpanded(node)) {
+            <div class="w-full pl-siaf-md">
+              <div class="flex w-full flex-col gap-siaf-xxs border-l pl-siaf-xxs" style="border-color: var(--sys-color-divider-strong)">
+                <ng-container *ngTemplateOutlet="treeTemplate; context: { $implicit: node.children || [], level: level + 1 }" />
+              </div>
+            </div>
+          }
         </div>
       }
     </ng-template>
