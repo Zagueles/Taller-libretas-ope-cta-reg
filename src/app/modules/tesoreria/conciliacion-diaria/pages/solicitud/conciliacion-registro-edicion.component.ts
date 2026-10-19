@@ -292,8 +292,8 @@ export class ConciliacionRegistroEdicionComponent implements OnChanges {
     { key: 'fecha', label: 'F. operación B.', widthClass: 'w-[200px]' },
     { key: 'numero', label: 'Número', widthClass: 'w-[130px]' },
     { key: 'descripcion', label: 'Descripción' },
-    { key: 'debito', label: 'Débito (S/)', cellClass: 'text-right' },
-    { key: 'credito', label: 'Crédito (S/)', cellClass: 'text-right' },
+    { key: 'debito', label: 'Débito (S/)', align: 'right' },
+    { key: 'credito', label: 'Crédito (S/)', align: 'right' },
   ];
 
   /** Lo que se busca: si el registro nace del libro banco, operaciones bancarias; si nace de ellas, el libro banco. */

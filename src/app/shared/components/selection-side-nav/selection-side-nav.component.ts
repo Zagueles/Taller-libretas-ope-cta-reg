@@ -18,6 +18,8 @@ export interface SelectionColumn<T = Record<string, unknown>> {
   widthClass?: string;
   /** Clase Tailwind extra para las celdas (p.ej. `font-mono`). */
   cellClass?: string;
+  /** `right` alinea a la derecha la cabecera y las celdas de la columna (importes). */
+  align?: 'right';
   /** Renderer opcional. Si no se da, se usa `row[key]` como string. */
   render?: (row: T) => string;
 }
@@ -186,6 +188,7 @@ export type SelectionMode = 'single' | 'multiple';
                       <th
                         class="px-siaf-md py-siaf-sm"
                         [class.rounded-r-siaf-sm]="last"
+                        [class.text-right]="col.align === 'right'"
                         [ngClass]="col.widthClass || ''"
                       >
                         {{ col.label }}
@@ -227,7 +230,7 @@ export type SelectionMode = 'single' | 'multiple';
                         }
                       </td>
                       @for (col of columns; track col.key) {
-                        <td class="px-siaf-md py-siaf-sm" [ngClass]="col.cellClass || ''">
+                        <td class="px-siaf-md py-siaf-sm" [class.text-right]="col.align === 'right'" [ngClass]="col.cellClass || ''">
                           {{ cellValue(row, col) }}
                         </td>
                       }
