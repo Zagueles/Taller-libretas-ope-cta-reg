@@ -59,7 +59,7 @@ export class CuentasBancariasDocumentsComponent implements OnInit {
 
   /** Búsqueda y paginación de la pestaña Documentos (Enter, lupa o cambio de página). */
   onDocumentsQuery(q: DocumentsQuery): void {
-    const query = { search: q.search, page: q.page, limit: q.limit };
+    const query = { search: q.search, page: q.page, limit: q.limit, orden: q.sort?.key, sentido: q.sort?.direction };
     if (this.permissions.currentRole() === 'approver') this.solicitudesFacade.cargarBandejaAprobador([CODIGO_DOCUMENTO], query);
     else this.solicitudesFacade.cargarBandejaCreador([CODIGO_DOCUMENTO], query);
   }

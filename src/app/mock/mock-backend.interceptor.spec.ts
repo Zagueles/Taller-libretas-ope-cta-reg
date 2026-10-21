@@ -95,6 +95,20 @@ describe('mockBackendInterceptor', () => {
     expect(valor?.total).toBe(12);
   }));
 
+  it('la bandeja se ordena en el servidor por la columna y el sentido pedidos, antes de paginar', fakeAsync(() => {
+    const headers = entrar('creador');
+    const pedir = (sentido: string) =>
+      esperar(http.get<{ data: SolicitudResponse[]; total: number }>(`${API}/solicitudes/bandeja-creador?tipos=SRCB&page=1&limit=3&orden=number&sentido=${sentido}`, { headers })).valor!;
+
+    const asc = pedir('asc').data.map((s) => s.numero!);
+    const desc = pedir('desc').data.map((s) => s.numero!);
+
+    expect(asc).toEqual([...asc].sort());
+    expect(desc).toEqual([...desc].sort().reverse());
+    expect(asc[0]).not.toBe(desc[0]);
+    expect(pedir('asc').total).toBe(12);
+  }));
+
   it('recorre el flujo completo: elaborar, verificar y aprobar crea la cuenta y avisa a cada rol', fakeAsync(() => {
     const ana = entrar('creador');
     const creada = esperar(http.post<SolicitudResponse>(`${API}/solicitudes`, { tipoAccion: 'creacion', organoLinea: 'OGA', justificacion: 'Cuenta nueva' }, { headers: ana }));

@@ -1,3 +1,4 @@
+import { ordenarFilas } from '../shared/utils/table-sort.util';
 import { HttpErrorResponse, HttpEvent, HttpInterceptorFn, HttpRequest, HttpResponse } from '@angular/common/http';
 import { Observable, of, throwError, timer } from 'rxjs';
 import { delay, mergeMap } from 'rxjs/operators';
@@ -217,6 +218,18 @@ function buscarSolicitud(datos: DatosTaller, id: string): SolicitudResponse | un
   return datos.solicitudes.find((s) => s.id === id);
 }
 
+/** Columnas de la bandeja por las que el servidor ordena (clave de la tabla de Documentos → valor de la solicitud). */
+const CAMPO_ORDEN_BANDEJA: Record<string, (s: SolicitudResponse) => string | null | undefined> = {
+  document: (s) => s.catDocumento?.nombre,
+  number: (s) => s.numero,
+  actionType: (s) => s.tipoAccion,
+  status: (s) => s.estado,
+  date: (s) => s.createdAt,
+  creator: (s) => (s.creador ? nombreCompleto(s.creador) : ''),
+  subject: (s) => s.asuntoMotivo,
+  entity: (s) => s.entidadCreadora?.nombre,
+};
+
 function bandeja(ctx: Contexto, estados?: EstadoDocumento[]): Respuesta {
   const { datos, sesion, query } = ctx;
   if (!sesion) return error(401, 'Sesión expirada.');
@@ -232,7 +245,11 @@ function bandeja(ctx: Contexto, estados?: EstadoDocumento[]): Respuesta {
         .some((valor) => (valor ?? '').toLowerCase().includes(busqueda)),
     );
   }
-  lista = [...lista].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const orden = query.get('orden');
+  const campo = orden ? CAMPO_ORDEN_BANDEJA[orden] : undefined;
+  lista = campo
+    ? ordenarFilas(lista, { key: orden!, direction: query.get('sentido') === 'desc' ? 'desc' : 'asc' }, (s) => campo(s))
+    : [...lista].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
   const pagina = Number(query.get('page'));
   const limite = Number(query.get('limit'));

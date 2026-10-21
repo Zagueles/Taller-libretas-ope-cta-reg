@@ -697,6 +697,9 @@ export interface BandejaQuery {
   search?: string;
   page?: number;
   limit?: number;
+  /** Columna por la que ordenar (`number`, `date`, `status`…) y su sentido; sin ellos, la más reciente primero. */
+  orden?: string;
+  sentido?: 'asc' | 'desc';
 }
 
 /** Respuesta de bandeja cuando se pide paginada (con page/limit). */
@@ -713,6 +716,8 @@ function armarQueryBandeja(tipos?: string[], query?: BandejaQuery): string {
   if (query?.search?.trim()) params.set('search', query.search.trim());
   if (query?.page != null) params.set('page', String(query.page));
   if (query?.limit != null) params.set('limit', String(query.limit));
+  if (query?.orden) params.set('orden', query.orden);
+  if (query?.orden && query.sentido) params.set('sentido', query.sentido);
   const qs = params.toString();
   return qs ? `?${qs}` : '';
 }

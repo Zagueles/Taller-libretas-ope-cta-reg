@@ -15,16 +15,16 @@ import { CREATE_DOCUMENT_OPTIONS, PROCESS_ID, PROCESS_ROUTE, REQUEST_ROUTE } fro
  */
 
 const documentColumns: DocumentsRecordsColumn[] = [
-  { key: 'document', label: 'Documento', visibility: 'visible', group: 'default', widthClass: 'w-[380px]', kind: 'document-link' },
-  { key: 'number', label: 'Número', visibility: 'visible', group: 'default', widthClass: 'w-[280px]' },
-  { key: 'actionType', label: 'Tipo de acción', visibility: 'visible', group: 'default', widthClass: 'w-[160px]' },
-  { key: 'status', label: 'Estado', visibility: 'visible', group: 'default', widthClass: 'w-[150px]', kind: 'flow-status' },
+  { key: 'document', label: 'Documento', visibility: 'visible', group: 'default', widthClass: 'w-[380px]', kind: 'document-link', sortable: true },
+  { key: 'number', label: 'Número', visibility: 'visible', group: 'default', widthClass: 'w-[280px]', sortable: true },
+  { key: 'actionType', label: 'Tipo de acción', visibility: 'visible', group: 'default', widthClass: 'w-[160px]', sortable: true },
+  { key: 'status', label: 'Estado', visibility: 'visible', group: 'default', widthClass: 'w-[150px]', kind: 'flow-status', sortable: true },
   { key: 'system', label: 'Sistemas Nacionales', visibility: 'visible', group: 'default', widthClass: 'w-[240px]' },
-  { key: 'date', label: 'Fecha de registro', visibility: 'visible', group: 'default', widthClass: 'w-[170px]' },
-  { key: 'creator', label: 'Creador', visibility: 'visible', group: 'more', widthClass: 'w-[220px]' },
-  { key: 'subject', label: 'Asunto/Motivo', visibility: 'hidden', group: 'more', widthClass: 'w-[280px]' },
+  { key: 'date', label: 'Fecha de registro', visibility: 'visible', group: 'default', widthClass: 'w-[170px]', sortable: true, sortType: 'date' },
+  { key: 'creator', label: 'Creador', visibility: 'visible', group: 'more', widthClass: 'w-[220px]', sortable: true },
+  { key: 'subject', label: 'Asunto/Motivo', visibility: 'hidden', group: 'more', widthClass: 'w-[280px]', sortable: true },
   { key: 'requesterArea', label: 'Área solicitante', visibility: 'hidden', group: 'more', widthClass: 'w-[240px]' },
-  { key: 'entity', label: 'Entidad', visibility: 'visible', group: 'more', widthClass: 'w-[320px]' },
+  { key: 'entity', label: 'Entidad', visibility: 'visible', group: 'more', widthClass: 'w-[320px]', sortable: true },
   { key: 'evaluationDate', label: 'Fecha de evaluación', visibility: 'hidden', group: 'more', widthClass: 'w-[200px]' },
   { key: 'evaluationUser', label: 'Usuario de evaluación', visibility: 'hidden', group: 'more', widthClass: 'w-[220px]' },
   { key: 'approvalDate', label: 'Fecha de aprobación', visibility: 'hidden', group: 'more', widthClass: 'w-[200px]' },
@@ -32,14 +32,14 @@ const documentColumns: DocumentsRecordsColumn[] = [
 ];
 
 const recordColumns: DocumentsRecordsColumn[] = [
-  { key: 'status', label: 'Estado', visibility: 'visible', group: 'default', widthClass: 'w-[120px]', kind: 'record-status' },
-  { key: 'codigo', label: 'Código', visibility: 'visible', group: 'default', widthClass: 'w-[110px]' },
-  { key: 'banco', label: 'Banco', visibility: 'visible', group: 'default', widthClass: 'w-[220px]' },
-  { key: 'numeroCuenta', label: 'Número de cuenta', visibility: 'visible', group: 'default', widthClass: 'w-[200px]' },
-  { key: 'denominacion', label: 'Denominación', visibility: 'visible', group: 'default', widthClass: 'min-w-[260px]' },
-  { key: 'moneda', label: 'Moneda', visibility: 'visible', group: 'default', widthClass: 'w-[110px]' },
-  { key: 'tipoCuenta', label: 'Tipo de cuenta', visibility: 'visible', group: 'default', widthClass: 'w-[140px]' },
-  { key: 'fechaApertura', label: 'Fecha de apertura', visibility: 'visible', group: 'default', widthClass: 'w-[160px]' },
+  { key: 'status', label: 'Estado', visibility: 'visible', group: 'default', widthClass: 'w-[120px]', kind: 'record-status', sortable: true },
+  { key: 'codigo', label: 'Código', visibility: 'visible', group: 'default', widthClass: 'w-[110px]', sortable: true },
+  { key: 'banco', label: 'Banco', visibility: 'visible', group: 'default', widthClass: 'w-[220px]', sortable: true },
+  { key: 'numeroCuenta', label: 'Número de cuenta', visibility: 'visible', group: 'default', widthClass: 'w-[200px]', sortable: true },
+  { key: 'denominacion', label: 'Denominación', visibility: 'visible', group: 'default', widthClass: 'min-w-[260px]', sortable: true },
+  { key: 'moneda', label: 'Moneda', visibility: 'visible', group: 'default', widthClass: 'w-[110px]', sortable: true },
+  { key: 'tipoCuenta', label: 'Tipo de cuenta', visibility: 'visible', group: 'default', widthClass: 'w-[140px]', sortable: true },
+  { key: 'fechaApertura', label: 'Fecha de apertura', visibility: 'visible', group: 'default', widthClass: 'w-[160px]', sortable: true, sortType: 'date' },
 ];
 
 const fieldsMenuOptions: DocumentsRecordsMenuOption[] = [
