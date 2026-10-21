@@ -1,5 +1,6 @@
 import { Location } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { forkJoin } from 'rxjs';
 import { Router } from '@angular/router';
 
 import { guardarFavoritos, leerFavoritos } from '../../../../../mock/mock-db';
@@ -18,6 +19,7 @@ import {
   CuentaRegistroCatalogo,
   ENTIDADES,
   MovimientoLibretaRegistro,
+  SaldosCuentaBancaria,
   TIPO_CAMBIO,
   TIPOS_OPERACION,
   UNIDADES_EJECUTORAS,
@@ -111,6 +113,8 @@ export class RegistroLibretasConsultasComponent {
   private readonly location = inject(Location);
 
   private filasPorCuenta = new Map<string, MovimientoLibretaRegistro[]>();
+  /** Saldo inicial y final de cada cuenta bancaria (el total de su libreta, no el del período consultado). */
+  private saldosCuentas = new Map<string, SaldosCuentaBancaria>();
 
   constructor() {
     // Las cuentas de registro de la libreta alimentan el filtro predeterminado y las cards del agregado.
@@ -164,7 +168,7 @@ export class RegistroLibretasConsultasComponent {
         },
       },
       { key: 'unidadEjecutora', label: 'Unidad ejecutora', groupable: true, hierarchy: 2, hidesColumns: ['unidadEjecutora'], groupLabelPrefix: 'UE.' },
-      { key: 'ffSubFf', label: 'FF/Sub FF', groupable: true, groupLabelPrefix: 'FF', hidesColumns: ['ffSubFf'], valueDetails: {} },
+      { key: 'ffSubFf', label: 'FF/Sub FF', groupable: true, groupLabelPrefix: 'FF', groupLabelTooltip: 'Fuente / Sub fuente de financiamiento', hidesColumns: ['ffSubFf'], valueDetails: {} },
       { key: 'numeroDocumento', label: 'Documento' },
     ],
     groupAggregation: { runningBalance: { startColumn: 'saldoInicial', endColumn: 'saldoFinal' }, accountColumn: 'numeroCuentaRegistro', openingCreditColumn: 'creditoSaldoInicial', hiddenColumns: ['sec', 'fecha', 'tipoOperacion', 'entidad', 'unidadEjecutora', 'grupo', 'numeroDocumento', 'descripcionDocumento', 'fechaRegistro', 'numeroOperacion', 'tipoBeneficiario', 'entidadAdministradoraCodigo', 'entidadAdministradoraSigla', 'movimientoInternoCodigo', 'movimientoInternoDescripcion', 'movimientoInternoSigla', 'movimientoExternoCodigo', 'movimientoExternoDescripcion', 'documentoCutNumero', 'documentoCutArchivo', 'documentoCutSigla', 'descripcionDetallada'] },
@@ -176,7 +180,7 @@ export class RegistroLibretasConsultasComponent {
       { key: 'tipoBeneficiario', label: 'Tipo', group: 'Beneficiario', hiddenByDefault: true, width: 130 },
       { key: 'numeroCuentaRegistro', label: 'Número', group: 'Cuenta de registro', width: 300 },
       { key: 'descripcionCuentaRegistro', label: 'Descripción', group: 'Cuenta de registro', width: 320 },
-      { key: 'ffSubFf', label: 'FF/SUB FF', group: 'Cuenta de registro', width: 260, ungroupWhenGroupHidden: true },
+      { key: 'ffSubFf', label: 'FF/SUB FF', panelLabel: 'Fuente / Sub fuente de financiamiento', group: 'Cuenta de registro', width: 260, ungroupWhenGroupHidden: true },
       { key: 'tipoOperacion', label: 'Tipo de operación', width: 190 },
       { key: 'entidad', label: 'Entidad', group: 'Ámbito institucional', width: 110 },
       { key: 'unidadEjecutora', label: 'Unidad ejecutora', group: 'Ámbito institucional', width: 190 },
@@ -205,8 +209,8 @@ export class RegistroLibretasConsultasComponent {
       { key: 'documentoCutArchivo', label: 'Archivo', group: 'Documento CUT', hiddenByDefault: true, width: 130 },
       { key: 'documentoCutSigla', label: 'Sigla', group: 'Documento CUT', hiddenByDefault: true, width: 100 },
       { key: 'descripcionDetallada', label: 'Descripción detallada', hiddenByDefault: true, width: 260 },
-      { key: 'numeroDocumento', label: 'Número', group: 'Documento', width: 150, kind: 'link' },
-      { key: 'descripcionDocumento', label: 'Descripción', group: 'Documento', width: 300 },
+      { key: 'numeroDocumento', label: 'Número', group: 'Documento', hiddenByDefault: true, width: 150, kind: 'link' },
+      { key: 'descripcionDocumento', label: 'Descripción', group: 'Documento', hiddenByDefault: true, width: 300 },
       { key: 'saldoFinal', label: 'Saldo final', group: 'Imp. m. cuenta', align: 'right', width: 135, fixed: true },
     ],
     columnsPanel: {
@@ -265,10 +269,13 @@ export class RegistroLibretasConsultasComponent {
 
     this.cargando.set(true);
     // El período, las cuentas y los demás filtros los resuelve el servidor.
-    this.api
-      .listarMovimientos({ desde, hasta, cuentasBancarias: cuentasSeleccionadas, tiposOperacion, entidades, unidadesEjecutoras, beneficiarios })
-      .subscribe({
-      next: (filtrados) => {
+    // Los saldos de la cuenta bancaria son los de toda su libreta: no dependen del período ni de los demás filtros.
+    forkJoin({
+      filtrados: this.api.listarMovimientos({ desde, hasta, cuentasBancarias: cuentasSeleccionadas, tiposOperacion, entidades, unidadesEjecutoras, beneficiarios }),
+      saldos: this.api.listarSaldosCuentasBancarias(),
+    }).subscribe({
+      next: ({ filtrados, saldos }) => {
+        this.saldosCuentas = new Map(saldos.map((x) => [x.cuentaBancariaId, x]));
         const idsConPestana = cuentasSeleccionadas.length ? cuentasSeleccionadas : [...new Set(filtrados.map((m) => m.cuentaBancariaId))];
         const tabs: TabItem[] = idsConPestana.map((id) => ({ id, label: nombreCuentaBancaria(id) }));
 
@@ -284,7 +291,7 @@ export class RegistroLibretasConsultasComponent {
   mostrarPestana(cuentaId: string): void {
     const filas = this.filasPorCuenta.get(cuentaId) ?? [];
     const cuenta = CUENTAS_BANCARIAS_INFO.find((c) => c.id === cuentaId);
-    const saldosCuenta = saldosPorCuentaRegistro(filas);
+    const saldosCuenta = this.saldosCuentas.get(cuentaId) ?? saldosPorCuentaRegistro(filas);
 
     // Tipo de cambio e importe en moneda nacional solo interesan en la cuenta en dólares: en soles no hay nada que
     // convertir. Se muestran solos al entrar a esa pestaña, sin que el usuario tenga que ir a «Columnas visibles».
@@ -328,7 +335,7 @@ export class RegistroLibretasConsultasComponent {
     const todas = [...this.filasPorCuenta.values()].flat();
     const permitidas = new Set(evento.filterRows(todas.map((m) => this.aFila(m))).map((fila) => fila['sec']));
     const cuentas = [...this.filasPorCuenta.entries()]
-      .map(([id, movimientos]) => ({ id, movimientos: movimientos.filter((m) => permitidas.has(m.sec)) }))
+      .map(([id, movimientos]) => ({ id, movimientos: movimientos.filter((m) => permitidas.has(m.sec)), saldos: this.saldosCuentas.get(id) }))
       .filter((cuenta) => cuenta.movimientos.length);
     const { resultType, levels } = evento.advanced;
     const agrupacion = levels.length

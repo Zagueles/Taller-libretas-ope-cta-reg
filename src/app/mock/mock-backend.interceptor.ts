@@ -27,7 +27,7 @@ import {
   numeroConciliacion,
   numeroDocumento,
 } from './mock-db';
-import { cuentasRegistro, detalleDocumento, detalleMovimiento, filtrarMovimientos, listarDocumentos } from './libretas-backend';
+import { cuentasRegistro, detalleDocumento, detalleMovimiento, filtrarMovimientos, listarDocumentos, saldosCuentasBancarias } from './libretas-backend';
 import { CONTRASENA_DEMO, USUARIOS_DEMO, UsuarioDemo, buscarUsuarioPorPerfil } from './usuarios-demo';
 
 /**
@@ -476,6 +476,8 @@ const registroLibreta: Manejador = ({ datos, params }) => {
 
 const cuentasRegistroLibreta: Manejador = ({ datos }) => ok(cuentasRegistro(datos.libretas));
 
+const saldosCuentasLibreta: Manejador = ({ datos }) => ok(saldosCuentasBancarias(datos.libretas));
+
 // ─── Enrutador ─────────────────────────────────────────────────────
 
 const RUTAS: [string, RegExp, Manejador][] = [
@@ -510,6 +512,7 @@ const RUTAS: [string, RegExp, Manejador][] = [
   ['GET', /^\/libretas\/documentos\/([^/]+)$/, documentoLibreta],
   ['GET', /^\/libretas\/registros\/([^/]+)$/, registroLibreta],
   ['GET', /^\/libretas\/cuentas-registro$/, cuentasRegistroLibreta],
+  ['GET', /^\/libretas\/cuentas-bancarias\/saldos$/, saldosCuentasLibreta],
 ];
 
 export const mockBackendInterceptor: HttpInterceptorFn = (req, next): Observable<HttpEvent<unknown>> => {

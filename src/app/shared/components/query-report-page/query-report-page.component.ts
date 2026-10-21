@@ -1027,7 +1027,7 @@ export class QueryReportPageComponent {
     const campos = this.configuracion().advancedFilterFields ?? [];
     return claves.map((clave) => {
       const campo = campos.find((c) => c.key === clave);
-      return { key: clave, label: campo?.label ?? clave, labelPrefix: campo?.groupLabelPrefix, subtitleColumn: campo?.groupSubtitleColumn };
+      return { key: clave, label: campo?.label ?? clave, labelPrefix: campo?.groupLabelPrefix, labelTooltip: campo?.groupLabelTooltip ?? campo?.label, subtitleColumn: campo?.groupSubtitleColumn };
     });
   }
 

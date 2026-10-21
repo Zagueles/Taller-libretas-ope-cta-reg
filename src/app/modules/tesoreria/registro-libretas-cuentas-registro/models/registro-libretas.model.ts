@@ -147,3 +147,10 @@ export interface FiltrosMovimientos {
   unidadesEjecutoras?: string[];
   beneficiarios?: string[];
 }
+
+/** Saldo inicial y final de una cuenta bancaria: el total de todas sus libretas, sin importar el período consultado. */
+export interface SaldosCuentaBancaria {
+  cuentaBancariaId: string;
+  saldoInicial: number;
+  saldoFinal: number;
+}

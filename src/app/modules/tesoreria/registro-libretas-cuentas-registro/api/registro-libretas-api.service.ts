@@ -11,6 +11,7 @@ import {
   EstadoDocumentoLibreta,
   FiltrosMovimientos,
   MovimientoLibretaRegistro,
+  SaldosCuentaBancaria,
 } from '../models/registro-libretas.model';
 
 /**
@@ -58,5 +59,10 @@ export class RegistroLibretasApiService {
   /** Cuentas de registro de la libreta: opciones del filtro predeterminado y cards del agregado. */
   listarCuentasRegistro(): Observable<CuentaRegistroCatalogo[]> {
     return this.http.get<CuentaRegistroCatalogo[]>(`${this.base}/cuentas-registro`);
+  }
+
+  /** Saldo inicial y final de cada cuenta bancaria: el total de sus libretas, sin importar el período consultado. */
+  listarSaldosCuentasBancarias(): Observable<SaldosCuentaBancaria[]> {
+    return this.http.get<SaldosCuentaBancaria[]>(`${this.base}/cuentas-bancarias/saldos`);
   }
 }

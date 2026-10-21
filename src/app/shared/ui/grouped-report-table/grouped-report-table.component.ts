@@ -11,13 +11,23 @@ export interface GroupedTableLevel {
   key: string;
   label: string;
   labelPrefix?: string;
+  /** Nombre completo de la abreviatura `labelPrefix`, para su tooltip. */
+  labelTooltip?: string;
   subtitleColumn?: string;
 }
 
 type Nodo =
-  | { tipo: 'grupo'; id: string; nivel: number; etiqueta: string; subtitulo?: string; cantidad: number; totales: Record<string, string> }
+  | { tipo: 'grupo'; id: string; nivel: number; etiqueta: string; partes: PartesEtiqueta; subtitulo?: string; cantidad: number; totales: Record<string, string> }
   | { tipo: 'detalle'; id: string; nivel: number; fila: ReportTableRow }
-  | { tipo: 'pie'; id: string; nivel: number; etiqueta: string; totales: Record<string, string> };
+  | { tipo: 'pie'; id: string; nivel: number; etiqueta: string; partes: PartesEtiqueta; totales: Record<string, string> };
+
+/** La etiqueta de un grupo dividida para poner el tooltip del nombre completo sobre su abreviatura («Benef.», «UE.»…). */
+interface PartesEtiqueta {
+  antes: string;
+  prefijo: string;
+  valor: string;
+  tooltip: string | null;
+}
 
 /** Celda de la primera fila de la cabecera: un grupo que abarca varias columnas o una columna sin grupo (igual que `siaf-report-table`). */
 interface CeldaCabecera {
@@ -137,7 +147,7 @@ let siguienteId = 0;
                     >
                       <siaf-icon [name]="colapsados.has(nodo.id) ? 'chevron_right' : 'expand_more'" [size]="20" class="shrink-0" />
                       <span class="min-w-0 flex-1 truncate">
-                        {{ nodo.etiqueta }} <span class="font-normal text-[var(--sys-color-text-neutral-medium)]">({{ nodo.cantidad }} Registros)</span>
+                        {{ nodo.partes.antes }}<span [siafTooltip]="nodo.partes.tooltip">{{ nodo.partes.prefijo }}</span>: {{ nodo.partes.valor }} <span class="font-normal text-[var(--sys-color-text-neutral-medium)]">({{ nodo.cantidad }} Registros)</span>
                         @if (nodo.subtitulo) {
                           <br /><span class="text-xs font-normal text-[var(--sys-color-text-neutral-medium)]">{{ nodo.subtitulo }}</span>
                         }
@@ -190,7 +200,7 @@ let siguienteId = 0;
                   [class.bg-[var(--sys-color-bg-surfaces-surface-low)]]="nodo.nivel !== 0"
                 >
                   @if (indiceInicio > -1) {
-                    <td [attr.colspan]="Math.max(indiceInicio, 1)" class="px-siaf-md py-siaf-sm" [style.paddingLeft.px]="16 + nodo.nivel * 20">{{ nodo.etiqueta }}</td>
+                    <td [attr.colspan]="Math.max(indiceInicio, 1)" class="px-siaf-md py-siaf-sm" [style.paddingLeft.px]="16 + nodo.nivel * 20">{{ nodo.partes.antes }}<span [siafTooltip]="nodo.partes.tooltip">{{ nodo.partes.prefijo }}</span>: {{ nodo.partes.valor }}</td>
                     <td class="px-siaf-md py-siaf-sm text-right tabular-nums">{{ nodo.totales['inicio'] }}</td>
                     @if (indiceFin - indiceInicio > 1) {
                       <td [attr.colspan]="indiceFin - indiceInicio - 1"></td>
@@ -202,7 +212,7 @@ let siguienteId = 0;
                       <td [attr.colspan]="columnasVisibles.length - indiceFin - 1"></td>
                     }
                   } @else {
-                    <td [attr.colspan]="columnasVisibles.length" class="px-siaf-md py-siaf-sm" [style.paddingLeft.px]="16 + nodo.nivel * 20">{{ nodo.etiqueta }}</td>
+                    <td [attr.colspan]="columnasVisibles.length" class="px-siaf-md py-siaf-sm" [style.paddingLeft.px]="16 + nodo.nivel * 20">{{ nodo.partes.antes }}<span [siafTooltip]="nodo.partes.tooltip">{{ nodo.partes.prefijo }}</span>: {{ nodo.partes.valor }}</td>
                   }
                 </tr>
               }
@@ -352,7 +362,8 @@ export class GroupedReportTableComponent implements OnChanges {
       // (la fila estructural de esta cabecera sigue existiendo, para no desalinear las columnas de saldo).
       const totalesEncabezado = esUltimoNivel && !this.footerInnermost ? this.totalizar(filasGrupo) : { inicio: '', fin: '' };
 
-      nodos.push({ tipo: 'grupo', id, nivel, etiqueta: `${prefijo}: ${valor}`, subtitulo, cantidad: filasGrupo.length, totales: totalesEncabezado });
+      const tooltip = nivelActual.labelTooltip && nivelActual.labelTooltip !== prefijo ? nivelActual.labelTooltip : null;
+      nodos.push({ tipo: 'grupo', id, nivel, etiqueta: `${prefijo}: ${valor}`, partes: { antes: '', prefijo, valor, tooltip }, subtitulo, cantidad: filasGrupo.length, totales: totalesEncabezado });
 
       if (!this.colapsados.has(id)) {
         nodos.push(...this.construirNivel(filasGrupo, nivel + 1, id));
@@ -362,7 +373,7 @@ export class GroupedReportTableComponent implements OnChanges {
       if (!esUltimoNivel || this.footerInnermost) {
         const totales = this.totalizar(filasGrupo);
         const etiquetaPie = nivel === 0 ? `TOTAL ${prefijo}: ${valor}` : `Subtotal ${prefijo}: ${valor}`;
-        nodos.push({ tipo: 'pie', id: `${id}-pie`, nivel, etiqueta: etiquetaPie, totales });
+        nodos.push({ tipo: 'pie', id: `${id}-pie`, nivel, etiqueta: etiquetaPie, partes: { antes: nivel === 0 ? 'TOTAL ' : 'Subtotal ', prefijo, valor, tooltip }, totales });
       }
     }
     return nodos;

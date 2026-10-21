@@ -9,6 +9,8 @@ import { descargar, fechaHoraVisible, fechaVisible } from './formato-exportacion
 export interface CuentaConsultaExcel {
   id: string;
   movimientos: MovimientoLibretaRegistro[];
+  /** Saldo inicial y final de la cuenta bancaria (el total de sus libretas); sin él, se derivan de `movimientos`. */
+  saldos?: { saldoInicial: number; saldoFinal: number };
 }
 
 /** Anchos de columna de la plantilla «reporte detallado» (hoja Resultado), de la A en adelante. */
@@ -426,7 +428,7 @@ export async function construirLibroConsulta(
   resumen.getRow(filaNota + 2).height = 42.75;
 
   // ---------- Resultado N (una hoja por cuenta bancaria elegida) ----------
-  cuentas.forEach(({ id, movimientos }, indice) => {
+  cuentas.forEach(({ id, movimientos, saldos }, indice) => {
     const cuenta = CUENTAS_BANCARIAS_INFO.find((c) => c.id === id);
     const enDolares = cuenta?.moneda === 'USD';
     const hoja = libro.addWorksheet(`Resultado ${indice + 1}`, {
@@ -435,7 +437,7 @@ export async function construirLibroConsulta(
     });
     if (!agrupacion) (enDolares ? ANCHOS_USD : ANCHOS_PEN).forEach((ancho, i) => (hoja.getColumn(i + 1).width = ancho));
 
-    const saldosCuenta = saldosPorCuentaRegistro(movimientos);
+    const saldosCuenta = saldos ?? saldosPorCuentaRegistro(movimientos);
     // Cabecera de la cuenta: «Cta. Bancaria» (gris), saldo inicial y saldo final (B:D combinadas).
     [2, 3, 4].forEach((f) => (hoja.getRow(f).height = 36));
     const cabecera: [number, string, string | number, boolean][] = [

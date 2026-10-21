@@ -6,7 +6,9 @@ import type {
   EstadoDocumentoLibreta,
   FiltrosMovimientos,
   MovimientoLibretaRegistro,
+  SaldosCuentaBancaria,
 } from '../modules/tesoreria/registro-libretas-cuentas-registro/models/registro-libretas.model';
+import { saldosPorCuentaRegistro } from '../modules/tesoreria/registro-libretas-cuentas-registro/utils/registro-libretas-saldos.util';
 import { DOCUMENTOS_RECHAZADOS, MOVIMIENTOS_LIBRETA_REGISTRO, MOVIMIENTOS_RECHAZADOS } from './libretas-seed';
 
 /**
@@ -88,4 +90,16 @@ export function cuentasRegistro(libretas: DatosLibretas): CuentaRegistroCatalogo
     }
   }
   return [...porNumero.values()];
+}
+
+/**
+ * Saldos de cada cuenta bancaria: el total de todas sus libretas (una sola vez el saldo de cada cuenta de registro, con el
+ * crédito de «Saldo inicial» en el inicial), sin importar el período ni los demás filtros de la consulta.
+ */
+export function saldosCuentasBancarias(libretas: DatosLibretas): SaldosCuentaBancaria[] {
+  const ids = [...new Set(libretas.movimientos.map((m) => m.cuentaBancariaId))];
+  return ids.map((cuentaBancariaId) => {
+    const { saldoInicial, saldoFinal } = saldosPorCuentaRegistro(libretas.movimientos.filter((m) => m.cuentaBancariaId === cuentaBancariaId));
+    return { cuentaBancariaId, saldoInicial, saldoFinal };
+  });
 }

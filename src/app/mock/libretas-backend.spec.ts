@@ -1,4 +1,5 @@
-import { cuentasRegistro, datosLibretasIniciales, detalleDocumento, detalleMovimiento, filtrarMovimientos, listarDocumentos } from './libretas-backend';
+import { cuentasRegistro, datosLibretasIniciales, detalleDocumento, detalleMovimiento, filtrarMovimientos, listarDocumentos, saldosCuentasBancarias } from './libretas-backend';
+import { saldosPorCuentaRegistro } from '../modules/tesoreria/registro-libretas-cuentas-registro/utils/registro-libretas-saldos.util';
 
 /** Las reglas del backend simulado de libretas: lo que el servidor resuelve y las pantallas ya no calculan. */
 describe('libretas-backend', () => {
@@ -28,6 +29,21 @@ describe('libretas-backend', () => {
       const ipd = filtrarMovimientos(libretas, { entidades: ['IPD'], beneficiarios: ['000193'] });
       expect(ipd.every((m) => m.entidad === 'IPD' && m.beneficiarioCodigo === '000193')).toBeTrue();
       expect(filtrarMovimientos(libretas, { cuentasBancarias: ['no-existe'] })).toEqual([]);
+    });
+  });
+
+  describe('saldosCuentasBancarias', () => {
+    it('son el total de todas las libretas de la cuenta, sin importar el período de la consulta', () => {
+      const saldos = saldosCuentasBancarias(libretas);
+      expect(saldos.map((x) => x.cuentaBancariaId).sort()).toEqual(['mef-dgtp', 'mef-dgtp-cut']);
+      saldos.forEach((x) => {
+        const total = saldosPorCuentaRegistro(libretas.movimientos.filter((m) => m.cuentaBancariaId === x.cuentaBancariaId));
+        expect(x.saldoInicial).toBe(total.saldoInicial);
+        expect(x.saldoFinal).toBe(total.saldoFinal);
+      });
+      // Un período acotado da otro resultado: los saldos de la cuenta no deben usarlo.
+      const soloOctubre = saldosPorCuentaRegistro(filtrarMovimientos(libretas, { cuentasBancarias: ['mef-dgtp-cut'], desde: '2026-10-01', hasta: '2026-10-01' }));
+      expect(soloOctubre.saldoInicial).not.toBe(saldos.find((x) => x.cuentaBancariaId === 'mef-dgtp-cut')!.saldoInicial);
     });
   });
 
