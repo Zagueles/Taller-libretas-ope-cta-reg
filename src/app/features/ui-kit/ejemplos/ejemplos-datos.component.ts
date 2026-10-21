@@ -184,8 +184,8 @@ export class EjemplosDatosComponent {
   readonly nivelesAgrupado: GroupedTableLevel[] = [{ key: 'beneficiario', label: 'Beneficiario', labelPrefix: 'Benef.' }];
 
   readonly columnas: DataTableColumn[] = [
-    { key: 'numero', label: 'Número' },
-    { key: 'documento', label: 'Documento' },
+    { key: 'numero', label: 'Número', sortable: true },
+    { key: 'documento', label: 'Documento', sortable: true },
     { key: 'estado', label: 'Estado' },
   ];
   readonly filas: DataTableRow[] = [

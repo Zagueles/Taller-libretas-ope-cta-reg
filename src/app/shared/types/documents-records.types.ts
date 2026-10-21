@@ -1,3 +1,4 @@
+import type { TableSort } from '../utils/table-sort.util';
 export type DocumentsRecordsTab = 'documents' | 'records';
 export type DocumentFlowStatus = 'Elaborado' | 'Verificado';
 export type RecordStatus = 'Activo';
@@ -45,6 +46,10 @@ export type DocumentsRecordsColumn = {
   panelLabel?: string;
   /** Línea divisoria a la derecha de la cabecera de una columna suelta (las de un grupo ya la llevan al cerrar el grupo). */
   borderRight?: boolean;
+  /** El título pasa a ser un botón que ordena por esta columna (ascendente, descendente, sin orden). */
+  sortable?: boolean;
+  /** Cómo comparar sus valores al ordenar: `text` (por defecto, orden natural), `number` (montos con miles) o `date` (dd/mm/aaaa hh:mm:ss). */
+  sortType?: 'text' | 'number' | 'date';
 };
 
 export type DocumentsRecordsFilterOption = {
@@ -66,6 +71,8 @@ export type DocumentsQuery = {
   search: string;
   page: number;
   limit: number;
+  /** Orden elegido en una columna `sortable`; `null` si no hay. */
+  sort?: TableSort | null;
 };
 
 export type DocumentsRecordsConfig = {

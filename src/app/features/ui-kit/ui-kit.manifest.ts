@@ -3837,7 +3837,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     "capa": "components",
     "importacion": "@siaf/shared/components/data-table/data-table.component",
     "archivo": "src/app/shared/components/data-table/data-table.component.ts",
-    "descripcion": "Tabla de solo lectura: una cabecera con las `columns` y una fila por registro con el texto de cada celda\n(`row[column.key]`); `idKey` identifica las filas.\n\nUsa las clases globales `siaf-table-*` (cabecera fija y scroll con alto máximo de 480 px, 320 px en móvil). No\nselecciona, no ordena ni pagina; `siaf-table` la envuelve con la misma API.",
+    "descripcion": "Tabla de solo lectura: una cabecera con las `columns` y una fila por registro con el texto de cada celda\n(`row[column.key]`); `idKey` identifica las filas.\n\nUsa las clases globales `siaf-table-*` (cabecera fija y scroll con alto máximo de 480 px, 320 px en móvil). No\nselecciona ni pagina; `siaf-table` la envuelve con la misma API. Ordena solo las columnas con `sortable`.",
     "usaSesion": false,
     "proyectaContenido": false,
     "entradas": [
@@ -3858,23 +3858,55 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       {
         "nombre": "rows",
         "tipo": "DataTableRow[]",
-        "porDefecto": "[]",
+        "porDefecto": null,
         "requerida": true,
         "descripcion": null
+      },
+      {
+        "nombre": "sort",
+        "tipo": "TableSort | null",
+        "porDefecto": null,
+        "requerida": false,
+        "descripcion": "Orden inicial o controlado desde fuera; sin él, la tabla lo lleva sola."
+      },
+      {
+        "nombre": "sortMode",
+        "tipo": "'local' | 'externo'",
+        "porDefecto": "'local'",
+        "requerida": false,
+        "descripcion": "Quién ordena: `local` (por defecto) ordena aquí las filas recibidas; `externo` solo emite `sortChange` y deja el orden a quien alimenta las filas (p. ej. el servidor, cuando la lista está paginada)."
       }
     ],
-    "eventos": [],
+    "eventos": [
+      {
+        "nombre": "sortChange",
+        "tipo": "TableSort | null",
+        "descripcion": "Se emite al pulsar el título de una columna `sortable`: el nuevo orden, o `null` al quitarlo."
+      }
+    ],
     "usar": "- Para un listado corto de solo lectura con texto plano en cada celda (número, documento, estado como texto), sin\n  acciones por fila.\n- Hoy solo la pinta `siaf-table`, que ninguna pantalla usa: es la base para un listado nuevo antes de escribir otra\n  `<table>` a mano.",
     "evitar": "- Para celdas con enlace al documento, tag de estado, checkbox o historial: `siaf-documents-records-table`.\n- Para seleccionar o paginar: no lo hace sola; va dentro de la grilla estándar (`siaf-table-controls` arriba y\n  `siaf-pagination` con `position=\"Bottom\"` y `rowPage` abajo).\n- Para ítems sin columnas (título, descripción, ícono): `siaf-list`.",
-    "teclado": "- No recibe foco: no es interactiva. Si las filas pasan el alto máximo, el contenedor con scroll no lleva\n  `tabindex`: desplazarlo con el teclado depende del navegador.",
-    "accesibilidad": "- **1.3.1 Información y relaciones (A)**: `<table>` con `<thead>`, `<tbody>` y un `<th>` por columna (sin `scope`,\n  que con una sola fila de cabecera no hace falta). No admite `<caption>` ni `ariaLabel`: el padre debe titularla\n  con un encabezado cercano. No ordena columnas, así que no aplica `aria-sort`.\n- **1.4.3 Contraste mínimo (AA)**: celdas en `text-neutral-high` sobre la superficie (16.29:1 / 16.53:1); la\n  cabecera, en `text-neutral-high` sobre `bg-surfaces-surface-high` (más que `text-neutral-medium` en ese fondo,\n  11.46:1 / 11.39:1).",
+    "teclado": "- **Tab / Enter / Espacio**: solo en el título de una columna `sortable` (botón que ordena). El resto no recibe foco.\n- No recibe foco: no es interactiva. Si las filas pasan el alto máximo, el contenedor con scroll no lleva\n  `tabindex`: desplazarlo con el teclado depende del navegador.",
+    "accesibilidad": "- **1.3.1 Información y relaciones (A)**: `<table>` con `<thead>`, `<tbody>` y un `<th>` por columna (sin `scope`,\n  que con una sola fila de cabecera no hace falta). No admite `<caption>` ni `ariaLabel`: el padre debe titularla\n  con un encabezado cercano. Las columnas `sortable` llevan `aria-sort` en su `<th>` y su título es un botón.\n- **2.1.1 Teclado (A)**: el título de una columna `sortable` es un botón: Tab lo enfoca y Enter o Espacio ordenan.\n- **1.4.3 Contraste mínimo (AA)**: celdas en `text-neutral-high` sobre la superficie (16.29:1 / 16.53:1); la\n  cabecera, en `text-neutral-high` sobre `bg-surfaces-surface-high` (más que `text-neutral-medium` en ese fondo,\n  11.46:1 / 11.39:1).",
     "figma": [],
     "aria": {
       "roles": [],
-      "atributos": []
+      "atributos": [
+        "aria-label",
+        "aria-sort"
+      ]
     },
-    "tokens": [],
-    "usa": [],
+    "tokens": [
+      {
+        "token": "--sys-gap-base-xxs",
+        "via": [
+          "gap-siaf-xxs"
+        ]
+      }
+    ],
+    "usa": [
+      "siaf-icon"
+    ],
     "sinUso": false
   },
   {
@@ -5402,7 +5434,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "tipo": "string",
         "porDefecto": "''",
         "requerida": false,
-        "descripcion": null
+        "descripcion": "Ya no fija el ancho de la tabla (lo da la suma de sus columnas); queda para quien dibuja el esqueleto con las mismas medidas."
       },
       {
         "nombre": "recordRowAction",
@@ -5438,6 +5470,13 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "porDefecto": "() => false",
         "requerida": false,
         "descripcion": null
+      },
+      {
+        "nombre": "sort",
+        "tipo": "TableSort | null",
+        "porDefecto": "null",
+        "requerida": false,
+        "descripcion": "Orden actual (columna y sentido); la tabla solo lo pinta: ordenar las filas es de quien las entrega."
       }
     ],
     "eventos": [
@@ -5455,17 +5494,23 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "nombre": "selectionChanged",
         "tipo": "DocumentsRecordsSelectionChange",
         "descripcion": null
+      },
+      {
+        "nombre": "sortChange",
+        "tipo": "TableSort | null",
+        "descripcion": "Se emite al pulsar el título de una columna `sortable`: el nuevo orden, o `null` al quitarlo."
       }
     ],
     "usar": "- En las pestañas Documentos / Registros de `siaf-documents-records-page` (plan de cuentas, asiento de ajuste,\n  catálogo de ajuste, catálogos de eventos, apertura contable y contabilización).\n- Cuando las columnas vienen de configuración (`DocumentsRecordsColumn` con `kind`, `align` y `widthClass`) y el\n  panel de columnas decide cuáles se ven.\n- Con `selectionDisabled` para dejar marcables solo los documentos de la acción masiva: Elaborados para el creador\n  (Verificar) y Verificados para el aprobador (Aprobar).\n- Con `headerGroup` en las columnas, la cabecera pasa a dos filas (grupo arriba, columna debajo), y con\n  `recordSelectable` / `recordRowAction`, Registros suma casillas y cambia el ícono de la fila.\n- Con `recordRoute` en una fila de Registros, o `detailRoute` en una de Documentos, la fila abre su detalle (emite\n  `rowOpened`).",
-    "evitar": "- Para un listado de solo lectura con texto plano: `siaf-table`.\n- Usarla sola, sin barra ni paginado: va dentro de la grilla estándar (`siaf-table-controls` arriba, con el\n  seleccionar todo, y `siaf-pagination` con `position=\"Bottom\"` y `rowPage` abajo).\n- Mientras llegan las filas: `siaf-table-skeleton` con las mismas columnas y `minWidthClass`, no la tabla vacía.\n- Copiar su marcado en otra pantalla: `siaf-tray-documents-view` todavía tiene una tabla parecida hecha a mano.",
+    "evitar": "- Para un listado de solo lectura con texto plano: `siaf-table`.\n- Usarla sola, sin barra ni paginado: va dentro de la grilla estándar (`siaf-table-controls` arriba, con el\n  seleccionar todo, y `siaf-pagination` con `position=\"Bottom\"` y `rowPage` abajo).\n- Mientras llegan las filas: `siaf-table-skeleton` con las mismas columnas y `minWidthClass`, no la tabla vacía.\n- Copiar su marcado en otra pantalla: `siaf-tray-documents-view` todavía tiene una tabla parecida hecha a mano.\nCon `sortable` en una columna, su título ordena (flecha ↑/↓ en la ordenada); la tabla recibe `sort` y emite\n`sortChange`, y quien le da las filas las ordena (la página `siaf-documents-records-page` ya lo hace).",
     "teclado": "- **Tab**: recorre, fila por fila, el checkbox (solo en Documentos), el enlace al documento y el botón de historial;\n  un checkbox deshabilitado queda fuera.\n- **Espacio**: marca o desmarca el checkbox de la fila (emite `selectionChanged`).\n- **Enter**: en el enlace, abre el documento (`routerLink`).\n- **Enter / Espacio**: en el botón de historial, emiten `historyOpened`.",
-    "accesibilidad": "- **1.3.1 Información y relaciones (A)**: `<table>` con `<thead>` y un `<th>` por columna (sin `scope`, que con una\n  sola fila de cabecera no hace falta); las columnas del checkbox y del historial tienen el `<th>` vacío. No ordena\n  columnas, así que no aplica `aria-sort`.\n- **Pendiente · 4.1.2 Nombre, función y valor (A)**: el checkbox de cada fila no tiene nombre (ni `aria-label` ni\n  `<label>`). El botón de historial sí lleva `aria-label`, pero en Registros dice siempre «Ver historial de cuenta\n  contable», también en los asientos de ajuste.\n- **Pendiente · 2.1.1 Teclado (A)**: la fila no es clicable y sus acciones son nativas, pero el texto completo de\n  las cabeceras y celdas cortadas solo sale con `siafTooltip` al pasar el mouse: esas celdas no reciben foco (el\n  enlace sí lo muestra al enfocarlo).\n- **1.4.13 Contenido en hover o foco (AA)**: ese tooltip se cierra con Escape y se puede recorrer con el puntero.\n- **Pendiente · 1.4.3 Contraste mínimo (AA)**: el enlace va en `text-neutral-high` (16.29:1 / 16.53:1) y «Nuevo» en\n  blanco sobre `bg-brand-primary` (8.79:1 / 6.67:1), pero la etiqueta Observado de `siaf-flow-status-tag` (también\n  Pendiente y Fallido) da 3.39:1 en claro, y el enlace en hover (`text-brand-primary`) pinta en oscuro con\n  `bg-brand-primary` (2.66:1 sobre la superficie).\n- **1.4.1 Uso del color (A)**: los estados llevan su nombre en la etiqueta y «Nuevo» es texto.\n- **2.4.7 Foco visible (AA)**: sin estilo propio: enlace, checkbox y botón muestran el anillo nativo del navegador.\n- **2.5.8 Tamaño del objetivo (AA)**: botón de historial de 32 px; el checkbox mide 16 px, pero cumple por\n  espaciado (celda de 40 × 58 px).",
+    "accesibilidad": "- **1.3.1 Información y relaciones (A)**: `<table>` con `<thead>` y un `<th>` por columna (sin `scope`, que con una\n  sola fila de cabecera no hace falta); las columnas del checkbox y del historial tienen el `<th>` vacío. Las columnas\n  `sortable` llevan `aria-sort` y su título es un botón; la tabla no ordena las filas: avisa con `sortChange`.\n- **Pendiente · 4.1.2 Nombre, función y valor (A)**: el checkbox de cada fila no tiene nombre (ni `aria-label` ni\n  `<label>`). El botón de historial sí lleva `aria-label`, pero en Registros dice siempre «Ver historial de cuenta\n  contable», también en los asientos de ajuste.\n- **Pendiente · 2.1.1 Teclado (A)**: la fila no es clicable y sus acciones son nativas, pero el texto completo de\n  las cabeceras y celdas cortadas solo sale con `siafTooltip` al pasar el mouse: esas celdas no reciben foco (el\n  enlace sí lo muestra al enfocarlo).\n- **1.4.13 Contenido en hover o foco (AA)**: ese tooltip se cierra con Escape y se puede recorrer con el puntero.\n- **Pendiente · 1.4.3 Contraste mínimo (AA)**: el enlace va en `text-neutral-high` (16.29:1 / 16.53:1) y «Nuevo» en\n  blanco sobre `bg-brand-primary` (8.79:1 / 6.67:1), pero la etiqueta Observado de `siaf-flow-status-tag` (también\n  Pendiente y Fallido) da 3.39:1 en claro, y el enlace en hover (`text-brand-primary`) pinta en oscuro con\n  `bg-brand-primary` (2.66:1 sobre la superficie).\n- **1.4.1 Uso del color (A)**: los estados llevan su nombre en la etiqueta y «Nuevo» es texto.\n- **2.4.7 Foco visible (AA)**: sin estilo propio: enlace, checkbox y botón muestran el anillo nativo del navegador.\n- **2.5.8 Tamaño del objetivo (AA)**: botón de historial de 32 px; el checkbox mide 16 px, pero cumple por\n  espaciado (celda de 40 × 58 px).",
     "figma": [],
     "aria": {
       "roles": [],
       "atributos": [
-        "aria-label"
+        "aria-label",
+        "aria-sort"
       ]
     },
     "tokens": [
@@ -5540,6 +5585,12 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         ]
       },
       {
+        "token": "--sys-gap-base-xxs",
+        "via": [
+          "gap-siaf-xxs"
+        ]
+      },
+      {
         "token": "--sys-radius-md",
         "via": [
           "rounded-siaf-md"
@@ -5550,12 +5601,6 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "via": [
           "rounded-l-siaf-sm",
           "rounded-r-siaf-sm"
-        ]
-      },
-      {
-        "token": "--sys-shadow-elevation-6",
-        "via": [
-          "shadow-siaf-elevation-6"
         ]
       }
     ],
@@ -14581,7 +14626,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     "capa": "ui",
     "importacion": "@siaf/ui/table/table.component",
     "archivo": "src/app/shared/ui/table/table.component.ts",
-    "descripcion": "Envoltorio mínimo sobre `siaf-data-table`: tabla de columnas y filas, sin selección ni paginación.\n\nÚsalo para listados simples. Cuando la tabla necesita barra superior o paginado, va la grilla\nestándar: `siaf-table-controls` arriba (siempre, con `[showSelection]=false` si no hay selección)\ny `siaf-pagination Bottom` abajo.",
+    "descripcion": "Envoltorio mínimo sobre `siaf-data-table`: tabla de columnas y filas, sin selección ni paginación.\n\nÚsalo para listados simples. Cuando la tabla necesita barra superior o paginado, va la grilla\nestándar: `siaf-table-controls` arriba (siempre, con `[showSelection]=false` si no hay selección)\ny `siaf-pagination Bottom` abajo.\n\nCon `sortable` en una columna, su título ordena la tabla (flecha ↑/↓ en la columna ordenada, `aria-sort`): `local`\nordena las filas recibidas y `externo` solo emite `sortChange` para que el servidor las ordene.",
     "usaSesion": false,
     "proyectaContenido": false,
     "entradas": [
@@ -14605,13 +14650,33 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "porDefecto": "[]",
         "requerida": true,
         "descripcion": null
+      },
+      {
+        "nombre": "sort",
+        "tipo": "TableSort | null",
+        "porDefecto": "null",
+        "requerida": false,
+        "descripcion": "Orden inicial o controlado desde fuera."
+      },
+      {
+        "nombre": "sortMode",
+        "tipo": "'local' | 'externo'",
+        "porDefecto": "'local'",
+        "requerida": false,
+        "descripcion": "`local` ordena aquí las filas; `externo` solo avisa con `sortChange` para que quien las trae las ordene."
       }
     ],
-    "eventos": [],
+    "eventos": [
+      {
+        "nombre": "sortChange",
+        "tipo": "TableSort | null",
+        "descripcion": "Orden elegido al pulsar el título de una columna con `sortable`; `null` al quitarlo."
+      }
+    ],
     "usar": "- Para un listado corto de solo lectura con columnas de texto (número, documento, estado como texto) dentro de una\n  tarjeta o un panel.\n- Hoy ninguna pantalla la usa: es la opción del kit antes de escribir otra `<table>` a mano.",
     "evitar": "- Para enlace al documento, tags de estado, checkbox o historial por fila: `siaf-documents-records-table`.\n- Para paginar o seleccionar: no lo hace; va la grilla estándar alrededor (`siaf-table-controls` arriba y\n  `siaf-pagination` con `position=\"Bottom\"` y `rowPage` abajo).\n- Para ítems sin columnas (título, descripción, ícono): `siaf-list`.",
     "teclado": "- No recibe foco: no es interactiva. El scroll es el de `siaf-data-table`, sin `tabindex`.",
-    "accesibilidad": "- **1.3.1 Información y relaciones (A)**: pinta `siaf-data-table`: `<table>` con `<thead>` y un `<th>` por columna.\n  No admite `<caption>` ni `ariaLabel` (el padre debe titularla con un encabezado cercano) y no ordena columnas,\n  así que no aplica `aria-sort`.\n- **1.4.3 Contraste mínimo (AA)**: celdas en `text-neutral-high` sobre la superficie (16.29:1 / 16.53:1).",
+    "accesibilidad": "- **1.3.1 Información y relaciones (A)**: pinta `siaf-data-table`: `<table>` con `<thead>` y un `<th>` por columna.\n  No admite `<caption>` ni `ariaLabel` (el padre debe titularla con un encabezado cercano) y solo las columnas con\n  `sortable` llevan `aria-sort`.\n- **1.4.3 Contraste mínimo (AA)**: celdas en `text-neutral-high` sobre la superficie (16.29:1 / 16.53:1).",
     "figma": [],
     "aria": {
       "roles": [],

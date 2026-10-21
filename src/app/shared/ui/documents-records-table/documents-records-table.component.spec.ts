@@ -1,4 +1,5 @@
 import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
@@ -59,14 +60,23 @@ describe('DocumentsRecordsTableComponent — tooltip de textos truncados', () =>
   });
 
   it('muestra el contenido completo de una celda de texto truncada', () => {
-    // La tabla usa table-layout automático: la celda solo se trunca si algo
-    // le pone tope de ancho (como el max-w del enlace de documento).
-    const celda: HTMLElement = fixture.nativeElement.querySelector('tbody span.truncate');
+    // La celda muestra hasta 3 líneas y recién ahí se recorta (line-clamp): el texto largo de la columna estrecha pasa de 3.
+    const celda: HTMLElement = fixture.nativeElement.querySelector('tbody span.line-clamp-3');
     (celda.closest('td') as HTMLElement).style.maxWidth = '80px';
 
     celda.dispatchEvent(new MouseEvent('mouseenter'));
 
     expect(tooltipVisible()?.textContent).toBe(NUMERO_LARGO);
+  });
+
+  it('un texto de hasta 3 líneas se muestra completo, sin recorte ni tooltip', () => {
+    fixture.componentRef.setInput('rows', [{ number: '1', document: 'A-1', entidad: 'Ministerio de Comercio Exterior y Turismo' }]);
+    fixture.detectChanges();
+    const celda: HTMLElement = fixture.nativeElement.querySelector('tbody span.line-clamp-3');
+
+    expect(celda.scrollHeight).toBeLessThanOrEqual(celda.clientHeight + 1);
+    celda.dispatchEvent(new MouseEvent('mouseenter'));
+    expect(tooltipVisible()).toBeNull();
   });
 
   it('no muestra tooltip cuando el texto entra completo', () => {
@@ -87,4 +97,40 @@ describe('DocumentsRecordsTableComponent — tooltip de textos truncados', () =>
 
     expect(tooltipVisible()).toBeNull();
   }));
+});
+
+describe('DocumentsRecordsTableComponent — orden', () => {
+  const columnas: DocumentsRecordsColumn[] = [
+    { key: 'sec', label: 'Sec.', headerGroup: 'Acreditación', visibility: 'visible', group: 'default', sortable: true },
+    { key: 'fecha', label: 'Fecha', headerGroup: 'Acreditación', visibility: 'visible', group: 'default' },
+    { key: 'tipo', label: 'Tipo', visibility: 'visible', group: 'default', sortable: true },
+  ];
+  const crear = (sort: { key: string; direction: 'asc' | 'desc' } | null = null) => {
+    TestBed.configureTestingModule({ providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()] });
+    const fixture = TestBed.createComponent(DocumentsRecordsTableComponent);
+    fixture.componentRef.setInput('activeTab', 'records');
+    fixture.componentRef.setInput('columns', columnas);
+    fixture.componentRef.setInput('rows', []);
+    fixture.componentRef.setInput('sort', sort);
+    fixture.detectChanges();
+    return fixture;
+  };
+  const botones = (f: ReturnType<typeof crear>) => Array.from<HTMLButtonElement>((f.nativeElement as HTMLElement).querySelectorAll('thead th button'));
+
+  it('solo las columnas sortable llevan botón en su título, sean de un grupo o sueltas', () => {
+    const f = crear();
+    expect(botones(f).map((b) => b.textContent!.replace(/arrow_\w+/, '').trim())).toEqual(['Tipo', 'Sec.']);
+    expect(botones(f).map((b) => b.getAttribute('aria-label'))).toEqual(['Ordenar por Tipo', 'Ordenar por Sec.']);
+  });
+
+  it('marca aria-sort en la columna ordenada y emite el siguiente orden al pulsar', () => {
+    const f = crear({ key: 'sec', direction: 'asc' });
+    const emitidos: unknown[] = [];
+    f.componentInstance.sortChange.subscribe((o) => emitidos.push(o));
+    const ths = Array.from((f.nativeElement as HTMLElement).querySelectorAll('thead th'));
+    expect(ths.filter((th) => th.getAttribute('aria-sort') === 'ascending').length).toBe(1);
+    botones(f).find((b) => b.textContent!.includes('Sec.'))!.click();
+    botones(f).find((b) => b.textContent!.includes('Tipo'))!.click();
+    expect(emitidos).toEqual([{ key: 'sec', direction: 'desc' }, { key: 'tipo', direction: 'asc' }]);
+  });
 });

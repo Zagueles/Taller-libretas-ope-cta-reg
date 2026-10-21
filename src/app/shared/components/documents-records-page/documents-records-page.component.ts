@@ -1,3 +1,4 @@
+import { TableSort, ordenarFilas, valorOrdenable } from '../../utils/table-sort.util';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, inject, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
@@ -380,6 +381,8 @@ type DocumentsRecordsRoleMode = 'creator' | 'approver' | 'readOnly';
                   [selectionDisabled]="selectionDisabled"
                   [recordSelectable]="!!effectiveConfig.recordSelectable"
                   [recordRowAction]="effectiveConfig.recordRowAction ?? null"
+                  [sort]="ordenActivo"
+                  (sortChange)="cambiarOrden($event)"
                   (selectionChanged)="toggleRowSelection($event)"
                   (historyOpened)="onRowAction($event)"
                   (rowOpened)="abrirDetalleRegistro($event)"
@@ -640,7 +643,29 @@ export class DocumentsRecordsPageComponent implements OnChanges {
     return String(row['documentId'] ?? row['recordId'] ?? row['number'] ?? row['document'] ?? '');
   }
 
+  /** Orden elegido en cada pestaña (columna `sortable` de la tabla); el de una no afecta al de la otra. */
+  private ordenPorPestana: Record<DocumentsRecordsTab, TableSort | null> = { documents: null, records: null };
+
+  get ordenActivo(): TableSort | null {
+    return this.ordenPorPestana[this.activeTab];
+  }
+
+  cambiarOrden(orden: TableSort | null): void {
+    this.ordenPorPestana = { ...this.ordenPorPestana, [this.activeTab]: orden };
+    this.page = 1;
+    this.emitirQueryRemota();
+  }
+
+  /** Las filas filtradas, ordenadas por la columna elegida: todas, no solo la página visible. En modo servidor llegan ya ordenadas. */
   get filteredRows(): DocumentsRecordsRow[] {
+    const filas = this.filasFiltradasSinOrden;
+    const orden = this.ordenActivo;
+    if (!orden || this.esModoServidor) return filas;
+    const tipo = this.activeColumnOptions.find((c) => c.key === orden.key)?.sortType ?? 'text';
+    return ordenarFilas(filas, orden, (fila, key) => valorOrdenable(fila[key as keyof DocumentsRecordsRow], tipo));
+  }
+
+  private get filasFiltradasSinOrden(): DocumentsRecordsRow[] {
     if (this.activeTab === 'records') {
       // Tab Registros: filtra sobre recordRows con Es imputable / Naturaleza
       const key1 = this.effectiveConfig.recordFilter1Key ?? 'imputable';
@@ -926,7 +951,7 @@ export class DocumentsRecordsPageComponent implements OnChanges {
 
   private emitirQueryRemota(): void {
     if (!this.esModoServidor) return;
-    const query = { search: this.searchTerm, page: this.page, limit: this.rowsPerPage };
+    const query = { search: this.searchTerm, page: this.page, limit: this.rowsPerPage, sort: this.ordenActivo };
     if (this.activeTab === 'documents') this.documentsQueryChange.emit(query);
     else this.recordsQueryChange.emit(query);
   }
