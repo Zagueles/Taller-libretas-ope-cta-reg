@@ -5372,7 +5372,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     "capa": "ui",
     "importacion": "@siaf/ui/documents-records-table/documents-records-table.component",
     "archivo": "src/app/shared/ui/documents-records-table/documents-records-table.component.ts",
-    "descripcion": "Tabla de las pestañas Documentos / Registros: columnas configurables, celdas por tipo\n(enlace al documento, tag de flujo, tag de registro), checkbox de selección y botón de historial.\n\nEs la tabla interna de `siaf-documents-records-page`; para una grilla nueva compón la grilla\nestándar (`siaf-table-controls` arriba + `siaf-pagination Bottom` abajo) alrededor de ella.",
+    "descripcion": "Tabla de las pestañas Documentos / Registros: columnas configurables, celdas por tipo\n(enlace al documento, tag de flujo, tag de registro), checkbox de selección (fijo a la izquierda al desplazar) y botón de historial.\n\nEs la tabla interna de `siaf-documents-records-page`; para una grilla nueva compón la grilla\nestándar (`siaf-table-controls` arriba + `siaf-pagination Bottom` abajo) alrededor de ella.",
     "usaSesion": false,
     "proyectaContenido": false,
     "entradas": [
@@ -9449,6 +9449,13 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     "proyectaContenido": false,
     "entradas": [
       {
+        "nombre": "activo",
+        "tipo": "string | null",
+        "porDefecto": "null",
+        "requerida": false,
+        "descripcion": "Clave de la tarjeta elegida mientras el panel de parámetros está abierto sobre ella; sin ella (panel cerrado), ninguna queda marcada."
+      },
+      {
         "nombre": "parametros",
         "tipo": "readonly ParametroAplicado[]",
         "porDefecto": null,
@@ -9460,7 +9467,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       {
         "nombre": "selected",
         "tipo": "string",
-        "descripcion": "Se pulsó una tarjeta: emite su `key` para abrir ese parámetro en el panel de la consulta."
+        "descripcion": null
       }
     ],
     "usar": "- Arriba de los resultados de una consulta, para mostrar con qué parámetros se buscó, cada uno con su ícono.\n- Con muchos parámetros o valores largos: el carril se desplaza y cada valor se corta con tooltip.\n- `selected` para abrir el panel de parámetros posicionado en el parámetro pulsado.",

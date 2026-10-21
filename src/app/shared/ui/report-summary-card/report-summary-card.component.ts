@@ -57,7 +57,7 @@ export interface ReportSummaryField {
       <div class="flex flex-col gap-siaf-xs md:flex-row md:items-end">
         <div class="flex min-h-12 min-w-0 items-center gap-siaf-md px-siaf-md py-siaf-sm md:w-[46%] md:shrink-0">
           @if (icon) {
-            <siaf-icon class="shrink-0 text-[var(--sys-color-text-neutral-medium)]" [name]="icon" [size]="24" />
+            <siaf-icon class="shrink-0 text-[var(--sys-color-text-neutral-medium)]" [name]="icon" variant="filled" [size]="24" />
           }
           <div class="flex min-w-0 flex-1 flex-col gap-siaf-xxs text-[var(--sys-color-text-neutral-medium)]">
             <p class="m-0 break-words text-lg font-bold uppercase leading-normal tracking-[-0.11px]" data-resumen-titulo>{{ title }}</p>

@@ -226,7 +226,7 @@ let siguienteId = 0;
       } @else {
         <div class="flex flex-col gap-siaf-sm">
           <section data-parametros>
-            <siaf-parametros-aplicados [parametros]="parametrosAplicados()" (selected)="abrirParametros($event)" />
+            <siaf-parametros-aplicados [parametros]="parametrosAplicados()" [activo]="panelAbierto() ? campoEnfocado() : null" (selected)="abrirParametros($event)" />
           </section>
 
           @if (sinResultados()) {

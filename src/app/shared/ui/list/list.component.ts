@@ -155,6 +155,7 @@ export interface ListSwitchChange {
                   @case ('icon') {
                     <siaf-icon
                       [name]="leading.icon"
+                      [variant]="esSeleccionado(item) ? 'filled' : 'outlined'"
                       [size]="tamIcono"
                       [class.text-[var(--sys-color-icon-states-enabled)]]="!esSeleccionado(item)"
                       [class.text-[var(--sys-color-icon-states-active)]]="esSeleccionado(item)"

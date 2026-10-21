@@ -31,6 +31,8 @@ interface PartesEtiqueta {
 
 /** Celda de la primera fila de la cabecera: un grupo que abarca varias columnas o una columna sin grupo (igual que `siaf-report-table`). */
 interface CeldaCabecera {
+  /** Sin divisor a la derecha: la celda va pegada a la columna fija de su mismo grupo. */
+  sinDivisor?: boolean;
   label: string;
   colspan: number;
   rowspan: 1 | 2;
@@ -100,9 +102,9 @@ let siguienteId = 0;
                 class="h-10 px-siaf-md py-siaf-sm text-xs font-bold uppercase leading-normal text-[var(--sys-color-text-neutral-high)]"
                 [class.text-center]="celda.align === 'center'"
                 [class.text-right]="celda.align === 'right'"
-                [class.border-r]="!ultimo && !celda.fixed"
-                [class.border-[var(--sys-color-divider-strong)]]="!ultimo && !celda.fixed"
-                [class]="celda.fixed ? claseFijaCabecera : ''"
+                [class.border-r]="!ultimo && !celda.fixed && !celda.sinDivisor"
+                [class.border-[var(--sys-color-divider-strong)]]="!ultimo && !celda.fixed && !celda.sinDivisor"
+                [class]="celda.fixed ? (celda.rowspan === 2 || !hayGrupos ? claseFijaCabeceraInferior : claseFijaCabecera) : ''"
                 [attr.colspan]="celda.colspan > 1 ? celda.colspan : null"
                 [attr.rowspan]="celda.rowspan > 1 ? celda.rowspan : null"
                 [attr.scope]="celda.rowspan === 2 ? 'col' : 'colgroup'"
@@ -121,7 +123,7 @@ let siguienteId = 0;
                   [class.text-right]="columna.align === 'right'"
                   [class.border-r]="finDeGrupo(i) && !columna.fixed"
                   [class.border-[var(--sys-color-divider-strong)]]="finDeGrupo(i) && !columna.fixed"
-                  [class]="columna.fixed ? claseFijaCabecera : ''"
+                  [class]="columna.fixed ? claseFijaCabeceraInferior : ''"
                   scope="col"
                   [style.width.px]="columna.width ?? null"
                   [style.min-width.px]="columna.width ?? null"
@@ -147,7 +149,7 @@ let siguienteId = 0;
                     >
                       <siaf-icon [name]="colapsados.has(nodo.id) ? 'chevron_right' : 'expand_more'" [size]="20" class="shrink-0" />
                       <span class="min-w-0 flex-1 truncate">
-                        {{ nodo.partes.antes }}<span [siafTooltip]="nodo.partes.tooltip">{{ nodo.partes.prefijo }}</span>: {{ nodo.partes.valor }} <span class="font-normal text-[var(--sys-color-text-neutral-medium)]">({{ nodo.cantidad }} Registros)</span>
+                        <span class="font-bold">{{ nodo.partes.antes }}<span [siafTooltip]="nodo.partes.tooltip">{{ nodo.partes.prefijo }}</span>: {{ nodo.partes.valor }}</span><span class="ml-1 font-normal text-[var(--sys-color-text-neutral-medium)]">({{ nodo.cantidad }} Registros)</span>
                         @if (nodo.subtitulo) {
                           <br /><span class="text-xs font-normal text-[var(--sys-color-text-neutral-medium)]">{{ nodo.subtitulo }}</span>
                         }
@@ -159,7 +161,7 @@ let siguienteId = 0;
                     @if (indiceFin - indiceInicio > 1) {
                       <td [attr.colspan]="indiceFin - indiceInicio - 1"></td>
                     }
-                    <td [class]="indiceFin === indiceFija ? claseFija + ' bg-surface' : ''" class="px-siaf-md py-siaf-sm text-right font-bold tabular-nums text-[var(--sys-color-text-neutral-high)]">
+                    <td [class]="indiceFin === indiceFija ? claseFija + ' z-[1] bg-surface' : ''" class="px-siaf-md py-siaf-sm text-right font-bold tabular-nums text-[var(--sys-color-text-neutral-high)]">
                       {{ nodo.totales['fin'] }}
                     </td>
                     @if (indiceFin < columnasVisibles.length - 1) {
@@ -205,7 +207,7 @@ let siguienteId = 0;
                     @if (indiceFin - indiceInicio > 1) {
                       <td [attr.colspan]="indiceFin - indiceInicio - 1"></td>
                     }
-                    <td [class]="indiceFin === indiceFija ? claseFija + (nodo.nivel === 0 ? ' bg-[var(--sys-color-bg-surfaces-highlight)]' : ' bg-[var(--sys-color-bg-surfaces-surface-low)]') : ''" class="px-siaf-md py-siaf-sm text-right tabular-nums">
+                    <td [class]="indiceFin === indiceFija ? claseFija + ' z-[1] bg-surface ' + (nodo.nivel === 0 ? '[background-image:linear-gradient(var(--sys-color-bg-surfaces-highlight),var(--sys-color-bg-surfaces-highlight))]' : '[background-image:linear-gradient(var(--sys-color-bg-surfaces-surface-low),var(--sys-color-bg-surfaces-surface-low))]') : ''" class="px-siaf-md py-siaf-sm text-right tabular-nums">
                       {{ nodo.totales['fin'] }}
                     </td>
                     @if (indiceFin < columnasVisibles.length - 1) {
@@ -247,8 +249,12 @@ export class GroupedReportTableComponent implements OnChanges {
 
   /** Igual que `siaf-report-table`: sticky con la sombra de elevación 6 recortada a su borde izquierdo. */
   readonly claseFija = 'sticky right-0 shadow-siaf-elevation-6 [clip-path:inset(0_0_0_-16px)]';
+  /** Celda fija de la fila de grupos: lleva su propia línea inferior (el borde de la celda no acompaña al `sticky`). */
   readonly claseFijaCabecera =
     'sticky right-0 z-[3] border-b-0 shadow-[inset_0_-1px_0_var(--sys-color-divider-strong),var(--sys-shadow-elevation-6)] [clip-path:inset(0_0_0_-16px)]';
+  /** Celda fija de la última fila de la cabecera: la línea inferior ya la pone el `thead`; otra propia la duplicaría. */
+  readonly claseFijaCabeceraInferior =
+    'sticky right-0 z-[3] border-b-0 shadow-[var(--sys-shadow-elevation-6)] [clip-path:inset(0_0_0_-16px)]';
 
   columnasVisibles: ReportTableColumn[] = [];
   nodos: Nodo[] = [];
@@ -304,6 +310,25 @@ export class GroupedReportTableComponent implements OnChanges {
       let fin = i;
       while (fin + 1 < this.columnasVisibles.length && this.columnasVisibles[fin + 1].group === columna.group) fin++;
       const grupo = this.columnasVisibles.slice(i, fin + 1);
+      // Si la columna fija cierra el grupo, solo ella queda fija: si la celda entera del grupo fuera `sticky`, taparía al grupo
+      // anterior al desplazar. El título del grupo se repite sobre la columna fija para que siga visible al desplazar.
+      if (grupo.length > 1 && grupo[grupo.length - 1].fixed && !grupo.slice(0, -1).some((c) => c.fixed)) {
+        const resto = grupo.slice(0, -1);
+        const anchosResto = resto.map((c) => c.width);
+        celdas.push({
+          label: columna.group,
+          colspan: resto.length,
+          rowspan: 1,
+          align: 'center' as const,
+          width: anchosResto.every((a) => typeof a === 'number') ? (anchosResto as number[]).reduce((suma, a) => suma + a, 0) : null,
+          fixed: false,
+          sinDivisor: true,
+          tooltip: this.tooltipGrupo(columna.group),
+        });
+        celdas.push({ label: columna.group, colspan: 1, rowspan: 1, align: 'center' as const, width: grupo[grupo.length - 1].width ?? null, fixed: true, tooltip: this.tooltipGrupo(columna.group) });
+        i = fin;
+        continue;
+      }
       const anchos = grupo.map((c) => c.width);
       celdas.push({
         label: columna.group,

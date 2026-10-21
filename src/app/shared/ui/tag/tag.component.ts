@@ -70,7 +70,7 @@ export type TagSize = 'standard' | 'small';
   template: `
     <ng-template #cuerpo>
       @if (iconoInicial) {
-        <siaf-icon class="flex shrink-0" [class]="claseIcono" [name]="iconoInicial" [size]="20" data-tag-icono />
+        <siaf-icon class="flex shrink-0" [class]="claseIcono" [name]="iconoInicial" [variant]="selected ? 'filled' : 'outlined'" [size]="20" data-tag-icono />
       }
       <span class="min-w-0 truncate"><ng-content /></span>
       @if (conFlecha) {

@@ -77,7 +77,7 @@ export interface ParametroAplicado {
           [attr.tabindex]="desborda() ? 0 : null"
           (scroll)="medir()"
         >
-          <siaf-list orientation="horizontal" [outlined]="true" [selectable]="true" [items]="items()" (selectedIdChange)="selected.emit($event)" />
+          <siaf-list orientation="horizontal" [outlined]="true" [selectable]="true" [selectedId]="activo" [items]="items()" (selectedIdChange)="selected.emit($event)" />
         </div>
         @if (hayMasALaIzquierda()) {
           <!-- Espejo del de la derecha: retrocede cuando el carril ya avanzó. -->
@@ -114,6 +114,8 @@ export class ParametrosAplicadosComponent {
   readonly items = computed<ListItem[]>(() => this._parametros().map((p) => ({ id: p.key ?? p.label, title: p.label, description: p.value, icon: p.icon })));
 
   /** Se pulsó una tarjeta: emite su `key` para abrir ese parámetro en el panel de la consulta. */
+  /** Clave de la tarjeta elegida mientras el panel de parámetros está abierto sobre ella; sin ella (panel cerrado), ninguna queda marcada. */
+  @Input() activo: string | null = null;
   @Output() selected = new EventEmitter<string>();
 
   /** Las tarjetas no entran en el ancho disponible: el carril se desplaza y se puede enfocar. */

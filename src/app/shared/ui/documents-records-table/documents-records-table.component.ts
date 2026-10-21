@@ -17,7 +17,7 @@ export type DocumentsRecordsSelectionChange = {
 
 /**
  * Tabla de las pestañas Documentos / Registros: columnas configurables, celdas por tipo
- * (enlace al documento, tag de flujo, tag de registro), checkbox de selección y botón de historial.
+ * (enlace al documento, tag de flujo, tag de registro), checkbox de selección (fijo a la izquierda al desplazar) y botón de historial.
  *
  * Es la tabla interna de `siaf-documents-records-page`; para una grilla nueva compón la grilla
  * estándar (`siaf-table-controls` arriba + `siaf-pagination Bottom` abajo) alrededor de ella.
@@ -75,7 +75,7 @@ export type DocumentsRecordsSelectionChange = {
         <thead>
           <tr class="bg-surface-high text-[10px] font-bold uppercase text-text">
             @if (mostrarCasilla) {
-              <th class="w-10 rounded-l-siaf-sm px-siaf-sm py-siaf-sm" [attr.rowspan]="hayGrupos ? 2 : null"></th>
+              <th class="sticky left-0 z-[3] w-10 rounded-l-siaf-sm border-r border-[var(--sys-color-divider-strong)] bg-surface-high px-siaf-sm py-siaf-sm shadow-siaf-elevation-6 [clip-path:inset(0_-16px_0_0)]" [attr.rowspan]="hayGrupos ? 2 : null"></th>
             }
             @if (hayGrupos) {
               @for (celda of filaSuperior; track $index) {
@@ -110,13 +110,13 @@ export type DocumentsRecordsSelectionChange = {
         <tbody>
           @for (row of rows; track rowTrackValue(row, $index)) {
             <tr
-              class="border-b border-[var(--sys-color-divider-default)] bg-surface hover:bg-[var(--sys-color-bg-states-light-hover)]"
+              class="group/fila border-b border-[var(--sys-color-divider-default)] bg-surface hover:bg-[var(--sys-color-bg-states-light-hover)]"
               [class.h-12]="activeTab === 'records'"
               [class.cursor-pointer]="abreDetalle(row)"
               (click)="abreDetalle(row) && rowOpened.emit(row)"
             >
               @if (mostrarCasilla) {
-                <td class="h-[58px] px-siaf-sm py-siaf-xs">
+                <td class="sticky left-0 z-[1] h-[58px] bg-surface px-siaf-sm py-siaf-xs shadow-siaf-elevation-6 [clip-path:inset(0_-16px_0_0)] group-hover/fila:[background-image:linear-gradient(var(--sys-color-bg-states-light-hover),var(--sys-color-bg-states-light-hover))]">
                   <input
                     class="size-4 disabled:cursor-not-allowed"
                     type="checkbox"
