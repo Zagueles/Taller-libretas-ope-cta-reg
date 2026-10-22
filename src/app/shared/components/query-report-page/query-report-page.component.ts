@@ -752,7 +752,7 @@ export class QueryReportPageComponent {
 
     const iconoParametro = this.configuracion().parameterFields.find((p) => p.key === primeraClave)?.icon;
     return {
-      campo: { ...campo, plural: campo.label.endsWith('a') || /[aeiou]$/i.test(campo.label) ? `${campo.label}s` : `${campo.label}es` },
+      campo: { ...campo, plural: campo.pluralLabel ?? (/[aeiou]$/i.test(campo.label) ? `${campo.label}s` : `${campo.label}es`) },
       elegida: entidad,
       columnas: this.columnasPorNiveles(avanzados.levels, this.configuracion().groupAggregation?.hiddenColumns),
       icono: iconoParametro ?? 'account_balance',

@@ -214,6 +214,8 @@ export interface QueryReportAdvancedFilterField extends QueryReportFilterField {
   groupable?: boolean;
   /** Abreviatura ante el valor del grupo en su encabezado («Ent.», «UE.», «Benef.»); por defecto, `label`. */
   groupLabelPrefix?: string;
+  /** Plural del `label` para el título de la bandeja lateral del Agregado; por defecto, el `label` con «s» o «es». */
+  pluralLabel?: string;
   /** Nombre completo que muestra el tooltip de la abreviatura del encabezado del grupo; por defecto, `label`. */
   groupLabelTooltip?: string;
   /** Columna de la fila que se muestra como segunda línea bajo el encabezado del grupo (Figma: la Cuenta de Registro bajo «Benef.»). */

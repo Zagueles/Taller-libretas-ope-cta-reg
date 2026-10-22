@@ -171,7 +171,7 @@ export class RegistroLibretasConsultasComponent {
       },
       { key: 'unidadEjecutora', label: 'Unidad ejecutora', groupable: true, hierarchy: 2, hidesColumns: ['unidadEjecutora'], groupLabelPrefix: 'UE.' },
       { key: 'grupo', label: 'Grupo', groupable: true, groupLabelPrefix: 'Grupo', hidesColumns: ['grupo'], valueDetails: {} },
-      { key: 'ffSubFf', label: 'FF/Sub FF', groupable: true, groupLabelPrefix: 'FF', groupLabelTooltip: 'Fuente / Sub fuente de financiamiento', hidesColumns: ['ffSubFf'], valueDetails: {} },
+      { key: 'ffSubFf', label: 'Fuente de financiamiento', pluralLabel: 'Fuentes de financiamiento', groupable: true, groupLabelPrefix: 'FF/SUB FF', groupLabelTooltip: 'Fuente / Sub fuente de financiamiento', hidesColumns: ['ffSubFf'], valueDetails: {} },
       { key: 'numeroDocumento', label: 'Documento' },
     ],
     groupAggregation: { runningBalance: { startColumn: 'saldoInicial', endColumn: 'saldoFinal' }, accountColumn: 'numeroCuentaRegistro', openingCreditColumn: 'creditoSaldoInicial', consolidate: {
@@ -195,7 +195,7 @@ export class RegistroLibretasConsultasComponent {
       { key: 'tipoBeneficiario', label: 'Tipo', group: 'Beneficiario', hiddenByDefault: true, width: 130 },
       { key: 'numeroCuentaRegistro', label: 'Número', group: 'Cuenta de registro', width: 300 },
       { key: 'descripcionCuentaRegistro', label: 'Descripción', group: 'Cuenta de registro', width: 320 },
-      { key: 'ffSubFf', label: 'FF/SUB FF', panelLabel: 'Fuente / Sub fuente de financiamiento', group: 'Cuenta de registro', width: 260, ungroupWhenGroupHidden: true },
+      { key: 'ffSubFf', label: 'Fuente de financiamiento', group: 'Cuenta de registro', width: 260, ungroupWhenGroupHidden: true },
       { key: 'tipoOperacion', label: 'Tipo de operación', width: 190 },
       { key: 'entidad', label: 'Entidad', group: 'Ámbito institucional', width: 110 },
       { key: 'unidadEjecutora', label: 'Unidad ejecutora', group: 'Ámbito institucional', width: 190 },
