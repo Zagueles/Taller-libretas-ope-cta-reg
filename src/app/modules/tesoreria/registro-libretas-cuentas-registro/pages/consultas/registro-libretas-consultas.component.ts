@@ -29,14 +29,11 @@ import {
   nombreTipoOperacionCorto,
 } from '../../models/registro-libretas.model';
 
-/** Columnas que solo interesan en la cuenta en dólares (tipo de cambio e importe en moneda nacional): visibles por
- *  defecto solo en esa pestaña (Figma nodo 6094:125648); en soles quedan disponibles en «Columnas visibles». */
-const COLUMNAS_MONEDA_EXTRANJERA = new Set(['tipoCotizacion', 'tipoCambioCompra', 'tipoCambioVenta', 'saldoInicialMN', 'debitoMN', 'creditoMN', 'saldoDisponibleMN', 'saldoFinalMN']);
-
 /** Prefijo de los montos en los KPI de la vista de gráficas, según la moneda de la cuenta bancaria de la pestaña activa. */
 const SIMBOLO_MONEDA: Record<'PEN' | 'USD', string> = { PEN: 'S/ ', USD: 'US$ ' };
 
-import { campoDetalleRegistro, construirDetalleRegistro } from '../../utils/registro-libretas-detalle.util';
+import { COLUMNAS_MONEDA_EXTRANJERA, COLUMNAS_REGISTRO_LIBRETAS } from '../../config/registro-libretas-columnas';
+import { filaMovimiento } from '../../utils/registro-libretas-fila.util';
 import { claveMovimiento, importesMN, saldosMNPorMovimiento, saldosPorCuentaRegistro, tipoCambioDeMovimiento, TIPO_OPERACION_SALDO_INICIAL } from '../../utils/registro-libretas-saldos.util';
 import { exportarConsultaExcel } from '../../utils/exportacion/excel-consulta.util';
 
@@ -187,50 +184,7 @@ export class RegistroLibretasConsultasComponent {
         ],
         endColumns: ['saldoFinal', 'saldoFinalMN'],
       }, hiddenColumns: ['saldoDisponible', 'saldoDisponibleMN', 'sec', 'fecha', 'tipoOperacion', 'entidad', 'unidadEjecutora', 'grupo', 'numeroDocumento', 'descripcionDocumento', 'fechaRegistro', 'numeroOperacion', 'tipoBeneficiario', 'entidadAdministradoraCodigo', 'entidadAdministradoraSigla', 'movimientoInternoCodigo', 'movimientoInternoDescripcion', 'movimientoInternoSigla', 'movimientoExternoCodigo', 'movimientoExternoDescripcion', 'documentoCutNumero', 'documentoCutArchivo', 'documentoCutSigla', 'descripcionDetallada'] },
-    columns: [
-      { key: 'sec', label: 'Sec.', panelLabel: 'Secuencia', group: 'Acreditación', width: 90 },
-      { key: 'fecha', label: 'Fecha', group: 'Acreditación', width: 130 },
-      { key: 'beneficiarioCodigo', label: 'Código', group: 'Beneficiario', width: 90 },
-      { key: 'beneficiario', label: 'Descripción', group: 'Beneficiario', width: 230 },
-      { key: 'tipoBeneficiario', label: 'Tipo', group: 'Beneficiario', hiddenByDefault: true, width: 130 },
-      { key: 'numeroCuentaRegistro', label: 'Número', group: 'Cuenta de registro', width: 300 },
-      { key: 'descripcionCuentaRegistro', label: 'Descripción', group: 'Cuenta de registro', width: 320 },
-      { key: 'ffSubFf', label: 'Fuente de financiamiento', group: 'Cuenta de registro', width: 260, ungroupWhenGroupHidden: true },
-      { key: 'tipoOperacion', label: 'Tipo de operación', width: 190 },
-      { key: 'entidad', label: 'Entidad', group: 'Ámbito institucional', width: 110 },
-      { key: 'unidadEjecutora', label: 'Unidad ejecutora', group: 'Ámbito institucional', width: 190 },
-      { key: 'grupo', label: 'Grupo', group: 'Ámbito institucional', width: 160 },
-      { key: 'tipoCotizacion', label: 'Tipo de cotiz.', panelLabel: 'Tipo de cotización', group: 'Tipo de cambio', hiddenByDefault: true, width: 160 },
-      { key: 'tipoCambioCompra', label: 'Compra', group: 'Tipo de cambio', hiddenByDefault: true, align: 'right', width: 110 },
-      { key: 'tipoCambioVenta', label: 'Venta', group: 'Tipo de cambio', hiddenByDefault: true, align: 'right', width: 110 },
-      { key: 'saldoInicial', label: 'Saldo inicial', group: 'Imp. m. cuenta', align: 'right', width: 120 },
-      { key: 'debito', label: 'Débito', group: 'Imp. m. cuenta', align: 'right', width: 110 },
-      { key: 'credito', label: 'Crédito', group: 'Imp. m. cuenta', align: 'right', width: 110 },
-      { key: 'saldoDisponible', label: 'Saldo disponible', group: 'Imp. m. cuenta', hiddenByDefault: true, align: 'right', width: 140 },
-      { key: 'saldoInicialMN', label: 'Saldo inicial', group: 'Imp. m. nacional', hiddenByDefault: true, align: 'right', width: 130 },
-      { key: 'debitoMN', label: 'Débito', group: 'Imp. m. nacional', hiddenByDefault: true, align: 'right', width: 120 },
-      { key: 'creditoMN', label: 'Crédito', group: 'Imp. m. nacional', hiddenByDefault: true, align: 'right', width: 130 },
-      { key: 'saldoDisponibleMN', label: 'Saldo disponible', group: 'Imp. m. nacional', hiddenByDefault: true, align: 'right', width: 140 },
-      { key: 'saldoFinalMN', label: 'Saldo final', group: 'Imp. m. nacional', hiddenByDefault: true, align: 'right', width: 140 },
-      // «Más columnas» del detalle del registro (las mismas de la pestaña Registros): ocultas hasta que se activen.
-      { key: 'fechaRegistro', label: 'Fecha de registro', hiddenByDefault: true, width: 170 },
-      { key: 'numeroOperacion', label: 'Número de operación', hiddenByDefault: true, width: 170 },
-      { key: 'entidadAdministradoraCodigo', label: 'Código', group: 'Entidad administradora', hiddenByDefault: true, width: 120 },
-      { key: 'entidadAdministradoraSigla', label: 'Sigla', group: 'Entidad administradora', hiddenByDefault: true, width: 120 },
-      { key: 'movimientoInternoCodigo', label: 'Código', group: 'Movimiento interno', hiddenByDefault: true, width: 120 },
-      { key: 'movimientoInternoDescripcion', label: 'Descripción', group: 'Movimiento interno', hiddenByDefault: true, width: 260 },
-      { key: 'movimientoInternoSigla', label: 'Sigla', group: 'Movimiento interno', hiddenByDefault: true, width: 100 },
-      { key: 'movimientoExternoCodigo', label: 'Código', group: 'Movimiento externo', hiddenByDefault: true, width: 120 },
-      { key: 'movimientoExternoDescripcion', label: 'Descripción', group: 'Movimiento externo', hiddenByDefault: true, width: 200 },
-      { key: 'documentoCutNumero', label: 'Número', group: 'Documento CUT', hiddenByDefault: true, width: 130 },
-      { key: 'documentoCutArchivo', label: 'Archivo', group: 'Documento CUT', hiddenByDefault: true, width: 130 },
-      { key: 'documentoCutSigla', label: 'Sigla', group: 'Documento CUT', hiddenByDefault: true, width: 100 },
-      { key: 'descripcionDetallada', label: 'Descripción detallada', hiddenByDefault: true, width: 260 },
-      { key: 'estadoConciliacion', label: 'Estado de conciliación', hiddenByDefault: true, width: 170 },
-      { key: 'numeroDocumento', label: 'Número', group: 'Documento', hiddenByDefault: true, width: 150, kind: 'link' },
-      { key: 'descripcionDocumento', label: 'Descripción', group: 'Documento', hiddenByDefault: true, width: 300 },
-      { key: 'saldoFinal', label: 'Saldo final', group: 'Imp. m. cuenta', align: 'right', width: 135, fixed: true },
-    ],
+    columns: COLUMNAS_REGISTRO_LIBRETAS,
     columnsPanel: {
       baseGroups: ['Acreditación', 'Beneficiario', 'Cuenta de registro', 'Imp. m. cuenta'],
       groupLabels: { 'Imp. m. cuenta': 'Importe en moneda de la cuenta', 'Imp. m. nacional': 'Importe en moneda nacional' },
@@ -390,68 +344,6 @@ export class RegistroLibretasConsultasComponent {
   }
 
   private aFila(m: MovimientoLibretaRegistro): QueryReportRow {
-    // Cuentas en dólares: el importe en moneda nacional es el importe por el tipo de cambio (dato de ejemplo).
-    // Tipo de cambio SUNAT del día (Compra/Venta), solo relevante para la cuenta en dólares; el sol se convierte 1 a 1.
-    const enDolares = CUENTAS_BANCARIAS_INFO.find((c) => c.id === m.cuentaBancariaId)?.moneda === 'USD';
-    const tipoCambioCompra = enDolares ? TIPO_CAMBIO.compra : 1;
-    const tipoCambioVenta = enDolares ? TIPO_CAMBIO.venta : 1;
-    const mn = importesMN(m);
-    const saldosMN = this.saldosMN.get(claveMovimiento(m));
-    return {
-      id: m.id,
-      sec: m.sec,
-      // La consulta solo trae movimientos de la libreta: los de documentos rechazados o pendientes no están en ella.
-      estadoConciliacion: 'Conciliado',
-      fecha: fechaHoraVisible(m.fecha),
-      /** Solo para «Filtros avanzados» (Fecha de acreditación): comparable como aaaa-mm-dd, a diferencia de `fecha`, que ya viene formateada para mostrarse. */
-      fechaAcreditacion: m.fecha.slice(0, 10),
-      beneficiarioCodigo: m.beneficiarioCodigo,
-      beneficiario: nombreBeneficiario(m.beneficiarioCodigo),
-      numeroCuentaRegistro: m.numeroCuentaRegistro,
-      descripcionCuentaRegistro: m.descripcionCuentaRegistro,
-      /** Solo para el subtítulo del grupo «Benef.» en Agrupado/Agregado (Figma nodo 5960:44051). */
-      cuentaRegistroResumen: `CR: ${m.numeroCuentaRegistro} - ${m.descripcionCuentaRegistro}`,
-      ffSubFf: m.ffSubFf,
-      tipoOperacion: nombreTipoOperacion(m.tipoOperacionCodigo),
-      tipoOperacionCorto: nombreTipoOperacionCorto(m.tipoOperacionCodigo),
-      entidad: m.entidad,
-      unidadEjecutora: m.unidadEjecutora,
-      grupo: m.grupo,
-      saldoInicial: monto(m.saldoInicial),
-      debito: monto(m.debito),
-      credito: monto(m.credito),
-      /** Saldo disponible del movimiento: crédito menos débito (se deriva, no se guarda). */
-      saldoDisponible: monto(m.credito - m.debito),
-      /** Solo para los totales: el crédito del movimiento interno «Saldo inicial» forma parte del saldo inicial. */
-      creditoSaldoInicial: monto(m.tipoOperacionCodigo === TIPO_OPERACION_SALDO_INICIAL ? m.credito : 0),
-      creditoSaldoInicialMN: monto(m.tipoOperacionCodigo === TIPO_OPERACION_SALDO_INICIAL ? m.credito * tipoCambioCompra : 0),
-      fechaRegistro: construirDetalleRegistro(m).fechaRegistro,
-      numeroOperacion: construirDetalleRegistro(m).numeroOperacion,
-      tipoBeneficiario: campoDetalleRegistro(m, 'Beneficiario', 'Tipo'),
-      entidadAdministradoraCodigo: campoDetalleRegistro(m, 'Entidad administradora', 'Código'),
-      entidadAdministradoraSigla: campoDetalleRegistro(m, 'Entidad administradora', 'Sigla'),
-      movimientoInternoCodigo: campoDetalleRegistro(m, 'Movimiento interno', 'Código'),
-      movimientoInternoDescripcion: campoDetalleRegistro(m, 'Movimiento interno', 'Descripción'),
-      movimientoInternoSigla: campoDetalleRegistro(m, 'Movimiento interno', 'Sigla'),
-      movimientoExternoCodigo: campoDetalleRegistro(m, 'Movimiento externo', 'Código'),
-      movimientoExternoDescripcion: campoDetalleRegistro(m, 'Movimiento externo', 'Descripción'),
-      documentoCutNumero: campoDetalleRegistro(m, 'Documento CUT', 'Número'),
-      documentoCutArchivo: campoDetalleRegistro(m, 'Documento CUT', 'Archivo'),
-      documentoCutSigla: campoDetalleRegistro(m, 'Documento CUT', 'Sigla'),
-      descripcionDetallada: construirDetalleRegistro(m).descripcionDetallada,
-      numeroDocumento: m.numeroDocumento,
-      documentoId: m.documentoId,
-      descripcionDocumento: m.descripcionDocumento,
-      saldoFinal: monto(m.saldoFinal),
-      tipoCotizacion: '1. Compra / Venta',
-      tipoCambioCompra: tipoCambioCompra.toFixed(2),
-      tipoCambioVenta: tipoCambioVenta.toFixed(2),
-      // Moneda nacional (RN-032/033): crédito a tipo de compra, débito a tipo de venta; los saldos van encadenados.
-      saldoInicialMN: monto(saldosMN?.saldoInicialMN ?? m.saldoInicial * tipoCambioCompra),
-      debitoMN: monto(mn.debito),
-      creditoMN: monto(mn.credito),
-      saldoDisponibleMN: monto(mn.disponible),
-      saldoFinalMN: monto(saldosMN?.saldoFinalMN ?? m.saldoFinal * tipoCambioCompra),
-    };
+    return filaMovimiento(m, this.saldosMN.get(claveMovimiento(m)));
   }
 }

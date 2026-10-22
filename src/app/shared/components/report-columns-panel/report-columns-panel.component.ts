@@ -112,7 +112,7 @@ let siguienteId = 0;
 
               @if (!grupo.suelta && !plegados().has(grupo.id)) {
                 @for (columna of grupo.columnas; track columna.key) {
-                  <label class="flex min-h-12 cursor-pointer items-center gap-siaf-md pl-[64px] text-sm text-[var(--sys-color-text-neutral-medium)]">
+                  <label class="flex min-h-12 cursor-pointer items-center gap-[24px] pl-[32px] text-sm text-[var(--sys-color-text-neutral-medium)]">
                     <input class="size-4 accent-[var(--sys-color-icon-states-enabled)] disabled:cursor-not-allowed" type="checkbox" [attr.data-columna]="columna.key" [checked]="borrador().has(columna.key)" [disabled]="baseKeys.has(columna.key)" (change)="alternarColumna(columna.key)" />
                     {{ columna.label }}
                   </label>

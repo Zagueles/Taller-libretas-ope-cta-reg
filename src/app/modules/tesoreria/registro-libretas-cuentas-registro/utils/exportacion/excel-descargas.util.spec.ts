@@ -91,8 +91,9 @@ describe('descargas de Excel', () => {
       const hoja = (await libro([usd], ['cuentaBancariaNumero', 'cuentaBancariaDenominacion', 'moneda'])).getWorksheet('Resultado')!;
 
       expect(fila(hoja, 3)).toEqual(['12073303572000000003', 'MEF - DGTP', 'USD']);
-      // «Cuenta bancaria» agrupa número y denominación (celdas combinadas); «Moneda» ocupa las dos filas de cabecera.
-      expect(fila(hoja, 1)).toEqual(['Cuenta bancaria', 'Cuenta bancaria', 'Moneda']);
+      // «Cuenta bancaria» agrupa número, denominación y moneda (celdas combinadas).
+      expect(fila(hoja, 1)).toEqual(['Cuenta bancaria', 'Cuenta bancaria', 'Cuenta bancaria']);
+      expect(fila(hoja, 2)).toEqual(['Número', 'Denominación', 'Moneda']);
     });
   });
 });

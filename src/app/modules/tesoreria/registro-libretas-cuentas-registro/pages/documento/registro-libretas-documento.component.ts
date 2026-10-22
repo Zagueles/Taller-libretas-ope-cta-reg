@@ -10,6 +10,7 @@ import { SolicitudePageLayoutComponent } from '../../../../../shared/components/
 import { ActionTrackerComponent } from '../../../../../shared/ui/action-tracker/action-tracker.component';
 import { AlertComponent } from '../../../../../shared/ui/alert/alert.component';
 import { ButtonComponent } from '../../../../../shared/ui/button/button.component';
+import type { IconDropdownMenuItem } from '../../../../../shared/ui/icon-dropdown-menu/icon-dropdown-menu.component';
 import { DocumentSummaryCardComponent } from '../../../../../shared/ui/document-summary-card/document-summary-card.component';
 import { ReadonlyFieldComponent } from '../../../../../shared/ui/readonly-field/readonly-field.component';
 import { ReportTableColumn, ReportTableComponent, ReportTableRow } from '../../../../../shared/ui/report-table/report-table.component';
@@ -22,10 +23,13 @@ import { IconComponent } from '../../../../../shared/ui/icon/icon.component';
 import { SnackbarComponent } from '../../../../../shared/ui/snackbar/snackbar.component';
 import { volverAlOrigen } from '../../../../../shared/utils/volver.util';
 import { buildProcessBreadcrumbs } from '../../../../../shared/utils/breadcrumbs.util';
+import { COLUMNAS_REGISTRO_LIBRETAS } from '../../config/registro-libretas-columnas';
 import { PROCESS_ID, PROCESS_ROUTE, REGISTRO_ROUTE } from '../../config/registro-libretas.rutas';
 import { RegistroLibretasApiService } from '../../api/registro-libretas-api.service';
-import { DetalleDocumentoLibreta, nombreBeneficiario, nombreTipoOperacion } from '../../models/registro-libretas.model';
+import { CUENTAS_BANCARIAS_INFO, DetalleDocumentoLibreta, nombreBeneficiario, nombreTipoOperacion } from '../../models/registro-libretas.model';
 import { generarPdfDocumento } from '../../utils/exportacion/pdf-documento.util';
+import { filaMovimiento } from '../../utils/registro-libretas-fila.util';
+import { claveMovimiento, saldosMNPorMovimiento, tipoCambioDeMovimiento } from '../../utils/registro-libretas-saldos.util';
 
 /** Descarga un Blob como archivo. */
 function descargarArchivo(blob: Blob, nombre: string): void {
@@ -58,18 +62,16 @@ interface FiltroDocumento {
   valor: string;
 }
 
-const COLUMNAS: ReportTableColumn[] = [
-  { key: 'sec', label: 'Sec.', group: 'Acreditación', width: 90 },
-  { key: 'fecha', label: 'Fecha', group: 'Acreditación', width: 130 },
-  { key: 'codigo', label: 'Código', group: 'Beneficiario', width: 90 },
-  { key: 'beneficiario', label: 'Descripción', group: 'Beneficiario', width: 230 },
-  { key: 'numeroCuenta', label: 'Número', group: 'Cuenta de registro', width: 300 },
-  { key: 'descripcionCuenta', label: 'Descripción', group: 'Cuenta de registro', width: 320 },
-  { key: 'saldoInicial', label: 'Saldo inicial', group: 'Imp. m. cuenta', align: 'right', width: 120 },
-  { key: 'debito', label: 'Débito', group: 'Imp. m. cuenta', align: 'right', width: 110 },
-  { key: 'credito', label: 'Crédito', group: 'Imp. m. cuenta', align: 'right', width: 110 },
-  { key: 'saldoFinal', label: 'Saldo final', group: 'Imp. m. cuenta', align: 'right', width: 135, fixed: true },
-];
+/** Nombre completo de los grupos de cabecera abreviados («Imp. m. cuenta» → «Importe en moneda de la cuenta»). */
+const etiquetaGrupo = (grupo: string): string => (grupo === 'Imp. m. cuenta' ? 'Importe en moneda de la cuenta' : grupo === 'Imp. m. nacional' ? 'Importe en moneda nacional' : grupo);
+
+/** Las columnas de los registros, las mismas de Consultas y reportes; el documento ya es esta página, así que su grupo no se ofrece. */
+const COLUMNAS_DOCUMENTO: ReportTableColumn[] = (() => {
+  // De fábrica solo se ven Acreditación, Beneficiario (código y descripción), Cuenta de registro (número y descripción) y los
+  // importes en moneda de la cuenta; el resto está disponible en «Columnas visibles».
+  const deFabrica = new Set(['sec', 'fecha', 'beneficiarioCodigo', 'beneficiario', 'numeroCuentaRegistro', 'descripcionCuentaRegistro', 'saldoInicial', 'debito', 'credito', 'saldoFinal']);
+  return COLUMNAS_REGISTRO_LIBRETAS.filter((c) => c.group !== 'Documento').map((c) => ({ ...c, hiddenByDefault: !deFabrica.has(c.key) }));
+})();
 
 /**
  * Vista de un documento de «Documentos y registros» (Figma nodo 6021:56145): documento generado automáticamente por
@@ -167,10 +169,11 @@ const COLUMNAS: ReportTableColumn[] = [
               [value]="busqueda()"
               [filterCount]="filtros().length"
               filterLabel="Filtros"
-              moreLabel="Columnas visibles"
+              moreLabel="Más opciones"
+              [moreItems]="opcionesMas"
               (valueChange)="busqueda.set($any($event))"
               (filter)="abrirFiltros()"
-              (more)="panelColumnasAbierto.set(true)"
+              (moreSelected)="elegirOpcionMas($event)"
             />
 
             @if (filtros().length) {
@@ -245,10 +248,10 @@ const COLUMNAS: ReportTableColumn[] = [
 
     <siaf-report-columns-panel
       [open]="panelColumnasAbierto()"
-      [grupos]="gruposColumnas"
+      [grupos]="gruposColumnas()"
       [selected]="columnasElegidas()"
-      [defaults]="todasLasColumnas"
-      [baseKeys]="columnasBase"
+      [defaults]="todasLasColumnas()"
+      [baseKeys]="columnasBase()"
       (closed)="panelColumnasAbierto.set(false)"
       (applied)="aplicarColumnas($event)"
     />
@@ -267,27 +270,38 @@ export class RegistroLibretasDocumentoComponent implements OnInit {
 
   readonly breadcrumbs = buildProcessBreadcrumbs(PROCESS_ID, PROCESS_ROUTE);
   readonly cuentas = CUENTAS;
-  readonly columnas = COLUMNAS;
 
   // ── Columnas visibles (mismo panel que Consultas y reportes) ──
   readonly panelColumnasAbierto = signal(false);
-  readonly todasLasColumnas: ReadonlySet<string> = new Set(COLUMNAS.map((c) => c.key));
-  /** Si se ocultan todas, queda la secuencia. */
-  readonly columnasBase: ReadonlySet<string> = new Set(['sec', 'saldoFinal']);
-  readonly columnasElegidas = signal<ReadonlySet<string>>(this.todasLasColumnas);
-  readonly columnasVisibles = computed(() => COLUMNAS.filter((c) => this.columnasElegidas().has(c.key)));
-  readonly gruposColumnas: ColumnasPanelGrupo[] = [...new Set(COLUMNAS.map((c) => c.group ?? c.key))].map((id) => {
-    const columnas = COLUMNAS.filter((c) => (c.group ?? c.key) === id);
-    return {
-      id,
-      label: id === 'Imp. m. cuenta' ? 'Importe en moneda de la cuenta' : id,
-      suelta: !columnas[0].group,
-      columnas: columnas.map((c) => ({ key: c.key, label: c.label === 'Sec.' ? 'Secuencia' : c.label })),
-    };
-  });
+  /** «Más opciones» abre un menú, igual que en la pestaña Registros: de ahí se llega a «Columnas visibles». */
+  readonly opcionesMas: IconDropdownMenuItem[] = [{ label: 'Ocultar o mostrar columnas', value: 'open-columns' }];
+
+  elegirOpcionMas(valor: string): void {
+    if (valor === 'open-columns') this.panelColumnasAbierto.set(true);
+  }
+  readonly columnasCuenta = computed(() => COLUMNAS_DOCUMENTO);
+  /** Las que se ven de fábrica (y a las que vuelve «Restablecer»): todas menos las `hiddenByDefault`. */
+  readonly todasLasColumnas = computed<ReadonlySet<string>>(() => new Set(this.columnasCuenta().filter((c) => !c.hiddenByDefault).map((c) => c.key)));
+  /** Las de fábrica no se pueden ocultar (como en Consultas y reportes): solo se suman las demás. */
+  readonly columnasBase = computed<ReadonlySet<string>>(() => this.todasLasColumnas());
+  /** Lo que se eligió en el panel; sin elegir, las de fábrica de la cuenta. */
+  private readonly columnasEscogidas = signal<ReadonlySet<string> | null>(null);
+  readonly columnasElegidas = computed<ReadonlySet<string>>(() => this.columnasEscogidas() ?? this.todasLasColumnas());
+  readonly columnasVisibles = computed(() => this.columnasCuenta().filter((c) => this.columnasElegidas().has(c.key)));
+  readonly gruposColumnas = computed<ColumnasPanelGrupo[]>(() =>
+    [...new Set(this.columnasCuenta().map((c) => c.group ?? c.key))].map((id) => {
+      const columnas = this.columnasCuenta().filter((c) => (c.group ?? c.key) === id);
+      return {
+        id,
+        label: columnas[0].group ? etiquetaGrupo(id) : (columnas[0].panelLabel ?? columnas[0].label),
+        suelta: !columnas[0].group,
+        columnas: columnas.map((c) => ({ key: c.key, label: c.panelLabel ?? c.label })),
+      };
+    }),
+  );
 
   aplicarColumnas(elegidas: Set<string>): void {
-    this.columnasElegidas.set(elegidas);
+    this.columnasEscogidas.set(elegidas);
     this.panelColumnasAbierto.set(false);
     // Un filtro sobre una columna que ya no se ve deja de ofrecerse y de aplicarse.
     this.filtros.update((actual) => actual.filter((f) => elegidas.has(f.campo)));
@@ -358,22 +372,11 @@ export class RegistroLibretasDocumentoComponent implements OnInit {
   });
 
   /** Las filas de la cuenta elegida, sin buscar ni filtrar. */
+  private readonly saldosMN = computed(() => saldosMNPorMovimiento(this.movimientos(), tipoCambioDeMovimiento));
   private readonly filasCuenta = computed<ReportTableRow[]>(() =>
     this.movimientos()
       .filter((m) => m.cuentaBancariaId === this.cuentaActiva())
-      .map((m) => ({
-        id: m.id,
-        sec: m.sec,
-        fecha: fechaHoraVisible(m.fecha),
-        codigo: m.beneficiarioCodigo,
-        beneficiario: nombreBeneficiario(m.beneficiarioCodigo).toUpperCase(),
-        numeroCuenta: m.numeroCuentaRegistro,
-        descripcionCuenta: m.descripcionCuentaRegistro,
-        saldoInicial: monto(m.saldoInicial),
-        debito: monto(m.debito),
-        credito: monto(m.credito),
-        saldoFinal: monto(m.saldoFinal),
-      })),
+      .map((m) => filaMovimiento(m, this.saldosMN().get(claveMovimiento(m)))),
   );
 
   // ── Filtros personalizados del documento (Campo · Condición · Valor) ──
@@ -386,12 +389,13 @@ export class RegistroLibretasDocumentoComponent implements OnInit {
 
   /** Los campos del panel: las columnas visibles, por grupo; fecha con selector, códigos y descripciones con lista, importes con texto. */
   readonly gruposFiltro = computed(() => {
-    const tipoDe = (key: string): 'fecha' | 'select' | 'texto' => (key === 'fecha' ? 'fecha' : ['saldoInicial', 'debito', 'credito', 'saldoFinal'].includes(key) ? 'texto' : 'select');
+    const importes = new Set(this.columnasCuenta().filter((c) => c.align === 'right').map((c) => c.key));
+    const tipoDe = (key: string): 'fecha' | 'select' | 'texto' => (key === 'fecha' ? 'fecha' : importes.has(key) ? 'texto' : 'select');
     const grupos = new Map<string, { titulo: string; campos: { key: string; label: string; tipo: 'fecha' | 'select' | 'texto' }[] }>();
     for (const c of this.columnasVisibles()) {
-      const titulo = c.group === 'Imp. m. cuenta' ? 'Importe en moneda de la cuenta' : (c.group ?? c.label);
+      const titulo = c.group ? etiquetaGrupo(c.group) : c.label;
       const grupo = grupos.get(titulo) ?? { titulo, campos: [] };
-      grupo.campos.push({ key: c.key, label: c.label === 'Sec.' ? 'Secuencia' : c.label, tipo: tipoDe(c.key) });
+      grupo.campos.push({ key: c.key, label: c.panelLabel ?? c.label, tipo: tipoDe(c.key) });
       grupos.set(titulo, grupo);
     }
     return [...grupos.values()];
@@ -400,7 +404,7 @@ export class RegistroLibretasDocumentoComponent implements OnInit {
   /** Valores a elegir de cada campo: los que tiene en las filas de la cuenta elegida. */
   readonly valoresPorCampo = computed<Record<string, { label: string; value: string }[]>>(() =>
     Object.fromEntries(
-      COLUMNAS.map((c) => {
+      this.columnasCuenta().map((c) => {
         const valores = [...new Set(this.filasCuenta().map((f) => String(f[c.key] ?? '')).filter(Boolean))];
         return [c.key, valores.map((v) => ({ label: v, value: v }))];
       }),
@@ -436,8 +440,8 @@ export class RegistroLibretasDocumentoComponent implements OnInit {
   /** «Aceptar»: cada campo con valor pasa a ser un filtro aplicado (la fecha, comparada por su día; los importes, por contenido). */
   aceptarFiltros(): void {
     const etiqueta = (key: string): string => {
-      const label = COLUMNAS.find((c) => c.key === key)?.label ?? key;
-      return label === 'Sec.' ? 'Secuencia' : label;
+      const columna = this.columnasCuenta().find((c) => c.key === key);
+      return columna?.panelLabel ?? columna?.label ?? key;
     };
     this.filtros.set(
       Object.entries(this.borradorFiltros())
@@ -446,7 +450,7 @@ export class RegistroLibretasDocumentoComponent implements OnInit {
           id: `filtro-${++this.secuenciaFiltro}`,
           campo,
           campoLabel: etiqueta(campo),
-          condicion: campo === 'fecha' || ['saldoInicial', 'debito', 'credito', 'saldoFinal'].includes(campo) ? 'contains' : 'eq',
+          condicion: campo === 'fecha' || this.columnasCuenta().some((c) => c.key === campo && c.align === 'right') ? 'contains' : 'eq',
           valor: campo === 'fecha' ? valor.split('-').reverse().join('/') : valor,
         })),
     );

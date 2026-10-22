@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 
 import { TooltipDirective } from '../../ui/tooltip/tooltip.directive';
+import { IconDropdownMenuComponent, IconDropdownMenuItem } from '../../ui/icon-dropdown-menu/icon-dropdown-menu.component';
 import { IconComponent } from '../../ui/icon/icon.component';
 import { TextFieldComponent } from '../../ui/text-field/text-field.component';
 
@@ -10,6 +11,9 @@ import { TextFieldComponent } from '../../ui/text-field/text-field.component';
  *
  * Con `variant="reports"` es el buscador de Consultas y reportes (Figma «Guía de Estructura de Pantallas», nodo
  * 22402:16457 «Search for table»): el segundo botón pasa a ser Columnas (`view_column`), que emite `columns`.
+ *
+ * Con `moreItems`, «Más opciones» abre un menú (como el de Documentos y registros) y emite `moreSelected` con el valor
+ * elegido, en vez de emitir `more` directo: la vista de un documento lo usa para «Ocultar o mostrar columnas».
  *
  * Escribir solo registra el texto: la búsqueda sale por `valueChange` al pulsar Enter o la lupa, y lo tecleado se
  * descarta si el padre reescribe `value`.
@@ -55,7 +59,7 @@ import { TextFieldComponent } from '../../ui/text-field/text-field.component';
 @Component({
   selector: 'siaf-form-table-search',
   standalone: true,
-  imports: [IconComponent, TextFieldComponent, TooltipDirective],
+  imports: [IconComponent, TextFieldComponent, TooltipDirective, IconDropdownMenuComponent],
   template: `
     <div class="flex w-full items-start gap-siaf-md">
       <!-- Campo del design system: etiqueta flotante y borde de éxito, igual
@@ -86,7 +90,10 @@ import { TextFieldComponent } from '../../ui/text-field/text-field.component';
             <span class="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--sys-color-bg-feedback-dark-info)] px-1 text-[10px] font-bold leading-none text-white">{{ filterCount }}</span>
           }
         </button>
-        <!-- Segundo botón según la variante: Más opciones o, en Consultas y reportes, Columnas. -->
+        <!-- Segundo botón según la variante: Más opciones o, en Consultas y reportes, Columnas. Con moreItems, Más opciones es un menú. -->
+        @if (variant !== 'reports' && moreItems.length) {
+          <siaf-icon-dropdown-menu icon="more_vert" [ariaLabel]="moreLabel" [items]="moreItems" [menuWidth]="280" [disabled]="disabled" (selected)="moreSelected.emit($event)" />
+        } @else {
         <button
           class="inline-flex size-10 items-center justify-center rounded-siaf-md text-text transition hover:bg-surface-muted active:bg-[var(--sys-color-bg-states-dark-pressed)] disabled:cursor-not-allowed disabled:text-[var(--sys-color-text-neutral-disabled)] disabled:hover:bg-transparent focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sys-color-border-states-focus)]"
           type="button"
@@ -98,6 +105,7 @@ import { TextFieldComponent } from '../../ui/text-field/text-field.component';
         >
           <siaf-icon [name]="variant === 'reports' ? 'view_column' : 'more_vert'" [size]="24" />
         </button>
+        }
       </div>
     </div>
   `,
@@ -123,12 +131,16 @@ export class FormTableSearchComponent implements OnChanges {
   /** Nombre accesible del botón Columnas de la variante `reports`. */
   @Input() columnsLabel = 'Ocultar o mostrar columnas';
   @Input() disabled = false;
+  /** Opciones del menú de «Más opciones»; vacío = el botón emite `more` directo. */
+  @Input() moreItems: IconDropdownMenuItem[] = [];
   /** Insignia en Filtrar: cuántas condiciones de «Filtros avanzados» están aplicadas (0 no la muestra). */
   @Input() filterCount = 0;
 
   @Output() valueChange = new EventEmitter<string>();
   @Output() filter = new EventEmitter<void>();
   @Output() more = new EventEmitter<void>();
+  /** Valor de la opción elegida en el menú de `moreItems`. */
+  @Output() moreSelected = new EventEmitter<string>();
   /** Botón Columnas de la variante `reports`. */
   @Output() columns = new EventEmitter<void>();
 

@@ -6384,7 +6384,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     "capa": "components",
     "importacion": "@siaf/shared/components/form-table-search/form-table-search.component",
     "archivo": "src/app/shared/components/form-table-search/form-table-search.component.ts",
-    "descripcion": "Buscador de tabla: un `siaf-input` con lupa a todo el ancho y, a la derecha, dos botones de ícono: Filtrar y Más\nopciones, que emiten `filter` y `more`.\n\nCon `variant=\"reports\"` es el buscador de Consultas y reportes (Figma «Guía de Estructura de Pantallas», nodo\n22402:16457 «Search for table»): el segundo botón pasa a ser Columnas (`view_column`), que emite `columns`.\n\nEscribir solo registra el texto: la búsqueda sale por `valueChange` al pulsar Enter o la lupa, y lo tecleado se\ndescarta si el padre reescribe `value`.\n\nTiene además otra variante, como componente aparte, para Documentos y registros y la Bandeja de Documentos:\n`siaf-records-search-toolbar`, el mismo campo con las acciones de la derecha proyectadas (los menús Campos, Favorito\ny Más opciones) en vez de estos dos botones fijos.",
+    "descripcion": "Buscador de tabla: un `siaf-input` con lupa a todo el ancho y, a la derecha, dos botones de ícono: Filtrar y Más\nopciones, que emiten `filter` y `more`.\n\nCon `variant=\"reports\"` es el buscador de Consultas y reportes (Figma «Guía de Estructura de Pantallas», nodo\n22402:16457 «Search for table»): el segundo botón pasa a ser Columnas (`view_column`), que emite `columns`.\n\nCon `moreItems`, «Más opciones» abre un menú (como el de Documentos y registros) y emite `moreSelected` con el valor\nelegido, en vez de emitir `more` directo: la vista de un documento lo usa para «Ocultar o mostrar columnas».\n\nEscribir solo registra el texto: la búsqueda sale por `valueChange` al pulsar Enter o la lupa, y lo tecleado se\ndescarta si el padre reescribe `value`.\n\nTiene además otra variante, como componente aparte, para Documentos y registros y la Bandeja de Documentos:\n`siaf-records-search-toolbar`, el mismo campo con las acciones de la derecha proyectadas (los menús Campos, Favorito\ny Más opciones) en vez de estos dos botones fijos.",
     "usaSesion": false,
     "proyectaContenido": false,
     "entradas": [
@@ -6422,6 +6422,13 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "porDefecto": "'Filtrar'",
         "requerida": false,
         "descripcion": null
+      },
+      {
+        "nombre": "moreItems",
+        "tipo": "IconDropdownMenuItem[]",
+        "porDefecto": "[]",
+        "requerida": false,
+        "descripcion": "Opciones del menú de «Más opciones»; vacío = el botón emite `more` directo."
       },
       {
         "nombre": "moreLabel",
@@ -6467,6 +6474,11 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "nombre": "more",
         "tipo": "void",
         "descripcion": null
+      },
+      {
+        "nombre": "moreSelected",
+        "tipo": "string",
+        "descripcion": "Valor de la opción elegida en el menú de `moreItems`."
       },
       {
         "nombre": "valueChange",
@@ -6549,6 +6561,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     "usa": [
       "[siafTooltip]",
       "siaf-icon",
+      "siaf-icon-dropdown-menu",
       "siaf-input"
     ],
     "sinUso": false
