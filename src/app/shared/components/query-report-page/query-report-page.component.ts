@@ -29,6 +29,7 @@ import { MessageBoxComponent } from '../../ui/message-box/message-box.component'
 import { ReportSummaryCardComponent } from '../../ui/report-summary-card/report-summary-card.component';
 import { ReportTableColumn, ReportTableComponent } from '../../ui/report-table/report-table.component';
 import { TableSkeletonComponent } from '../../ui/table-skeleton/table-skeleton.component';
+import { SnackbarComponent } from '../../ui/snackbar/snackbar.component';
 import { TabsComponent } from '../../ui/tabs/tabs.component';
 import { TagComponent } from '../../ui/tag/tag.component';
 import type { TextFieldOption } from '../../ui/text-field/text-field.component';
@@ -198,6 +199,7 @@ let siguienteId = 0;
     PaginationComponent,
     ParametrosAplicadosComponent,
     QueryParametersPanelComponent,
+    SnackbarComponent,
     ReportColumnsPanelComponent,
     ReportSummaryCardComponent,
     ReportTableComponent,
@@ -570,6 +572,15 @@ let siguienteId = 0;
       (closed)="panelAvanzadoAbierto.set(false)"
       (applied)="aplicarAvanzados($event)"
     />
+
+    <!-- Aviso al agregar un favorito (Figma 6741:38737): «Ver favoritos» abre el panel; se cierra solo. -->
+    <div class="pointer-events-none fixed bottom-siaf-lg left-1/2 z-50 w-[min(430px,calc(100vw-32px))] -translate-x-1/2">
+      <div class="pointer-events-auto">
+        <siaf-snackbar [open]="avisoFavoritoAbierto()" tone="success" actionLabel="Ver favoritos" (action)="verFavoritosDesdeAviso()" (closed)="cerrarAvisoFavorito()">
+          <strong class="font-bold">{{ favoritoAgregado() }}</strong> se agregó a favoritos.
+        </siaf-snackbar>
+      </div>
+    </div>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -624,6 +635,10 @@ export class QueryReportPageComponent {
   readonly campoEnfocado = signal<string | null>(null);
   readonly panelAvanzadoAbierto = signal(false);
   readonly panelFavoritosAbierto = signal(false);
+  /** Descripción del último favorito agregado, mientras el aviso está a la vista. */
+  readonly favoritoAgregado = signal('');
+  readonly avisoFavoritoAbierto = signal(false);
+  private temporizadorAviso?: ReturnType<typeof setTimeout>;
   readonly panelColumnasAbierto = signal(false);
   /** Columnas elegidas en «Columnas visibles»; `null` = las de fábrica de la configuración. */
   private readonly columnasElegidas = signal<ReadonlySet<string> | null>(null);
@@ -896,6 +911,24 @@ export class QueryReportPageComponent {
     };
     this.cambiarFavoritos([...this.favoritos().map((f) => (nuevo.isDefault ? { ...f, isDefault: false } : f)), favorito]);
     this.panelFavoritosAbierto.set(false);
+    this.mostrarAvisoFavorito(nuevo.description);
+  }
+
+  private mostrarAvisoFavorito(descripcion: string): void {
+    clearTimeout(this.temporizadorAviso);
+    this.favoritoAgregado.set(descripcion);
+    this.avisoFavoritoAbierto.set(true);
+    this.temporizadorAviso = setTimeout(() => this.cerrarAvisoFavorito(), 6000);
+  }
+
+  cerrarAvisoFavorito(): void {
+    clearTimeout(this.temporizadorAviso);
+    this.avisoFavoritoAbierto.set(false);
+  }
+
+  verFavoritosDesdeAviso(): void {
+    this.cerrarAvisoFavorito();
+    this.abrirFavoritos();
   }
 
   aplicarFavorito(id: string): void {
@@ -989,11 +1022,31 @@ export class QueryReportPageComponent {
   /** Columnas de la configuración que se ven ahora. */
   readonly columnasMostradas = computed<ReportTableColumn[]>(() => this.configuracion().columns.filter((c) => this.columnasActivas().has(c.key)));
 
+  /**
+   * Claves de las columnas que los niveles aplicados (Agrupado o Agregado) ocultan de la tabla: las de cada nivel, las
+   * de `groupAggregation` en Agregado y las de los grupos de cabecera que el nivel oculta. El panel de columnas no las ofrece.
+   */
+  private readonly columnasOcultasPorNiveles = computed<ReadonlySet<string>>(() => {
+    const avanzados = this.avanzados();
+    const niveles = avanzados.levels;
+    if (!niveles.length) return new Set<string>();
+    const campos = (this.configuracion().advancedFilterFields ?? []).filter((c) => niveles.includes(c.key));
+    const extra = avanzados.resultType === 'agregado' ? (this.configuracion().groupAggregation?.hiddenColumns ?? []) : [];
+    const claves = new Set([...extra, ...campos.flatMap((c) => c.hidesColumns ?? [])]);
+    const grupos = new Set(campos.flatMap((c) => c.hidesGroups ?? []));
+    this.configuracion()
+      .columns.filter((c) => c.group && grupos.has(c.group) && !c.ungroupWhenGroupHidden)
+      .forEach((c) => claves.add(c.key));
+    return claves;
+  });
+
   /** El árbol del panel: un grupo por cabecera (los no contiguos con el mismo nombre se juntan) y las columnas sueltas aparte. */
   readonly gruposColumnas = computed<ColumnasPanelGrupo[]>(() => {
     const nombres = this.configuracion().columnsPanel?.groupLabels ?? {};
+    const ocultas = this.columnasOcultasPorNiveles();
     const grupos: ColumnasPanelGrupo[] = [];
     for (const c of this.configuracion().columns) {
+      if (ocultas.has(c.key)) continue;
       const columna = { key: c.key, label: c.panelLabel ?? c.label };
       const id = c.group ?? `col-${c.key}`;
       const existente = grupos.find((g) => g.id === id);
@@ -1009,7 +1062,9 @@ export class QueryReportPageComponent {
   }
 
   aplicarColumnas(claves: Set<string>): void {
-    this.columnasElegidas.set(claves);
+    // Las columnas que los niveles ocultan no están en el panel: conservan su estado para cuando se quiten los niveles.
+    const conservadas = [...this.columnasActivas()].filter((k) => this.columnasOcultasPorNiveles().has(k));
+    this.columnasElegidas.set(new Set([...claves, ...conservadas]));
     this.panelColumnasAbierto.set(false);
   }
 

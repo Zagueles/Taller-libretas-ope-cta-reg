@@ -41,3 +41,9 @@ export function formatFechaCorta(iso?: string | null): string {
     day: '2-digit', month: '2-digit', year: 'numeric',
   });
 }
+
+/** Hoy en la zona horaria del navegador, como aaaa-mm-dd (el formato de `siaf-date-time-picker`). */
+export function fechaDeHoy(): string {
+  const ahora = new Date();
+  return `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`;
+}

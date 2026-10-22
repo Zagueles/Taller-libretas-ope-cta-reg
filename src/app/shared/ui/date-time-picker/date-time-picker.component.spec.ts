@@ -160,3 +160,39 @@ describe('DateTimePickerComponent — escribir la fecha', () => {
     expect(emitidos).toEqual(['2026-03-15T13:45:10']);
   });
 });
+
+describe('DateTimePickerComponent — fecha máxima', () => {
+  let fixture: ComponentFixture<DateTimePickerComponent>;
+  let emitidos: string[];
+  const campo = (): HTMLInputElement => fixture.nativeElement.querySelector('input[type="text"]')!;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [DateTimePickerComponent] }).compileComponents();
+    fixture = TestBed.createComponent(DateTimePickerComponent);
+    emitidos = [];
+    fixture.componentInstance.valueChange.subscribe((v: string) => emitidos.push(v));
+    fixture.componentRef.setInput('label', 'Fecha');
+    fixture.componentRef.setInput('defaultToToday', false);
+    fixture.componentRef.setInput('maxDate', '2026-03-15');
+    fixture.componentRef.setInput('value', '2026-03-10');
+    fixture.detectChanges();
+  });
+
+  it('deshabilita los días posteriores a maxDate en el calendario', () => {
+    fixture.nativeElement.querySelector('button[aria-haspopup="dialog"]').click();
+    fixture.detectChanges();
+    const dias = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('.grid-cols-7 button'));
+    const estado = (n: string): boolean => dias.find((b) => b.textContent?.trim() === n && !b.disabled) === undefined;
+    expect(estado('15')).toBeFalse();
+    expect(estado('16')).toBeTrue();
+  });
+
+  it('no acepta al escribir una fecha posterior a maxDate', () => {
+    campo().value = '16032026';
+    campo().dispatchEvent(new Event('input'));
+    expect(emitidos).toEqual([]);
+    campo().value = '15032026';
+    campo().dispatchEvent(new Event('input'));
+    expect(emitidos).toEqual(['2026-03-15']);
+  });
+});

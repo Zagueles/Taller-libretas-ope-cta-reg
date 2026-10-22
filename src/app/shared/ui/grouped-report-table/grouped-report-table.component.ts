@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges, ViewChild } from '@angular/core';
 
 import { IconComponent } from '../icon/icon.component';
+import { ANCHO_COLUMNA_POR_DEFECTO, medirSombras, observarSombras, SOMBRA_DER } from '../tabla-scroll';
 import { TooltipDirective } from '../tooltip/tooltip.directive';
 import type { QueryReportGroupAggregation } from '../../types/query-report.types';
 import type { ReportTableColumn, ReportTableRow } from '../report-table/report-table.component';
@@ -89,12 +90,20 @@ let siguienteId = 0;
   host: { class: 'block min-w-0' },
   template: `
     <div
-      class="siaf-table-scroll rounded-siaf-sm outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sys-color-border-states-focus)]"
+      #scroll
+      class="siaf-table-scroll group/tabla rounded-siaf-sm outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sys-color-border-states-focus)]"
       role="region"
       tabindex="0"
       [attr.aria-label]="ariaLabel"
+      (scroll)="medirScroll()"
     >
-      <table class="w-full min-w-full border-collapse text-left text-sm" [attr.aria-label]="ariaLabel">
+      <!-- Bordes separados y ancho fijo por columna (como Documentos y registros): abrir o cerrar grupos no mueve los anchos. -->
+      <table class="w-full min-w-full table-fixed border-separate border-spacing-0 text-left text-sm" [style.width.px]="anchoTabla" [attr.aria-label]="ariaLabel">
+        <colgroup>
+          @for (columna of columnasVisibles; track columna.key) {
+            <col [style.width.px]="columna.width ?? anchoPorDefecto" />
+          }
+        </colgroup>
         <thead>
           <tr>
             @for (celda of filaSuperior; track $index; let ultimo = $last) {
@@ -138,7 +147,7 @@ let siguienteId = 0;
           @for (nodo of nodos; track nodo.id) {
             @switch (nodo.tipo) {
               @case ('grupo') {
-                <tr class="border-b border-[var(--sys-color-divider-default)] bg-surface">
+                <tr class="bg-surface [&>td]:border-b [&>td]:border-[var(--sys-color-divider-default)]">
                   <td [attr.colspan]="indiceInicio > -1 ? Math.max(indiceInicio, 1) : columnasVisibles.length" class="p-0">
                     <button
                       class="flex w-full items-center gap-siaf-sm px-siaf-md py-siaf-sm text-left text-sm font-bold text-[var(--sys-color-text-neutral-high)] focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sys-color-border-states-focus)]"
@@ -171,7 +180,7 @@ let siguienteId = 0;
                 </tr>
               }
               @case ('detalle') {
-                <tr class="border-b border-[var(--sys-color-divider-default)] bg-surface">
+                <tr class="bg-surface [&>td]:border-b [&>td]:border-[var(--sys-color-divider-default)]">
                   @for (columna of columnasVisibles; track columna.key; let primero = $first) {
                     <td
                       class="h-12 px-siaf-md py-siaf-sm align-middle text-sm leading-normal tracking-[0.0249px] text-[var(--sys-color-text-neutral-medium)]"
@@ -189,7 +198,7 @@ let siguienteId = 0;
                           {{ nodo.fila[columna.key] }}
                         </button>
                       } @else {
-                        {{ nodo.fila[columna.key] }}
+                        <span class="line-clamp-3 break-words" siafTooltip>{{ nodo.fila[columna.key] }}</span>
                       }
                     </td>
                   }
@@ -197,7 +206,7 @@ let siguienteId = 0;
               }
               @case ('pie') {
                 <tr
-                  class="border-b border-[var(--sys-color-divider-default)] font-bold text-[var(--sys-color-text-neutral-high)]"
+                  class="font-bold text-[var(--sys-color-text-neutral-high)] [&>td]:border-b [&>td]:border-[var(--sys-color-divider-default)]"
                   [class.bg-[var(--sys-color-bg-surfaces-highlight)]]="nodo.nivel === 0"
                   [class.bg-[var(--sys-color-bg-surfaces-surface-low)]]="nodo.nivel !== 0"
                 >
@@ -232,7 +241,7 @@ let siguienteId = 0;
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class GroupedReportTableComponent implements OnChanges {
+export class GroupedReportTableComponent implements OnChanges, AfterViewInit, OnDestroy {
   /** Todas las columnas del reporte; las de los `levels` se ocultan porque ya están en la etiqueta del grupo. */
   @Input({ required: true }) columns: readonly ReportTableColumn[] = [];
   @Input() rows: readonly ReportTableRow[] = [];
@@ -248,13 +257,31 @@ export class GroupedReportTableComponent implements OnChanges {
   protected readonly Math = Math;
 
   /** Igual que `siaf-report-table`: sticky con la sombra de elevación 6 recortada a su borde izquierdo. */
-  readonly claseFija = 'sticky right-0 shadow-siaf-elevation-6 [clip-path:inset(0_0_0_-16px)]';
-  /** Celda fija de la fila de grupos: lleva su propia línea inferior (el borde de la celda no acompaña al `sticky`). */
-  readonly claseFijaCabecera =
-    'sticky right-0 z-[3] border-b-0 shadow-[inset_0_-1px_0_var(--sys-color-divider-strong),var(--sys-shadow-elevation-6)] [clip-path:inset(0_0_0_-16px)]';
-  /** Celda fija de la última fila de la cabecera: la línea inferior ya la pone el `thead`; otra propia la duplicaría. */
-  readonly claseFijaCabeceraInferior =
-    'sticky right-0 z-[3] border-b-0 shadow-[var(--sys-shadow-elevation-6)] [clip-path:inset(0_0_0_-16px)]';
+  readonly claseFija = `sticky right-0 ${SOMBRA_DER}`;
+  /** Celdas fijas de la cabecera: con bordes separados cada una lleva su línea inferior, así que las dos filas usan la misma clase. */
+  readonly claseFijaCabecera = `sticky right-0 z-[3] !overflow-visible ${SOMBRA_DER}`;
+  readonly claseFijaCabeceraInferior = this.claseFijaCabecera;
+  readonly anchoPorDefecto = ANCHO_COLUMNA_POR_DEFECTO;
+
+  @ViewChild('scroll') private scroll?: ElementRef<HTMLElement>;
+  private observador: ResizeObserver | null = null;
+
+  ngAfterViewInit(): void {
+    this.observador = observarSombras(this.scroll?.nativeElement);
+  }
+
+  ngOnDestroy(): void {
+    this.observador?.disconnect();
+  }
+
+  medirScroll(): void {
+    if (this.scroll) medirSombras(this.scroll.nativeElement);
+  }
+
+  /** Suma de los anchos de las columnas visibles: con `table-fixed` la tabla mide exactamente eso. */
+  get anchoTabla(): number {
+    return this.columnasVisibles.reduce((suma, c) => suma + (c.width ?? ANCHO_COLUMNA_POR_DEFECTO), 0);
+  }
 
   columnasVisibles: ReportTableColumn[] = [];
   nodos: Nodo[] = [];

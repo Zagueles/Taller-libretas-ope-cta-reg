@@ -318,3 +318,55 @@ describe('QueryReportPageComponent', () => {
     });
   });
 });
+
+describe('QueryReportPageComponent — panel de columnas con niveles', () => {
+  const CONFIG_PANEL: QueryReportConfig = {
+    ...CONFIG,
+    columns: [
+      { key: 'secuencia', label: 'Secuencia', group: 'Acreditación' },
+      { key: 'beneficiarioCodigo', label: 'Código', group: 'Beneficiario' },
+      { key: 'beneficiario', label: 'Descripción', group: 'Beneficiario' },
+      { key: 'beneficiarioTipo', label: 'Tipo', group: 'Beneficiario', hiddenByDefault: true },
+      { key: 'saldo', label: 'Saldo final', align: 'right', fixed: true },
+    ],
+    columnsPanel: { baseGroups: ['Acreditación', 'Beneficiario'] },
+    advancedFilterFields: [{ key: 'beneficiario', label: 'Beneficiario', type: 'text', groupable: true, hidesColumns: ['beneficiarioCodigo', 'beneficiario'] }],
+  };
+
+  it('el panel solo ofrece las columnas que los niveles aplicados no ocultan, y conserva el estado de las ocultas', async () => {
+    await TestBed.configureTestingModule({ imports: [QueryReportPageComponent], providers: [provideRouter([])] }).compileComponents();
+    const fixture = TestBed.createComponent(QueryReportPageComponent);
+    fixture.componentRef.setInput('config', CONFIG_PANEL);
+    fixture.detectChanges();
+    const pagina = fixture.componentInstance;
+    const claves = (): string[] => pagina.gruposColumnas().flatMap((g) => g.columnas.map((c) => c.key));
+    expect(claves()).toEqual(['secuencia', 'beneficiarioCodigo', 'beneficiario', 'beneficiarioTipo', 'saldo']);
+
+    pagina.aplicarAvanzados({ conditions: [], resultType: 'agrupado', levels: ['beneficiario'] });
+    expect(claves()).toEqual(['secuencia', 'beneficiarioTipo', 'saldo']);
+
+    pagina.aplicarColumnas(new Set(['secuencia', 'beneficiarioTipo', 'saldo']));
+    expect(pagina.columnasActivas().has('beneficiarioCodigo')).toBeTrue();
+  });
+});
+
+describe('QueryReportPageComponent — aviso al agregar un favorito', () => {
+  it('muestra el snackbar con la descripción y «Ver favoritos» abre el panel', async () => {
+    await TestBed.configureTestingModule({ imports: [QueryReportPageComponent], providers: [provideRouter([])] }).compileComponents();
+    const fixture = TestBed.createComponent(QueryReportPageComponent);
+    fixture.componentRef.setInput('config', CONFIG);
+    fixture.detectChanges();
+    const pagina = fixture.componentInstance;
+
+    pagina.agregarFavorito({ description: 'OPERACIONES MINCETUR', isDefault: false });
+    fixture.detectChanges();
+    const aviso = (fixture.nativeElement as HTMLElement).querySelector('siaf-snackbar')!;
+    expect(aviso.textContent).toContain('OPERACIONES MINCETUR');
+    expect(aviso.textContent).toContain('se agregó a favoritos.');
+
+    Array.from(aviso.querySelectorAll('button')).find((b) => b.textContent?.includes('Ver favoritos'))!.click();
+    fixture.detectChanges();
+    expect(pagina.panelFavoritosAbierto()).toBeTrue();
+    expect(pagina.avisoFavoritoAbierto()).toBeFalse();
+  });
+});

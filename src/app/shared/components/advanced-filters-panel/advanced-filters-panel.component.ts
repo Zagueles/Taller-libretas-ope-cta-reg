@@ -14,6 +14,7 @@ import { FocoDirective } from '../../ui/foco/foco.directive';
 import { IconComponent } from '../../ui/icon/icon.component';
 import { SidePanelAnimacion } from '../../ui/side-panel-animacion';
 import { TextFieldComponent } from '../../ui/text-field/text-field.component';
+import { fechaDeHoy } from '../../utils/fecha.util';
 
 /** Figma «Condición» (nodo 4663:59398): símbolo + etiqueta en la misma opción. */
 const OPERADORES: { value: QueryReportConditionOperator; label: string }[] = [
@@ -147,6 +148,7 @@ export const MAX_NIVELES = 3;
                         @if (esCampoFecha(condicion.field)) {
                           <siaf-date-time-picker
                             [label]="condicion.operator === 'between' ? 'Valor desde' : 'Valor'"
+                            [maxDate]="sinFuturo(condicion.field) ? hoy : ''"
                             [fullWidth]="true"
                             [value]="condicion.value ?? ''"
                             (valueChange)="cambiarCondicion(condicion.id, { value: $event })"
@@ -154,6 +156,7 @@ export const MAX_NIVELES = 3;
                           @if (condicion.operator === 'between') {
                             <siaf-date-time-picker
                               label="Valor hasta"
+                              [maxDate]="sinFuturo(condicion.field) ? hoy : ''"
                               [fullWidth]="true"
                               [value]="condicion.valueTo ?? ''"
                               (valueChange)="cambiarCondicion(condicion.id, { valueTo: $event })"
@@ -391,6 +394,13 @@ export class AdvancedFiltersPanelComponent implements OnChanges {
 
   opcionesValor(clave: string): TextFieldOption[] {
     return this.valueOptions[clave] ?? [];
+  }
+
+  /** Hoy (aaaa-mm-dd), el tope de los campos de fecha con `noFuture`. */
+  readonly hoy = fechaDeHoy();
+
+  sinFuturo(clave: string): boolean {
+    return !!this.campos().find((c) => c.key === clave)?.noFuture;
   }
 
   esCampoFecha(clave: string): boolean {

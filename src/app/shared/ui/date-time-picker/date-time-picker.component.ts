@@ -16,14 +16,14 @@ type CalendarDay = {
 
 /**
  * Selector de fecha (y opcionalmente hora) con calendario propio, label flotante,
- * estados de error/éxito y `[minDate]` para deshabilitar días anteriores.
+ * estados de error/éxito, `[minDate]` para deshabilitar días anteriores y `[maxDate]` para los posteriores (no se aceptan tampoco al escribirlos).
  *
  * Es el control canónico de fecha del design system: úsalo en vez de un `input type="date"`
  * nativo para que el campo respete tokens, textos en español y el formato dd/mm/aaaa.
  *
  * En la cabecera del calendario, el mes y el año son botones: el mes abre los 12 meses y el año una
  * grilla de 12 años (las flechas dobles pasan de página). Al elegir, vuelve a los días de ese mes o año.
- * Con `minDate`, los meses y años que terminan antes quedan deshabilitados.
+ * Con `minDate`, los meses y años que terminan antes quedan deshabilitados; con `maxDate`, los que empiezan después.
  *
  * @usar
  * - Para las fechas de vigencia de una solicitud («Fecha inicio desde» y «Fecha fin hasta» en clase de ajuste, tipo de
@@ -301,6 +301,8 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
   @Input() fullWidth = false;
   /** Fecha mínima seleccionable en formato ISO (YYYY-MM-DD). Los días anteriores quedan deshabilitados. */
   @Input() minDate = '';
+  /** Fecha máxima seleccionable (ISO, YYYY-MM-DD): los días posteriores quedan deshabilitados y no se aceptan al escribirlos. */
+  @Input() maxDate = '';
 
   @Output() valueChange = new EventEmitter<string>();
 
@@ -384,11 +386,11 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
 
     for (let day = 1; day <= daysInMonth; day += 1) {
       const dateValue = this.toDateValue(this.viewYear, this.viewMonth, day);
-      const isBeforeMin = this.minDate ? dateValue < this.minDate : false;
+      const fueraDeRango = (this.minDate && dateValue < this.minDate) || (this.maxDate && dateValue > this.maxDate);
       calendarDays.push({
         label: this.pad(day),
         value: dateValue,
-        ...(isBeforeMin ? { disabled: true } : {})
+        ...(fueraDeRango ? { disabled: true } : {})
       });
     }
 
@@ -480,13 +482,13 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
 
   /** Un mes queda deshabilitado si termina antes de `minDate`. */
   mesDeshabilitado(mes: number): boolean {
-    if (!this.minDate) return false;
-    return this.toDateValue(this.viewYear, mes + 1, 0) < this.minDate;
+    if (this.minDate && this.toDateValue(this.viewYear, mes + 1, 0) < this.minDate) return true;
+    return Boolean(this.maxDate) && this.toDateValue(this.viewYear, mes, 1) > this.maxDate;
   }
 
   /** Un año queda deshabilitado si termina antes de `minDate`. */
   anioDeshabilitado(anio: number): boolean {
-    return this.minDate ? `${anio}-12-31` < this.minDate : false;
+    return Boolean(this.minDate && `${anio}-12-31` < this.minDate) || Boolean(this.maxDate && `${anio}-01-01` > this.maxDate);
   }
 
   /** El mes o el año de la cabecera abren su grilla; pulsarlos otra vez vuelve a los días. */
@@ -545,7 +547,7 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
     const fecha = new Date(Number(anio), Number(mes) - 1, Number(dia));
     const existe = fecha.getFullYear() === Number(anio) && fecha.getMonth() === Number(mes) - 1 && fecha.getDate() === Number(dia);
     const iso = `${anio}-${mes}-${dia}`;
-    if (!existe || Number(anio) < 1900 || (this.minDate && iso < this.minDate)) return false;
+    if (!existe || Number(anio) < 1900 || (this.minDate && iso < this.minDate) || (this.maxDate && iso > this.maxDate)) return false;
     if (this.variant === 'datetime') {
       if (Number(hora) > 23 || Number(minuto) > 59 || Number(segundo) > 59) return false;
       [this.hora, this.minuto, this.segundo] = [hora, minuto, segundo];

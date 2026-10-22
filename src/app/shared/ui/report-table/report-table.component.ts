@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, OnDestroy, Output, ViewChild } from '@angular/core';
 
+import { ANCHO_COLUMNA_POR_DEFECTO, medirSombras, observarSombras, SOMBRA_DER } from '../tabla-scroll';
 import { TooltipDirective } from '../tooltip/tooltip.directive';
 
 export interface ReportTableColumn {
@@ -81,12 +82,20 @@ interface CeldaCabecera {
   host: { class: 'block min-w-0' },
   template: `
     <div
-      class="siaf-table-scroll rounded-siaf-sm outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sys-color-border-states-focus)]"
+      #scroll
+      class="siaf-table-scroll group/tabla rounded-siaf-sm outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sys-color-border-states-focus)]"
       role="region"
       tabindex="0"
       [attr.aria-label]="ariaLabel"
+      (scroll)="medirScroll()"
     >
-      <table class="w-full min-w-full border-collapse text-left text-sm" [attr.aria-label]="ariaLabel">
+      <!-- Bordes separados y ancho fijo por columna (como Documentos y registros): ordenar, paginar o cambiar de pestaña no mueve los anchos. -->
+      <table class="w-full min-w-full table-fixed border-separate border-spacing-0 text-left text-sm" [style.width.px]="anchoTabla" [attr.aria-label]="ariaLabel">
+        <colgroup>
+          @for (columna of columns; track columna.key) {
+            <col [style.width.px]="columna.width ?? anchoPorDefecto" />
+          }
+        </colgroup>
         <thead>
           <tr>
             @for (celda of filaSuperior; track $index; let ultimo = $last) {
@@ -131,7 +140,7 @@ interface CeldaCabecera {
         <tbody>
           @for (fila of rows; track trackBy(fila, $index)) {
             <tr
-              class="border-b border-[var(--sys-color-divider-default)] bg-surface"
+              class="bg-surface [&>td]:border-b [&>td]:border-[var(--sys-color-divider-default)]"
               [class.cursor-pointer]="clickableRows"
               [class.hover:bg-[var(--sys-color-bg-states-light-hover)]]="clickableRows"
               [attr.tabindex]="clickableRows ? 0 : null"
@@ -156,7 +165,7 @@ interface CeldaCabecera {
                       {{ fila[columna.key] }}
                     </button>
                   } @else {
-                    {{ fila[columna.key] }}
+                    <span class="line-clamp-3 break-words" siafTooltip>{{ fila[columna.key] }}</span>
                   }
                 </td>
               }
@@ -174,7 +183,7 @@ interface CeldaCabecera {
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ReportTableComponent {
+export class ReportTableComponent implements AfterViewInit, OnDestroy {
   @Input({ required: true }) columns: readonly ReportTableColumn[] = [];
   /** Filas de la página visible: cada clave de columna con su texto ya formateado. */
   @Input() rows: readonly ReportTableRow[] = [];
@@ -193,14 +202,34 @@ export class ReportTableComponent {
    * Columna fija a la derecha: sticky con la sombra de elevación 6 del Figma recortada a su borde izquierdo, para que no
    * oscurezca las filas de arriba y de abajo.
    */
-  readonly claseFija = 'sticky right-0 shadow-siaf-elevation-6 [clip-path:inset(0_0_0_-16px)]';
+  readonly claseFija = `sticky right-0 ${SOMBRA_DER}`;
+  readonly anchoPorDefecto = ANCHO_COLUMNA_POR_DEFECTO;
+
+  @ViewChild('scroll') private scroll?: ElementRef<HTMLElement>;
+  private observador: ResizeObserver | null = null;
+
+  ngAfterViewInit(): void {
+    this.observador = observarSombras(this.scroll?.nativeElement);
+  }
+
+  ngOnDestroy(): void {
+    this.observador?.disconnect();
+  }
+
+  medirScroll(): void {
+    if (this.scroll) medirSombras(this.scroll.nativeElement);
+  }
+
+  /** Suma de los anchos de las columnas: con `table-fixed` la tabla mide exactamente eso y el sobrante no ensancha ninguna. */
+  get anchoTabla(): number {
+    return this.columns.reduce((suma, c) => suma + (c.width ?? ANCHO_COLUMNA_POR_DEFECTO), 0);
+  }
 
   /**
    * En la cabecera, la línea inferior va como sombra interior sobre el fondo opaco: el borde de la tabla es translúcido
    * y dejaba ver, en esa línea, el título de una columna de dos filas que pasa por debajo.
    */
-  readonly claseFijaCabecera =
-    'sticky right-0 z-[3] border-b-0 shadow-[inset_0_-1px_0_var(--sys-color-divider-strong),var(--sys-shadow-elevation-6)] [clip-path:inset(0_0_0_-16px)]';
+  readonly claseFijaCabecera = `sticky right-0 z-[3] !overflow-visible ${SOMBRA_DER}`;
 
   /** Nombre completo de cada grupo de cabecera abreviado (`'Imp. m. cuenta'` → «Importe en moneda de la cuenta»). */
   @Input() groupTooltips: Record<string, string> = {};

@@ -66,7 +66,7 @@ describe('ReportTableComponent', () => {
     expect(el().querySelectorAll('[data-cabecera-superior]').length).toBe(2);
   });
 
-  it('los importes van a la derecha y la última columna queda fija con la línea de cabecera opaca', () => {
+  it('los importes van a la derecha y la última columna queda fija con su sombra de scroll', () => {
     montar(columnas, filas);
     const celdaFija = el().querySelectorAll<HTMLTableRowElement>('tbody tr')[0].cells[4];
     expect(celdaFija.textContent!.trim()).toBe('10,000.00');
@@ -75,7 +75,19 @@ describe('ReportTableComponent', () => {
     expect(celdaFija.classList).toContain('right-0');
     const cabeceraFija = el().querySelector<HTMLElement>('[data-cabecera-columna].sticky')!;
     expect(cabeceraFija.textContent!.trim()).toBe('Saldo final');
-    expect(cabeceraFija.classList).toContain('border-b-0');
+    expect(cabeceraFija.classList).toContain('z-[3]');
+  });
+
+  it('con ancho fijo: un col por columna y la tabla mide la suma de sus anchos', () => {
+    montar([{ key: 'a', label: 'A', width: 100 }, { key: 'b', label: 'B', width: 150 }, { key: 'c', label: 'C' }], [{ a: '1', b: '2', c: '3' }]);
+    const tabla = el().querySelector<HTMLTableElement>('table')!;
+    expect(tabla.querySelectorAll('col').length).toBe(3);
+    expect(tabla.style.width).toBe('430px');
+  });
+
+  it('el texto largo de una celda se corta a 3 líneas', () => {
+    montar([{ key: 'a', label: 'A', width: 100 }], [{ a: 'texto largo' }]);
+    expect(el().querySelector('tbody td span')!.classList).toContain('line-clamp-3');
   });
 
   it('una columna link pinta un botón que emite la fila y la columna; sin valor no hay botón', () => {

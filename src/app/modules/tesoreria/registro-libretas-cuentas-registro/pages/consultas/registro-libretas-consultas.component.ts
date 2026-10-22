@@ -143,8 +143,8 @@ export class RegistroLibretasConsultasComponent {
     title: TITULO,
     breadcrumbs: buildProcessBreadcrumbs(CONSULTAS_PROCESS_ID, CONSULTAS_ROUTE, TITULO),
     parameterFields: [
-      { key: 'desde', label: 'Fecha desde', type: 'date', required: true, icon: 'calendar_today', rangeEnd: 'hasta', rangeLabel: 'Fecha' },
-      { key: 'hasta', label: 'Fecha hasta', type: 'date', required: true, icon: 'event' },
+      { key: 'desde', label: 'Fecha desde', type: 'date', required: true, icon: 'calendar_today', rangeEnd: 'hasta', rangeLabel: 'Fecha', noFuture: true },
+      { key: 'hasta', label: 'Fecha hasta', type: 'date', required: true, icon: 'event', noFuture: true },
       { key: 'tipoOperacion', label: 'Tipo de operación', type: 'select-multiple', icon: 'calculate', options: TIPOS_OPERACION },
       { key: 'cuentaBancaria', label: 'Cuenta bancaria', type: 'select-multiple', required: true, icon: 'account_balance_wallet', options: CUENTAS_BANCARIAS_REGISTRO },
       { key: 'entidad', label: 'Entidad', type: 'select-multiple', icon: 'account_balance', options: ENTIDADES },
@@ -152,7 +152,7 @@ export class RegistroLibretasConsultasComponent {
       { key: 'beneficiario', label: 'Beneficiario', type: 'select-multiple', icon: 'groups', options: BENEFICIARIOS },
     ],
     advancedFilterFields: [
-      { key: 'fechaAcreditacion', label: 'Fecha de acreditación', type: 'date', groupable: true, groupableIn: ['agrupado'], hidesColumns: ['fecha'], groupLabelPrefix: 'Fecha' },
+      { key: 'fechaAcreditacion', label: 'Fecha de acreditación', type: 'date', noFuture: true, groupable: true, groupableIn: ['agrupado'], hidesColumns: ['fecha'], groupLabelPrefix: 'Fecha' },
       { key: 'beneficiario', label: 'Beneficiario', groupable: true, groupLabelPrefix: 'Benef.', groupSubtitleColumn: 'cuentaRegistroResumen', hidesGroups: GRUPOS_ASOCIADOS, valueDetails: DETALLE_BENEFICIARIO },
       { key: 'numeroCuentaRegistro', label: 'Cuenta de registro', groupable: true, groupLabelPrefix: 'CR', hidesGroups: GRUPOS_ASOCIADOS, valueDetails: {} },
       { key: 'tipoOperacion', label: 'Tipo de operación', groupable: true, groupLabelPrefix: 'Op.', hidesColumns: ['tipoOperacion'], valueDetails: DETALLE_TIPO_OPERACION },

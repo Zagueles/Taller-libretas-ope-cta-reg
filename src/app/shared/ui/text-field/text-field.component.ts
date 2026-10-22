@@ -130,7 +130,7 @@ export type TextFieldState = 'enabled' | 'error' | 'success';
                 [attr.aria-label]="labelText"
                 [disabled]="disabled"
                 [value]="selectOpen ? busqueda : (hasValue ? selectDisplayText : '')"
-                [placeholder]="hasValue && !selectOpen ? '' : labelText"
+                [placeholder]="selectOpen && openPlaceholder ? openPlaceholder : hasValue && !selectOpen ? '' : labelText"
                 (focus)="abrirSelect()"
                 (click)="abrirSelect()"
                 (input)="onBuscar($event)"
@@ -204,7 +204,7 @@ export type TextFieldState = 'enabled' | 'error' | 'success';
             (keydown.escape)="cerrarSelectConEscape($event)"
           >
             @if (!hasValue) {
-              <span class="flex-1 text-[var(--sys-color-text-neutral-low)]">{{ labelText }}@if (required) { <span class="text-[var(--sys-color-text-feedback-danger)]">*</span> }</span>
+              <span class="flex-1 text-[var(--sys-color-text-neutral-low)]">{{ selectOpen && openPlaceholder ? openPlaceholder : labelText }}@if (required && !(selectOpen && openPlaceholder)) { <span class="text-[var(--sys-color-text-feedback-danger)]">*</span> }</span>
             } @else if (selectAllLabel) {
               <!-- Con casillas (Figma «Parámetros de consulta») el valor va en una línea, como el select simple. -->
               <span class="min-w-0 flex-1 truncate leading-6 text-text" siafTooltip data-resumen-multiple>{{ selectDisplayText }}</span>
@@ -318,6 +318,8 @@ export class TextFieldComponent implements OnChanges, ControlValueAccessor {
 
   @Input() label = '';
   @Input() placeholder = '';
+  /** En `select` y `select-multiple`: texto guía del campo mientras la lista está abierta y sin valor («Seleccionar opción...»); por defecto, la etiqueta. */
+  @Input() openPlaceholder = '';
   @Input() hint = '';
   @Input() error = '';
   @Input() state: TextFieldState = 'enabled';

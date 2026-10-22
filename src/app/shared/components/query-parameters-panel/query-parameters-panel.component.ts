@@ -7,6 +7,7 @@ import { FocoDirective } from '../../ui/foco/foco.directive';
 import { IconComponent } from '../../ui/icon/icon.component';
 import { SidePanelAnimacion } from '../../ui/side-panel-animacion';
 import { TextFieldComponent } from '../../ui/text-field/text-field.component';
+import { fechaDeHoy } from '../../utils/fecha.util';
 
 /** ¿El valor cuenta como ingresado? Una lista vacía o un texto vacío no. */
 export function tieneValor(valor: string | string[] | undefined): boolean {
@@ -92,6 +93,7 @@ let siguienteId = 0;
                       [label]="campo.label"
                       [required]="!!campo.required"
                       [defaultToToday]="false"
+                      [maxDate]="campo.noFuture ? hoy : ''"
                       [fullWidth]="true"
                       [value]="texto(campo.key)"
                       (valueChange)="cambiar(campo.key, $event)"
@@ -100,6 +102,7 @@ let siguienteId = 0;
                   @case ('select') {
                     <siaf-input
                       type="select"
+                      openPlaceholder="Seleccionar opción..."
                       [attr.data-parametro]="campo.key"
                       [label]="campo.label"
                       [required]="!!campo.required"
@@ -113,6 +116,7 @@ let siguienteId = 0;
                     <siaf-input
                       type="select-multiple"
                       selectAllLabel="Seleccionar todo"
+                      openPlaceholder="Seleccionar opción..."
                       [attr.data-parametro]="campo.key"
                       [label]="campo.label"
                       [required]="!!campo.required"
@@ -138,6 +142,8 @@ let siguienteId = 0;
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class QueryParametersPanelComponent implements OnChanges {
+  /** Hoy (aaaa-mm-dd), el tope de los campos de fecha con `noFuture`. */
+  readonly hoy = fechaDeHoy();
   @Input() open = false;
   @Input() title = 'Parámetros de consulta';
   @Input() fields: readonly QueryReportParameterField[] = [];

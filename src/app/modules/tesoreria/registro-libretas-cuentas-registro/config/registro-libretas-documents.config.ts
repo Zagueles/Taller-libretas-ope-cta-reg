@@ -30,7 +30,7 @@ const recordColumns: DocumentsRecordsColumn[] = [
   { key: 'cuentaBancariaNumero', label: 'Número', panelLabel: 'Cuenta bancaria · Número', headerGroup: 'Cuenta bancaria', visibility: 'visible', group: 'default', widthClass: 'w-[200px]', sortable: true },
   { key: 'cuentaBancariaDenominacion', label: 'Denominación', panelLabel: 'Cuenta bancaria · Denominación', headerGroup: 'Cuenta bancaria', visibility: 'visible', group: 'default', widthClass: 'w-[200px]', sortable: true },
   { key: 'moneda', label: 'Moneda', visibility: 'visible', group: 'default', widthClass: 'w-[100px]', borderRight: true, sortable: true },
-  { key: 'beneficiarioCodigo', label: 'Código', panelLabel: 'Beneficiario · Código', headerGroup: 'Beneficiario', visibility: 'visible', group: 'default', widthClass: 'w-[90px]', sortable: true },
+  { key: 'beneficiarioCodigo', label: 'Código', panelLabel: 'Beneficiario · Código', headerGroup: 'Beneficiario', visibility: 'visible', group: 'default', widthClass: 'w-[110px]', sortable: true },
   { key: 'beneficiario', label: 'Descripción', panelLabel: 'Beneficiario · Descripción', headerGroup: 'Beneficiario', visibility: 'visible', group: 'default', widthClass: 'w-[230px]', sortable: true },
   { key: 'numeroCuentaRegistro', label: 'Número', panelLabel: 'Cuenta de registro · Número', headerGroup: 'Cuenta de registro', visibility: 'visible', group: 'default', widthClass: 'w-[300px]', sortable: true },
   { key: 'descripcionCuentaRegistro', label: 'Descripción', panelLabel: 'Cuenta de registro · Descripción', headerGroup: 'Cuenta de registro', visibility: 'visible', group: 'default', widthClass: 'w-[320px]', sortable: true },
@@ -42,7 +42,7 @@ const recordColumns: DocumentsRecordsColumn[] = [
   { key: 'debito', label: 'Débito', headerGroup: 'Imp. m. cuenta', visibility: 'visible', group: 'default', align: 'right', widthClass: 'w-[110px]', sortable: true, sortType: 'number' },
   { key: 'credito', label: 'Crédito', headerGroup: 'Imp. m. cuenta', visibility: 'visible', group: 'default', align: 'right', widthClass: 'w-[110px]', sortable: true, sortType: 'number' },
   { key: 'saldoDisponible', label: 'Saldo disponible', headerGroup: 'Imp. m. cuenta', visibility: 'hidden', group: 'more', align: 'right', widthClass: 'w-[135px]', sortable: true, sortType: 'number' },
-  { key: 'status', label: 'Estado de registro', visibility: 'visible', group: 'default', widthClass: 'w-[130px]', kind: 'record-status', borderRight: true, sortable: true },
+  { key: 'status', label: 'Est. Reg.', panelLabel: 'Estado de registro', visibility: 'visible', group: 'default', widthClass: 'w-[130px]', kind: 'record-status', borderRight: true, sortable: true },
   { key: 'number', label: 'Número', panelLabel: 'Documento · Número', headerGroup: 'Documento', visibility: 'visible', group: 'default', widthClass: 'w-[150px]', sortable: true },
   { key: 'descripcionDocumento', label: 'Descripción', panelLabel: 'Documento · Descripción', headerGroup: 'Documento', visibility: 'visible', group: 'default', widthClass: 'w-[300px]', sortable: true },
   // «Más columnas»: los datos del detalle del registro que la tabla no muestra de entrada.

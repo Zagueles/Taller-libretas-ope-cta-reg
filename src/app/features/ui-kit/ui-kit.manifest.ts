@@ -4037,7 +4037,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     "capa": "ui",
     "importacion": "@siaf/ui/date-time-picker/date-time-picker.component",
     "archivo": "src/app/shared/ui/date-time-picker/date-time-picker.component.ts",
-    "descripcion": "Selector de fecha (y opcionalmente hora) con calendario propio, label flotante,\nestados de error/éxito y `[minDate]` para deshabilitar días anteriores.\n\nEs el control canónico de fecha del design system: úsalo en vez de un `input type=\"date\"`\nnativo para que el campo respete tokens, textos en español y el formato dd/mm/aaaa.\n\nEn la cabecera del calendario, el mes y el año son botones: el mes abre los 12 meses y el año una\ngrilla de 12 años (las flechas dobles pasan de página). Al elegir, vuelve a los días de ese mes o año.\nCon `minDate`, los meses y años que terminan antes quedan deshabilitados.",
+    "descripcion": "Selector de fecha (y opcionalmente hora) con calendario propio, label flotante,\nestados de error/éxito, `[minDate]` para deshabilitar días anteriores y `[maxDate]` para los posteriores (no se aceptan tampoco al escribirlos).\n\nEs el control canónico de fecha del design system: úsalo en vez de un `input type=\"date\"`\nnativo para que el campo respete tokens, textos en español y el formato dd/mm/aaaa.\n\nEn la cabecera del calendario, el mes y el año son botones: el mes abre los 12 meses y el año una\ngrilla de 12 años (las flechas dobles pasan de página). Al elegir, vuelve a los días de ese mes o año.\nCon `minDate`, los meses y años que terminan antes quedan deshabilitados; con `maxDate`, los que empiezan después.",
     "usaSesion": false,
     "proyectaContenido": false,
     "entradas": [
@@ -4082,6 +4082,13 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "porDefecto": "''",
         "requerida": false,
         "descripcion": null
+      },
+      {
+        "nombre": "maxDate",
+        "tipo": "string",
+        "porDefecto": "''",
+        "requerida": false,
+        "descripcion": "Fecha máxima seleccionable (ISO, YYYY-MM-DD): los días posteriores quedan deshabilitados y no se aceptan al escribirlos."
       },
       {
         "nombre": "minDate",
@@ -6724,13 +6731,6 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "via": [
           "rounded-siaf-sm"
         ]
-      },
-      {
-        "token": "--sys-shadow-elevation-6",
-        "via": [
-          "shadow-siaf-elevation-6",
-          "var()"
-        ]
       }
     ],
     "usa": [
@@ -7049,6 +7049,13 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "porDefecto": "''",
         "requerida": false,
         "descripcion": null
+      },
+      {
+        "nombre": "openPlaceholder",
+        "tipo": "string",
+        "porDefecto": "''",
+        "requerida": false,
+        "descripcion": "En `select` y `select-multiple`: texto guía del campo mientras la lista está abierta y sin valor («Seleccionar opción...»); por defecto, la etiqueta."
       },
       {
         "nombre": "options",
@@ -10520,6 +10527,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       {
         "token": "--sys-gap-base-lg",
         "via": [
+          "bottom-siaf-lg",
           "gap-siaf-lg",
           "px-siaf-lg"
         ]
@@ -10592,6 +10600,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       "siaf-report-columns-panel",
       "siaf-report-summary-card",
       "siaf-report-table",
+      "siaf-snackbar",
       "siaf-table-skeleton",
       "siaf-tabs",
       "siaf-tag"
@@ -11452,13 +11461,6 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "token": "--sys-radius-sm",
         "via": [
           "rounded-siaf-sm"
-        ]
-      },
-      {
-        "token": "--sys-shadow-elevation-6",
-        "via": [
-          "shadow-siaf-elevation-6",
-          "var()"
         ]
       }
     ],
