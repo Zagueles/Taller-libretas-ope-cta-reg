@@ -20,7 +20,7 @@ export const TIPO_OPERACION_SALDO_INICIAL = '1';
 const redondear = (valor: number): number => Math.round(valor * 100) / 100;
 const claveLibreta = (m: MovimientoLibretaRegistro): string => `${m.cuentaBancariaId}|${m.numeroCuentaRegistro}`;
 /** Clave de un movimiento dentro del resultado: la secuencia se repite entre cuentas bancarias. */
-export const claveMovimiento = (m: MovimientoLibretaRegistro): string => `${m.cuentaBancariaId}|${m.sec}`;
+export const claveMovimiento = (m: MovimientoLibretaRegistro): string => `${m.cuentaBancariaId}|${m.id}`;
 
 /** Las libretas del resultado, cada una con sus movimientos en el orden de su secuencia. */
 function libretas(movimientos: readonly MovimientoLibretaRegistro[]): MovimientoLibretaRegistro[][] {

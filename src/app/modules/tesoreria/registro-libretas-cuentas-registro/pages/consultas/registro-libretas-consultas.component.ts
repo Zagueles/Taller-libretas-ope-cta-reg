@@ -168,10 +168,23 @@ export class RegistroLibretasConsultasComponent {
         },
       },
       { key: 'unidadEjecutora', label: 'Unidad ejecutora', groupable: true, hierarchy: 2, hidesColumns: ['unidadEjecutora'], groupLabelPrefix: 'UE.' },
+      { key: 'grupo', label: 'Grupo', groupable: true, groupLabelPrefix: 'Grupo', hidesColumns: ['grupo'], valueDetails: {} },
       { key: 'ffSubFf', label: 'FF/Sub FF', groupable: true, groupLabelPrefix: 'FF', groupLabelTooltip: 'Fuente / Sub fuente de financiamiento', hidesColumns: ['ffSubFf'], valueDetails: {} },
       { key: 'numeroDocumento', label: 'Documento' },
     ],
-    groupAggregation: { runningBalance: { startColumn: 'saldoInicial', endColumn: 'saldoFinal' }, accountColumn: 'numeroCuentaRegistro', openingCreditColumn: 'creditoSaldoInicial', hiddenColumns: ['sec', 'fecha', 'tipoOperacion', 'entidad', 'unidadEjecutora', 'grupo', 'numeroDocumento', 'descripcionDocumento', 'fechaRegistro', 'numeroOperacion', 'tipoBeneficiario', 'entidadAdministradoraCodigo', 'entidadAdministradoraSigla', 'movimientoInternoCodigo', 'movimientoInternoDescripcion', 'movimientoInternoSigla', 'movimientoExternoCodigo', 'movimientoExternoDescripcion', 'documentoCutNumero', 'documentoCutArchivo', 'documentoCutSigla', 'descripcionDetallada'] },
+    groupAggregation: { runningBalance: { startColumn: 'saldoInicial', endColumn: 'saldoFinal' }, accountColumn: 'numeroCuentaRegistro', openingCreditColumn: 'creditoSaldoInicial', consolidate: {
+        sumColumns: [
+          { column: 'debito' },
+          { column: 'credito', excludeColumn: 'creditoSaldoInicial' },
+          { column: 'debitoMN' },
+          { column: 'creditoMN', excludeColumn: 'creditoSaldoInicialMN' },
+        ],
+        startColumns: [
+          { column: 'saldoInicial', openingColumn: 'creditoSaldoInicial' },
+          { column: 'saldoInicialMN', openingColumn: 'creditoSaldoInicialMN' },
+        ],
+        endColumns: ['saldoFinal', 'saldoFinalMN'],
+      }, hiddenColumns: ['sec', 'fecha', 'tipoOperacion', 'entidad', 'unidadEjecutora', 'grupo', 'numeroDocumento', 'descripcionDocumento', 'fechaRegistro', 'numeroOperacion', 'tipoBeneficiario', 'entidadAdministradoraCodigo', 'entidadAdministradoraSigla', 'movimientoInternoCodigo', 'movimientoInternoDescripcion', 'movimientoInternoSigla', 'movimientoExternoCodigo', 'movimientoExternoDescripcion', 'documentoCutNumero', 'documentoCutArchivo', 'documentoCutSigla', 'descripcionDetallada'] },
     columns: [
       { key: 'sec', label: 'Sec.', panelLabel: 'Secuencia', group: 'Acreditación', width: 90 },
       { key: 'fecha', label: 'Fecha', group: 'Acreditación', width: 130 },
@@ -217,7 +230,7 @@ export class RegistroLibretasConsultasComponent {
       baseGroups: ['Acreditación', 'Beneficiario', 'Cuenta de registro', 'Imp. m. cuenta'],
       groupLabels: { 'Imp. m. cuenta': 'Importe en moneda de la cuenta', 'Imp. m. nacional': 'Importe en moneda nacional' },
     },
-    rowKey: 'sec',
+    rowKey: 'id',
     resultTitle: 'Resultado de reporte',
     tableLabel: TITULO,
     // Este reporte solo se exporta a Excel: CSV y PDF no distinguen los grupos de columnas de la tabla.
@@ -333,9 +346,9 @@ export class RegistroLibretasConsultasComponent {
    *  condiciones y filtros de la pantalla. Con un agrupado o agregado aplicado, cada pestaña sale con esa estructura. */
   async exportar(evento: QueryReportExportEvent): Promise<void> {
     const todas = [...this.filasPorCuenta.values()].flat();
-    const permitidas = new Set(evento.filterRows(todas.map((m) => this.aFila(m))).map((fila) => fila['sec']));
+    const permitidas = new Set(evento.filterRows(todas.map((m) => this.aFila(m))).map((fila) => fila['id']));
     const cuentas = [...this.filasPorCuenta.entries()]
-      .map(([id, movimientos]) => ({ id, movimientos: movimientos.filter((m) => permitidas.has(m.sec)), saldos: this.saldosCuentas.get(id) }))
+      .map(([id, movimientos]) => ({ id, movimientos: movimientos.filter((m) => permitidas.has(m.id)), saldos: this.saldosCuentas.get(id) }))
       .filter((cuenta) => cuenta.movimientos.length);
     const { resultType, levels } = evento.advanced;
     const agrupacion = levels.length
@@ -367,6 +380,7 @@ export class RegistroLibretasConsultasComponent {
     const tipoCambioVenta = enDolares ? TIPO_CAMBIO.venta : 1;
     const tipoCambio = tipoCambioVenta;
     return {
+      id: m.id,
       sec: m.sec,
       fecha: fechaHoraVisible(m.fecha),
       /** Solo para «Filtros avanzados» (Fecha de acreditación): comparable como aaaa-mm-dd, a diferencia de `fecha`, que ya viene formateada para mostrarse. */
@@ -388,6 +402,7 @@ export class RegistroLibretasConsultasComponent {
       credito: monto(m.credito),
       /** Solo para los totales: el crédito del movimiento interno «Saldo inicial» forma parte del saldo inicial. */
       creditoSaldoInicial: monto(m.tipoOperacionCodigo === TIPO_OPERACION_SALDO_INICIAL ? m.credito : 0),
+      creditoSaldoInicialMN: monto(m.tipoOperacionCodigo === TIPO_OPERACION_SALDO_INICIAL ? m.credito * tipoCambio : 0),
       fechaRegistro: construirDetalleRegistro(m).fechaRegistro,
       numeroOperacion: construirDetalleRegistro(m).numeroOperacion,
       tipoBeneficiario: campoDetalleRegistro(m, 'Beneficiario', 'Tipo'),

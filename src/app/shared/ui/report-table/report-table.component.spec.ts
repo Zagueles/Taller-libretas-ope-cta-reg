@@ -95,6 +95,6 @@ describe('ReportTableComponent', () => {
     expect(region.tabIndex).toBe(0);
     const aviso = el().querySelector<HTMLTableCellElement>('td[role="status"]')!;
     expect(aviso.colSpan).toBe(5);
-    expect(aviso.textContent).toContain('No se encontraron resultados');
+    expect(aviso.textContent).toContain('Aún no se encontraron resultados');
   });
 });

@@ -52,8 +52,8 @@ export class RegistroLibretasApiService {
     return this.http.get<DetalleDocumentoLibreta>(`${this.base}/documentos/${encodeURIComponent(numero)}`);
   }
 
-  obtenerRegistro(sec: string): Observable<DetalleMovimientoLibreta> {
-    return this.http.get<DetalleMovimientoLibreta>(`${this.base}/registros/${encodeURIComponent(sec)}`);
+  obtenerRegistro(id: string): Observable<DetalleMovimientoLibreta> {
+    return this.http.get<DetalleMovimientoLibreta>(`${this.base}/registros/${encodeURIComponent(id)}`);
   }
 
   /** Cuentas de registro de la libreta: opciones del filtro predeterminado y cards del agregado. */

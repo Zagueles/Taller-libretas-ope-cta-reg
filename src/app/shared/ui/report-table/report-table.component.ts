@@ -182,7 +182,7 @@ export class ReportTableComponent {
   @Input() rowKey = '';
   /** Nombre de la tabla y de su zona desplazable. */
   @Input() ariaLabel = 'Resultado del reporte';
-  @Input() emptyMessage = 'No se encontraron resultados con los filtros aplicados.';
+  @Input() emptyMessage = 'Aún no se encontraron resultados.';
 
   @Output() linkClicked = new EventEmitter<{ row: ReportTableRow; column: ReportTableColumn }>();
   /** Con `clickableRows`, pulsar una fila (o Enter con el foco en ella) la emite: abre su detalle. Los enlaces de la fila siguen emitiendo `linkClicked`. */

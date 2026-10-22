@@ -24,7 +24,7 @@ import { volverAlOrigen } from '../../../../../shared/utils/volver.util';
 import { buildProcessBreadcrumbs } from '../../../../../shared/utils/breadcrumbs.util';
 import { PROCESS_ID, PROCESS_ROUTE, REGISTRO_ROUTE } from '../../config/registro-libretas.rutas';
 import { RegistroLibretasApiService } from '../../api/registro-libretas-api.service';
-import { DetalleDocumentoLibreta, nombreBeneficiario } from '../../models/registro-libretas.model';
+import { DetalleDocumentoLibreta, nombreBeneficiario, nombreTipoOperacion } from '../../models/registro-libretas.model';
 import { generarPdfDocumento } from '../../utils/exportacion/pdf-documento.util';
 
 /** Descarga un Blob como archivo. */
@@ -132,8 +132,8 @@ const COLUMNAS: ReportTableColumn[] = [
         <siaf-solicitude-form-card title="Información de operaciones financieras">
           <div class="grid gap-x-siaf-lg gap-y-siaf-lg md:grid-cols-3">
             <readonly-field caption="Fecha registro" [value]="d.fechaRegistro" />
-            <readonly-field caption="Número de operación" value="12345678" />
-            <readonly-field caption="Tipo de operación" value="1 - Saldos iniciales" />
+            <readonly-field caption="Número de operación" [value]="d.numeroOperacion" />
+            <readonly-field caption="Tipo de operación" [value]="d.tipoOperacion" />
           </div>
         </siaf-solicitude-form-card>
 
@@ -273,7 +273,7 @@ export class RegistroLibretasDocumentoComponent implements OnInit {
   readonly panelColumnasAbierto = signal(false);
   readonly todasLasColumnas: ReadonlySet<string> = new Set(COLUMNAS.map((c) => c.key));
   /** Si se ocultan todas, queda la secuencia. */
-  readonly columnasBase: ReadonlySet<string> = new Set(['sec']);
+  readonly columnasBase: ReadonlySet<string> = new Set(['sec', 'saldoFinal']);
   readonly columnasElegidas = signal<ReadonlySet<string>>(this.todasLasColumnas);
   readonly columnasVisibles = computed(() => COLUMNAS.filter((c) => this.columnasElegidas().has(c.key)));
   readonly gruposColumnas: ColumnasPanelGrupo[] = [...new Set(COLUMNAS.map((c) => c.group ?? c.key))].map((id) => {
@@ -318,6 +318,9 @@ export class RegistroLibretasDocumentoComponent implements OnInit {
       motivoRechazo,
       fechaRegistro: `${fechaVisible(primero.fecha)}  18:01:00`,
       fechaProcesado: `${fechaVisible(primero.fecha)}  18:02:00`,
+      // Operación del documento: la de su primer registro (número y tipo), no un dato fijo.
+      numeroOperacion: `1234${primero.id.slice(-4)}`,
+      tipoOperacion: nombreTipoOperacion(primero.tipoOperacionCodigo),
     };
   });
 
@@ -345,6 +348,7 @@ export class RegistroLibretasDocumentoComponent implements OnInit {
     this.movimientos()
       .filter((m) => m.cuentaBancariaId === this.cuentaElegida())
       .map((m) => ({
+        id: m.id,
         sec: m.sec,
         fecha: fechaHoraVisible(m.fecha),
         codigo: m.beneficiarioCodigo,
@@ -481,8 +485,8 @@ export class RegistroLibretasDocumentoComponent implements OnInit {
 
   /** Pulsar una fila de «Registros de operaciones en las libretas» abre el detalle de ese registro. */
   abrirRegistro(fila: ReportTableRow): void {
-    const sec = fila['sec'];
-    if (sec) void this.router.navigate([REGISTRO_ROUTE, sec]);
+    const id = fila['id'];
+    if (id) void this.router.navigate([REGISTRO_ROUTE, id]);
   }
 
   volver(): void {

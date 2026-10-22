@@ -241,7 +241,7 @@ export class GroupedReportTableComponent implements OnChanges {
   /** El nivel más interno también cierra con su pie (el primer nivel es el «TOTAL» y los demás, «Subtotal»): en «Agregado» siempre y en «Agrupado» con uno o dos niveles; con tres o más, el más interno solo lleva su saldo en el título. */
   @Input() footerInnermost = false;
   @Input() ariaLabel = 'Resultado del reporte agrupado';
-  @Input() emptyMessage = 'No se encontraron resultados con los filtros aplicados.';
+  @Input() emptyMessage = 'Aún no se encontraron resultados.';
 
   @Output() linkClicked = new EventEmitter<{ row: ReportTableRow; column: ReportTableColumn }>();
 

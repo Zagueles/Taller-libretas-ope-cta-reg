@@ -75,10 +75,10 @@ export function detalleDocumento(libretas: DatosLibretas, numero: string): Detal
   return movimientos.length ? { documento: documentoDe(libretas, movimientos[movimientos.length - 1]), movimientos } : null;
 }
 
-export function detalleMovimiento(libretas: DatosLibretas, sec: string): DetalleMovimientoLibreta | null {
-  const movimiento = todosLosMovimientos(libretas).find((m) => m.sec === sec);
+export function detalleMovimiento(libretas: DatosLibretas, id: string): DetalleMovimientoLibreta | null {
+  const movimiento = todosLosMovimientos(libretas).find((m) => m.id === id);
   if (!movimiento) return null;
-  return { movimiento, rechazado: libretas.rechazados.some((m) => m.sec === sec), documento: documentoDe(libretas, movimiento) };
+  return { movimiento, rechazado: libretas.rechazados.some((m) => m.id === id), documento: documentoDe(libretas, movimiento) };
 }
 
 /** Las cuentas de registro distintas de la libreta (número, descripción y FF/SUB FF), por número. */

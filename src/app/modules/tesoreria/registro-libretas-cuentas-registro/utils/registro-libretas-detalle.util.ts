@@ -49,6 +49,8 @@ export interface DetalleRegistro {
   rechazado: boolean;
 }
 
+const ENTIDAD_ADMINISTRADORA_SUNAT = { codigo: '20131312955', sigla: 'SUNAT' };
+
 /**
  * Arma el detalle de un registro de la libreta (Figma nodo 241:20830) a partir del movimiento que entrega el backend:
  * lo usan tanto la pantalla de detalle (`siaf-registro-libretas-registro`) como el PDF de «Ver documento PDF» y los
@@ -69,7 +71,7 @@ export function construirDetalleRegistro(m: MovimientoLibretaRegistro, rechazado
     cuenta,
     tipoOperacion: tipo,
     fechaRegistro: `${fechaVisible(m.fecha)}  18:01:00`,
-    numeroOperacion: `1234${m.sec.slice(-4)}`,
+    numeroOperacion: `1234${m.id.slice(-4)}`,
     secciones: [
       {
         titulo: 'Acreditación',
@@ -101,7 +103,14 @@ export function construirDetalleRegistro(m: MovimientoLibretaRegistro, rechazado
           { caption: 'Grupo', value: m.grupo },
         ],
       },
-      { titulo: 'Entidad administradora', campos: [{ caption: 'Código', value: SIN_DATO }, { caption: 'Sigla', value: SIN_DATO }] },
+      // El reporte de recaudación es de la SUNAT: para ese tipo la entidad administradora es obligatoria (RN-009).
+      {
+        titulo: 'Entidad administradora',
+        campos: [
+          { caption: 'Código', value: m.tipoOperacionCodigo === '2' ? ENTIDAD_ADMINISTRADORA_SUNAT.codigo : SIN_DATO },
+          { caption: 'Sigla', value: m.tipoOperacionCodigo === '2' ? ENTIDAD_ADMINISTRADORA_SUNAT.sigla : SIN_DATO },
+        ],
+      },
       {
         titulo: 'Movimiento interno',
         campos: [

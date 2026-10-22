@@ -236,4 +236,20 @@ export interface QueryReportGroupAggregation {
   accountColumn?: string;
   /** Columna con el crédito del movimiento interno «Saldo inicial» de la fila (0 en las demás): se suma al saldo inicial de su cuenta. */
   openingCreditColumn?: string;
+  /**
+   * «Agregado» (RN-069): consolida los registros de cada cuenta de registro (`accountColumn`) en una sola fila en vez de
+   * listarlos uno por uno: los importes se suman, el saldo inicial es el del primer registro (más el crédito de «Saldo
+   * inicial») y el saldo final, el del último.
+   */
+  consolidate?: QueryReportConsolidation;
+}
+
+/** Cómo se consolida una cuenta de registro en «Agregado». */
+export interface QueryReportConsolidation {
+  /** Columnas que se suman; `excludeColumn` resta de la suma el crédito de «Saldo inicial», que ya va en el saldo inicial. */
+  sumColumns: { column: string; excludeColumn?: string }[];
+  /** Saldos iniciales: el del primer registro más el crédito de apertura (`openingColumn`) de todos. */
+  startColumns: { column: string; openingColumn: string }[];
+  /** Saldos finales: el del último registro. */
+  endColumns: string[];
 }

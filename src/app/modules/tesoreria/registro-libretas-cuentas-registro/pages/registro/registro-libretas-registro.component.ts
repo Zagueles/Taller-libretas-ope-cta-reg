@@ -129,9 +129,9 @@ export class RegistroLibretasRegistroComponent implements OnInit {
   readonly registro = signal<DetalleRegistro | null>(null);
 
   ngOnInit(): void {
-    const sec = this.ruta.snapshot.paramMap.get('sec') ?? '';
+    const id = this.ruta.snapshot.paramMap.get('id') ?? '';
     // Un registro que no existe (404) deja la pantalla sin contenido, como antes.
-    this.api.obtenerRegistro(sec).subscribe({
+    this.api.obtenerRegistro(id).subscribe({
       next: ({ movimiento, rechazado }) => this.registro.set(construirDetalleRegistro(movimiento, rechazado)),
       error: () => this.registro.set(null),
     });

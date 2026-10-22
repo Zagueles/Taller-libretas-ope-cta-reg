@@ -30,3 +30,25 @@ export function totalizarSaldos(filas: readonly Fila[], balance: QueryReportGrou
   });
   return { inicio, fin };
 }
+
+const formatoConsolidado = new Intl.NumberFormat('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/**
+ * «Agregado»: una fila por cuenta de registro (RN-069) en lugar de una por registro. Respeta el orden de llegada de las
+ * filas (cronológico dentro de cada cuenta); las columnas que no son importes toman el valor de la primera fila.
+ */
+export function consolidarPorCuenta(filas: readonly Record<string, string>[], agregacion?: QueryReportGroupAggregation | null): Record<string, string>[] {
+  const consolidacion = agregacion?.consolidate;
+  const columnaCuenta = agregacion?.accountColumn;
+  if (!consolidacion || !columnaCuenta) return [...filas];
+  const cuentas = new Map<string, Record<string, string>[]>();
+  filas.forEach((f) => cuentas.set(f[columnaCuenta] ?? '', [...(cuentas.get(f[columnaCuenta] ?? '') ?? []), f]));
+  const suma = (lista: readonly Record<string, string>[], columna: string): number => lista.reduce((total, f) => total + montoANumero(f[columna]), 0);
+  return [...cuentas.values()].map((lista) => {
+    const consolidada: Record<string, string> = { ...lista[0] };
+    consolidacion.startColumns.forEach(({ column, openingColumn }) => (consolidada[column] = formatoConsolidado.format(montoANumero(lista[0][column]) + suma(lista, openingColumn))));
+    consolidacion.endColumns.forEach((column) => (consolidada[column] = lista[lista.length - 1][column]));
+    consolidacion.sumColumns.forEach(({ column, excludeColumn }) => (consolidada[column] = formatoConsolidado.format(suma(lista, column) - (excludeColumn ? suma(lista, excludeColumn) : 0))));
+    return consolidada;
+  });
+}

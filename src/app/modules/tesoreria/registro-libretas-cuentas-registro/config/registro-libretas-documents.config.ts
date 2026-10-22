@@ -101,7 +101,7 @@ export const REGISTRO_LIBRETAS_DOCUMENTS_CONFIG: DocumentsRecordsConfig = {
   headerGroupLabels: { 'Imp. m. cuenta': 'Importe en moneda de la cuenta' },
   selectionDownload: true,
   recordRowAction: { icon: 'description', label: 'Ver documento PDF' },
-  recordTrackKey: 'sec',
+  recordTrackKey: 'id',
   recordHistoryDocumentLabel: 'Registro de operaciones en las libretas de las cuentas de registro',
   recordHistoryKind: 'documento',
   statusFilterOptions: ['Procesado', 'Rechazado'],

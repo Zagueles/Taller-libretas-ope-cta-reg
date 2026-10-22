@@ -5373,6 +5373,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     ],
     "usa": [
       "[siafFoco]",
+      "message-box",
       "siaf-account-history-panel",
       "siaf-asiento-history-panel",
       "siaf-breadcrumb",
@@ -6577,7 +6578,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       {
         "nombre": "emptyMessage",
         "tipo": "string",
-        "porDefecto": "'No se encontraron resultados con los filtros aplicados.'",
+        "porDefecto": "'Aún no se encontraron resultados.'",
         "requerida": false,
         "descripcion": null
       },
@@ -11320,7 +11321,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       {
         "nombre": "emptyMessage",
         "tipo": "string",
-        "porDefecto": "'No se encontraron resultados con los filtros aplicados.'",
+        "porDefecto": "'Aún no se encontraron resultados.'",
         "requerida": false,
         "descripcion": null
       },

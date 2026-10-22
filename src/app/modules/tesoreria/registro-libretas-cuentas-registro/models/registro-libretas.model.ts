@@ -58,6 +58,9 @@ export const CUENTAS_BANCARIAS_INFO: CuentaBancariaRegistroInfo[] = [
 
 /** Un movimiento (cargo o abono) en la libreta de una cuenta de registro. */
 export interface MovimientoLibretaRegistro {
+  /** Identificador único del registro en todas las libretas (el de la ruta de su detalle). */
+  id: string;
+  /** Secuencia correlativa dentro de su libreta (cuenta bancaria y cuenta de registro): empieza en 000001 en cada una (RN-025). */
   sec: string;
   /** Fecha y hora de acreditación, ISO (aaaa-mm-ddThh:mm:ss). */
   fecha: string;

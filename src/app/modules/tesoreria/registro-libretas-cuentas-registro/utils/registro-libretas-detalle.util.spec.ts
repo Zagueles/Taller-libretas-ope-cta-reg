@@ -48,11 +48,21 @@ describe('construirDetalleRegistro', () => {
     expect(valor(d, 'Movimiento interno', 'Código')).toBe('DV0003');
     expect(valor(d, 'Movimiento interno', 'Sigla')).toBe('DV');
     expect(d.descripcionDetallada).toBe('Registro de devolución');
-    expect(d.numeroOperacion).toBe(`1234${devolucion.sec.slice(-4)}`);
+    expect(d.numeroOperacion).toBe(`1234${devolucion.id.slice(-4)}`);
   });
 
   it('marca como rechazado el registro de un documento rechazado', () => {
     expect(construirDetalleRegistro(enSoles).rechazado).toBeFalse();
     expect(construirDetalleRegistro(libretas.rechazados[0], true).rechazado).toBeTrue();
+  });
+
+  it('el reporte de recaudación lleva la SUNAT como entidad administradora y los demás tipos no', () => {
+    const rr = construirDetalleRegistro({ ...enSoles, tipoOperacionCodigo: '2' });
+    const apertura = construirDetalleRegistro({ ...enSoles, tipoOperacionCodigo: '1' });
+    const campo = (d: ReturnType<typeof construirDetalleRegistro>, caption: string) => d.secciones.find((s) => s.titulo === 'Entidad administradora')!.campos.find((c) => c.caption === caption)!.value;
+
+    expect(campo(rr, 'Sigla')).toBe('SUNAT');
+    expect(campo(rr, 'Código')).not.toBe('-');
+    expect(campo(apertura, 'Sigla')).toBe('-');
   });
 });

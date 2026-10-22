@@ -85,7 +85,8 @@ export class RegistroLibretasDocumentsComponent implements OnInit {
     documentFilter2Label: 'Fecha de registro',
     documentFilter2Key: 'dateIso',
     documentFilter2Type: 'dateRange',
-    documentRows: this.documentos().map(
+    // Lo más reciente primero (RF-06 FP-04): por fecha de registro descendente y, a igual fecha, el número más alto.
+    documentRows: [...this.documentos()].sort((a, b) => b.fecha.localeCompare(a.fecha) || b.numero.localeCompare(a.numero)).map(
       (d): DocumentsRecordsRow => ({
         document: NOMBRE_DOCUMENTO,
         documentId: d.documentoId,
@@ -103,6 +104,7 @@ export class RegistroLibretasDocumentsComponent implements OnInit {
     ),
     recordRows: this.movimientos().map(
       (m): DocumentsRecordsRow => ({
+        id: m.id,
         sec: m.sec,
         fecha: fechaHoraVisible(m.fecha),
         cuentaBancariaNumero: CUENTAS_BANCARIAS_INFO.find((c) => c.id === m.cuentaBancariaId)?.numeroCuenta ?? '',
@@ -141,7 +143,7 @@ export class RegistroLibretasDocumentsComponent implements OnInit {
         documentId: m.documentoId,
         actionType: 'Creación',
         linkRoute: `/procesos/registro-libretas-cuentas-registro/consultas`,
-        recordRoute: `${REGISTRO_ROUTE}/${m.sec}`,
+        recordRoute: `${REGISTRO_ROUTE}/${m.id}`,
       }),
     ),
     // Trazabilidad de todo documento existente: se Registró un minuto antes de quedar Procesado (más reciente arriba).
@@ -160,7 +162,7 @@ export class RegistroLibretasDocumentsComponent implements OnInit {
 
   /** «Ver documento PDF» de una fila de Registros: arma el PDF del registro (jsPDF) y lo abre en el visor nativo. */
   async verDocumentoPdf(row: DocumentsRecordsRow): Promise<void> {
-    const movimiento = this.movimientos().find((m) => m.sec === String(row['sec'] ?? ''));
+    const movimiento = this.movimientos().find((m) => m.id === String(row['id'] ?? ''));
     if (!movimiento) return;
     const generado = await generarPdfRegistro(construirDetalleRegistro(movimiento));
     this.pdfBlob.set(generado.blob);
@@ -191,7 +193,7 @@ export class RegistroLibretasDocumentsComponent implements OnInit {
               evento.filters,
             )
           : exportarRegistrosExcel(
-              evento.rows.flatMap((r) => this.movimientos().find((m) => m.sec === String(r['sec'] ?? '')) ?? []),
+              evento.rows.flatMap((r) => this.movimientos().find((m) => m.id === String(r['id'] ?? '')) ?? []),
               evento.filters,
               evento.visibleColumns,
             );

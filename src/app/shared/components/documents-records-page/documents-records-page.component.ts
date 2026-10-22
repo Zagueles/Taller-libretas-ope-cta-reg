@@ -1,3 +1,4 @@
+import { MessageBoxComponent } from '../../ui/message-box/message-box.component';
 import { TableSort, ordenarFilas, valorOrdenable } from '../../utils/table-sort.util';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, inject, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { Router } from '@angular/router';
@@ -105,7 +106,7 @@ type DocumentsRecordsRoleMode = 'creator' | 'approver' | 'readOnly';
     AccountHistoryPanelComponent, AsientoHistoryPanelComponent, BreadcrumbComponent, ButtonComponent, ColumnVisibilityPanelComponent,
     CreateDocumentComponent, CustomFilterComponent, DateRangeFilterPillComponent, DocumentHistoryPanelComponent,
     DocumentsRecordsTableComponent, FilterPillComponent, IconComponent, IconDropdownMenuComponent,
-    ModalComponent, PaginationComponent, RecordsSearchToolbarComponent, RecordsTabsComponent,
+    MessageBoxComponent, ModalComponent, PaginationComponent, RecordsSearchToolbarComponent, RecordsTabsComponent,
     SnackbarComponent, TableControlsComponent, TableSkeletonComponent,
   ],
   template: `
@@ -256,7 +257,7 @@ type DocumentsRecordsRoleMode = 'creator' | 'approver' | 'readOnly';
                     <siaf-icon-dropdown-menu
                       icon="star_border"
                       ariaLabel="Favorito"
-                      [items]="favoriteMenuItems"
+                      [items]="favoriteMenuItemsVisibles"
                       (selected)="onFavoriteOption($any($event))"
                     />
                     <siaf-icon-dropdown-menu
@@ -387,6 +388,9 @@ type DocumentsRecordsRoleMode = 'creator' | 'approver' | 'readOnly';
                   (historyOpened)="onRowAction($event)"
                   (rowOpened)="abrirDetalleRegistro($event)"
                 />
+                @if (paginatedRows.length === 0) {
+                  <message-box text="Aún no se encontraron resultados." />
+                }
               }
 
               <siaf-pagination
@@ -599,6 +603,11 @@ export class DocumentsRecordsPageComponent implements OnChanges {
     { label: 'Solicitudes observadas',     value: 'observed', divider: true },
     { label: 'Guardar búsqueda actual',    value: 'save-search' },
   ];
+
+  /** «Solicitudes observadas» solo aplica a procesos con solicitudes: en los de solo consulta (modo consulta) no se ofrece. */
+  get favoriteMenuItemsVisibles(): IconDropdownMenuItem[] {
+    return this.effectiveConfig.modoConsulta ? this.favoriteMenuItems.filter((i) => i.value !== 'observed') : this.favoriteMenuItems;
+  }
 
   /** Items del menú "Más opciones" (more_vert). */
   readonly moreOptionsMenuItems: IconDropdownMenuItem[] = [

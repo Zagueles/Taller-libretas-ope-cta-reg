@@ -45,7 +45,7 @@ export const TESORERIA_ROUTES: Routes = [
       ),
   },
   {
-    path: 'procesos/registro-libretas-cuentas-registro/registro/:sec',
+    path: 'procesos/registro-libretas-cuentas-registro/registro/:id',
     loadComponent: () =>
       import('./registro-libretas-cuentas-registro/pages/registro/registro-libretas-registro.component').then(
         (m) => m.RegistroLibretasRegistroComponent,

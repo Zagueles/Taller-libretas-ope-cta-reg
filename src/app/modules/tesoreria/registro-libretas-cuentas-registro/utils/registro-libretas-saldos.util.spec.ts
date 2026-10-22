@@ -5,7 +5,7 @@ import { saldosMNPorMovimiento, saldosPorCuentaRegistro } from './registro-libre
 /** Reglas de saldos del Anexo 14 (RN-036 a RN-047 y RN-069) sobre las libretas de ejemplo y sobre casos armados. */
 describe('registro-libretas-saldos', () => {
   const mov = (sec: string, cuenta: string, si: number, debito: number, credito: number): MovimientoLibretaRegistro =>
-    ({ sec, fecha: '2026-10-01T00:00:00', cuentaBancariaId: 'cb', numeroCuentaRegistro: cuenta, saldoInicial: si, debito, credito, saldoFinal: si + credito - debito } as MovimientoLibretaRegistro);
+    ({ id: `${cuenta}-${sec}`, sec, fecha: '2026-10-01T00:00:00', cuentaBancariaId: 'cb', numeroCuentaRegistro: cuenta, saldoInicial: si, debito, credito, saldoFinal: si + credito - debito } as MovimientoLibretaRegistro);
 
   describe('datos de ejemplo (libretas del taller)', () => {
     const libretas = datosLibretasIniciales().movimientos;
@@ -23,12 +23,34 @@ describe('registro-libretas-saldos', () => {
       libretas.forEach((m) => expect(m.debito).withContext(`sec ${m.sec}`).toBeLessThanOrEqual(m.saldoInicial));
     });
 
-    it('RN-036/044: desde julio (lo que se encadena) el saldo inicial es el final del registro anterior de la libreta', () => {
-      // Junio viene tal cual del Figma, con saldos que no se encadenan por fecha; del primer registro nuevo en adelante sí.
+    it('RN-036/044: en cada libreta, ordenada por su secuencia, el saldo inicial es el final del registro anterior', () => {
       porLibreta.forEach((lista, clave) => {
         lista.forEach((m, i) => {
-          if (i > 0 && m.fecha >= '2026-07-01') expect(m.saldoInicial).withContext(`${clave} sec ${m.sec}`).toBe(lista[i - 1].saldoFinal);
+          if (i > 0) expect(m.saldoInicial).withContext(`${clave} sec ${m.sec}`).toBe(lista[i - 1].saldoFinal);
         });
+      });
+    });
+
+    it('RN-025: la secuencia es correlativa dentro de cada libreta (000001, 000002…) en orden cronológico, y el id es único', () => {
+      porLibreta.forEach((lista, clave) => {
+        expect(lista.map((m) => m.sec)).withContext(clave).toEqual(lista.map((_, i) => String(i + 1).padStart(6, '0')));
+      });
+      expect(new Set(libretas.map((m) => m.id)).size).toBe(libretas.length);
+    });
+
+    it('el saldo inicial de cada cuenta bancaria es el de sus libretas: apertura (con su crédito) y ningún saldo inicial huérfano', () => {
+      const cut = saldosPorCuentaRegistro(libretas.filter((m) => m.cuentaBancariaId === 'mef-dgtp-cut'));
+      // Cada libreta parte de 0.00 y su apertura entra como crédito: 10,000 + 0 + 3,000 + 15,000 + 1,000,000.
+      expect(cut.saldoInicial).toBe(1028000);
+    });
+
+    it('cuadra por cuenta bancaria: saldo inicial + créditos (sin la apertura) − débitos = saldo final', () => {
+      ['mef-dgtp-cut', 'mef-dgtp'].forEach((cuenta) => {
+        const movs = libretas.filter((m) => m.cuentaBancariaId === cuenta);
+        const totales = saldosPorCuentaRegistro(movs);
+        const creditos = movs.filter((m) => m.tipoOperacionCodigo !== '1').reduce((t, m) => t + m.credito, 0);
+        const debitos = movs.reduce((t, m) => t + m.debito, 0);
+        expect(totales.saldoInicial + creditos - debitos).withContext(cuenta).toBe(totales.saldoFinal);
       });
     });
 
@@ -73,8 +95,8 @@ describe('registro-libretas-saldos', () => {
       const b = mov('000002', 'A', 110, 0, 10); // TC 4.0 → SI 330 (no 110 × 4), SF 370
       const tc = (m: MovimientoLibretaRegistro): number => (m.sec === '000001' ? 3 : 4);
       const mn = saldosMNPorMovimiento([a, b], tc);
-      expect(mn.get('cb|000001')).toEqual({ saldoInicialMN: 300, saldoFinalMN: 330 });
-      expect(mn.get('cb|000002')).toEqual({ saldoInicialMN: 330, saldoFinalMN: 370 });
+      expect(mn.get('cb|A-000001')).toEqual({ saldoInicialMN: 300, saldoFinalMN: 330 });
+      expect(mn.get('cb|A-000002')).toEqual({ saldoInicialMN: 330, saldoFinalMN: 370 });
       expect(saldosPorCuentaRegistro([a, b], tc)).toEqual(jasmine.objectContaining({ saldoInicialMN: 300, saldoFinalMN: 370 }));
     });
   });

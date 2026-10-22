@@ -44,7 +44,7 @@ import { ParametroAplicado, ParametrosAplicadosComponent } from '../parametros-a
 import { QueryParametersPanelComponent, tieneValor } from '../query-parameters-panel/query-parameters-panel.component';
 import { GraficoCalculado, calcularGrafico, calcularKpis } from './query-report-charts';
 import { cumpleCondicion } from './query-report-conditions';
-import { totalizarSaldos } from '../../utils/saldos-agregados.util';
+import { consolidarPorCuenta, totalizarSaldos } from '../../utils/saldos-agregados.util';
 
 const formatoSaldo = new Intl.NumberFormat('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -512,7 +512,7 @@ let siguienteId = 0;
                     @if (avanzados().levels.length) {
                       <siaf-tag
                         variant="filter"
-                        icon="layers"
+                        [icon]="avanzados().resultType === 'agregado' ? 'functions' : 'layers'"
                         [selected]="true"
                         [removable]="true"
                         removeLabel="Quitar agrupación"
@@ -755,7 +755,8 @@ export class QueryReportPageComponent {
       columnas: this.columnasPorNiveles(avanzados.levels, this.configuracion().groupAggregation?.hiddenColumns),
       icono: iconoParametro ?? 'account_balance',
       opciones,
-      filas: entidad ? filas.filter((f) => f[primeraClave] === entidad) : [],
+      // «Agregado» consolida cada cuenta de registro en una fila (RN-069) cuando la configuración lo pide.
+      filas: entidad ? consolidarPorCuenta(filas.filter((f) => f[primeraClave] === entidad) as Record<string, string>[], this.configuracion().groupAggregation) : [],
       niveles: this.aNivelesTabla(restoClaves),
     };
   });
