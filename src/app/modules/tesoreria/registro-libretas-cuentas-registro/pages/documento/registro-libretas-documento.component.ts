@@ -169,6 +169,7 @@ const COLUMNAS_DOCUMENTO: ReportTableColumn[] = (() => {
               [value]="busqueda()"
               [filterCount]="filtros().length"
               filterLabel="Filtros"
+              [minChars]="3"
               moreLabel="Más opciones"
               [moreItems]="opcionesMas"
               (valueChange)="busqueda.set($any($event))"

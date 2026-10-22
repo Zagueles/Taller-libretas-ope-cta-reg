@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 
 import { RecordsSearchToolbarComponent } from './records-search-toolbar.component';
@@ -112,5 +112,47 @@ describe('RecordsSearchToolbarComponent', () => {
     fixture.detectChanges();
     const input = fixture.debugElement.query(By.css('input')).nativeElement as HTMLInputElement;
     expect(input.disabled).toBeTrue();
+  });
+
+  describe('búsqueda en vivo desde N caracteres (RF-07)', () => {
+    const escribir = (texto: string): void => {
+      const input = fixture.debugElement.query(By.css('input')).nativeElement as HTMLInputElement;
+      input.value = texto;
+      input.dispatchEvent(new Event('input'));
+    };
+
+    it('busca sola al llegar a 3 caracteres y con menos de 3 quita la búsqueda', fakeAsync(() => {
+      fixture.componentRef.setInput('minChars', 3);
+      fixture.detectChanges();
+      const emitidos: string[] = [];
+      component.searchSubmit.subscribe((v) => emitidos.push(v));
+
+      escribir('ab');
+      tick(300);
+      expect(emitidos).toEqual([]);
+
+      escribir('abc');
+      tick(300);
+      expect(emitidos).toEqual(['abc']);
+
+      escribir('ab');
+      tick(300);
+      expect(emitidos).toEqual(['abc', '']);
+    }));
+
+    it('sin minChars teclear no busca; Enter con menos de 3 caracteres no busca nada', fakeAsync(() => {
+      const emitidos: string[] = [];
+      component.searchSubmit.subscribe((v) => emitidos.push(v));
+      escribir('abcd');
+      tick(300);
+      expect(emitidos).toEqual([]);
+
+      fixture.componentRef.setInput('minChars', 3);
+      fixture.detectChanges();
+      escribir('ab');
+      fixture.debugElement.query(By.css('input')).nativeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      expect(emitidos).toEqual(['']);
+      tick(300);
+    }));
   });
 });

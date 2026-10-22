@@ -166,6 +166,8 @@ export interface QueryReportConfig {
   /** «Columnas visibles»: sin él, el botón Columnas solo emite `columnsRequested`. */
   columnsPanel?: QueryReportColumnsConfig;
   title: string;
+  /** Búsqueda en vivo desde N caracteres (RF-07): sin él, solo se busca con Enter o la lupa. */
+  searchMinChars?: number;
   breadcrumbs: BreadcrumbItem[];
   parameterFields: QueryReportParameterField[];
   columns: QueryReportColumn[];

@@ -185,6 +185,8 @@ export class RegistroLibretasConsultasComponent {
         endColumns: ['saldoFinal', 'saldoFinalMN'],
       }, hiddenColumns: ['saldoDisponible', 'saldoDisponibleMN', 'sec', 'fecha', 'tipoOperacion', 'entidad', 'unidadEjecutora', 'grupo', 'numeroDocumento', 'descripcionDocumento', 'fechaRegistro', 'numeroOperacion', 'tipoBeneficiario', 'entidadAdministradoraCodigo', 'entidadAdministradoraSigla', 'movimientoInternoCodigo', 'movimientoInternoDescripcion', 'movimientoInternoSigla', 'movimientoExternoCodigo', 'movimientoExternoDescripcion', 'documentoCutNumero', 'documentoCutArchivo', 'documentoCutSigla', 'descripcionDetallada'] },
     columns: COLUMNAS_REGISTRO_LIBRETAS,
+    // RF-07: la búsqueda sale sola desde 3 caracteres, con resultados preliminares por ocurrencia.
+    searchMinChars: 3,
     columnsPanel: {
       baseGroups: ['Acreditación', 'Beneficiario', 'Cuenta de registro', 'Imp. m. cuenta'],
       groupLabels: { 'Imp. m. cuenta': 'Importe en moneda de la cuenta', 'Imp. m. nacional': 'Importe en moneda nacional' },

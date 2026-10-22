@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges } from '@angular/core';
 
 import { TooltipDirective } from '../../ui/tooltip/tooltip.directive';
 import { IconDropdownMenuComponent, IconDropdownMenuItem } from '../../ui/icon-dropdown-menu/icon-dropdown-menu.component';
@@ -111,7 +111,7 @@ import { TextFieldComponent } from '../../ui/text-field/text-field.component';
   `,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class FormTableSearchComponent implements OnChanges {
+export class FormTableSearchComponent implements OnChanges, OnDestroy {
   ngOnChanges(changes: SimpleChanges): void {
     // Si el padre reescribe `value` (p. ej. quitar la búsqueda desde el chip),
     // lo tecleado pendiente deja de valer: un Enter posterior no debe
@@ -131,6 +131,8 @@ export class FormTableSearchComponent implements OnChanges {
   /** Nombre accesible del botón Columnas de la variante `reports`. */
   @Input() columnsLabel = 'Ocultar o mostrar columnas';
   @Input() disabled = false;
+  /** Búsqueda en vivo desde N caracteres (RF-07): sale sola tras una pausa breve al teclear y con menos de N se quita. Con 0, solo Enter o la lupa. */
+  @Input() minChars = 0;
   /** Opciones del menú de «Más opciones»; vacío = el botón emite `more` directo. */
   @Input() moreItems: IconDropdownMenuItem[] = [];
   /** Insignia en Filtrar: cuántas condiciones de «Filtros avanzados» están aplicadas (0 no la muestra). */
@@ -150,6 +152,26 @@ export class FormTableSearchComponent implements OnChanges {
   /** El siaf-input interno emite al tipear; aquí solo se registra el texto. */
   onTyped(value: string | number | string[]): void {
     this.lastTyped = String(value ?? '');
+    if (this.minChars <= 0) return;
+    clearTimeout(this.temporizador);
+    this.temporizador = setTimeout(() => {
+      const texto = this.efectivo(this.lastTyped ?? '');
+      if (texto === (this.ultimoEmitido ?? this.value)) return;
+      this.ultimoEmitido = texto;
+      this.valueChange.emit(texto);
+    }, 250);
+  }
+
+  private temporizador?: ReturnType<typeof setTimeout>;
+  private ultimoEmitido: string | null = null;
+
+  /** Con búsqueda en vivo, el texto de menos de `minChars` caracteres no busca nada. */
+  private efectivo(texto: string): string {
+    return this.minChars > 0 && texto.trim().length < this.minChars ? '' : texto;
+  }
+
+  ngOnDestroy(): void {
+    clearTimeout(this.temporizador);
   }
 
   onSubmit(event: Event): void {
@@ -157,10 +179,10 @@ export class FormTableSearchComponent implements OnChanges {
     // La búsqueda se dispara con Enter o la lupa, no por tecleo: los 18
     // consumidores (paneles de selección, tablas de solicitudes, listados
     // admin) pasan a ese comportamiento sin cambiar una línea.
-    this.valueChange.emit(this.lastTyped ?? this.value);
+    this.valueChange.emit(this.efectivo(this.lastTyped ?? this.value));
   }
 
   onLupa(): void {
-    this.valueChange.emit(this.lastTyped ?? this.value);
+    this.valueChange.emit(this.efectivo(this.lastTyped ?? this.value));
   }
 }

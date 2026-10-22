@@ -104,6 +104,8 @@ export const REGISTRO_LIBRETAS_DOCUMENTS_CONFIG: DocumentsRecordsConfig = {
   selectionDownload: true,
   recordRowAction: { icon: 'description', label: 'Ver documento PDF' },
   recordTrackKey: 'id',
+  // RF-07: la búsqueda sale sola desde 3 caracteres, con resultados preliminares por ocurrencia.
+  searchMinChars: 3,
   recordHistoryDocumentLabel: 'Registro de operaciones en las libretas de las cuentas de registro',
   recordHistoryKind: 'documento',
   statusFilterOptions: ['Procesado', 'Pendiente', 'Rechazado'],

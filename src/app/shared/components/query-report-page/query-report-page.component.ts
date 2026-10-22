@@ -491,6 +491,7 @@ let siguienteId = 0;
                   filterLabel="Filtros avanzados"
                   columnsLabel="Columnas visibles"
                   ariaLabel="Buscar en el resultado"
+                  [minChars]="configuracion().searchMinChars ?? 0"
                   (valueChange)="buscar($event)"
                   (filter)="abrirFiltrosAvanzados()"
                   (columns)="abrirColumnas()"

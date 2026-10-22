@@ -6424,6 +6424,13 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "descripcion": null
       },
       {
+        "nombre": "minChars",
+        "tipo": "number",
+        "porDefecto": "0",
+        "requerida": false,
+        "descripcion": "Búsqueda en vivo desde N caracteres (RF-07): sale sola tras una pausa breve al teclear y con menos de N se quita. Con 0, solo Enter o la lupa."
+      },
+      {
         "nombre": "moreItems",
         "tipo": "IconDropdownMenuItem[]",
         "porDefecto": "[]",
@@ -10880,6 +10887,13 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "porDefecto": "false",
         "requerida": false,
         "descripcion": "Deshabilita el input."
+      },
+      {
+        "nombre": "minChars",
+        "tipo": "number",
+        "porDefecto": "0",
+        "requerida": false,
+        "descripcion": "Búsqueda en vivo desde N caracteres (RF-07): al llegar a N, la búsqueda sale sola (tras una pausa breve al teclear) y con menos de N se quita. Con 0, que es lo habitual, solo se busca con Enter o la lupa."
       },
       {
         "nombre": "placeholder",

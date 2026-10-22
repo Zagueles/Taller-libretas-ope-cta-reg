@@ -100,6 +100,8 @@ export type DocumentsRecordsConfig = {
   documentTableMinWidthClass: string;
   recordTableMinWidthClass: string;
   recordTrackKey: string;
+  /** Búsqueda en vivo desde N caracteres (RF-07): sin él, solo se busca con Enter o la lupa. */
+  searchMinChars?: number;
   recordHistoryDocumentLabel: string;
   /** Variante del panel "Historial del registro" de la pestaña Registros:
    *  'cuenta' (default, plan de cuentas) o 'asiento' (asiento de ajuste). */

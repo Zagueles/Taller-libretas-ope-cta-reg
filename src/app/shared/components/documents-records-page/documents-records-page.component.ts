@@ -245,6 +245,7 @@ type DocumentsRecordsRoleMode = 'creator' | 'approver' | 'readOnly';
                 <siaf-records-search-toolbar
                   [value]="searchInput"
                   placeholder="Buscar"
+                  [minChars]="effectiveConfig.searchMinChars ?? 0"
                   (valueChange)="onSearchChange($event)"
                   (searchSubmit)="onSearchSubmit($event)"
                 >

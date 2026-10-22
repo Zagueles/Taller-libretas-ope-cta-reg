@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges } from '@angular/core';
 
 import { TextFieldComponent } from '../../ui/text-field/text-field.component';
 
@@ -75,7 +75,7 @@ import { TextFieldComponent } from '../../ui/text-field/text-field.component';
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class RecordsSearchToolbarComponent implements OnChanges {
+export class RecordsSearchToolbarComponent implements OnChanges, OnDestroy {
   ngOnChanges(changes: SimpleChanges): void {
     // Si el padre reescribe `value` (p. ej. quitar la búsqueda desde el chip),
     // lo tecleado pendiente deja de valer: un Enter posterior no debe
@@ -93,6 +93,11 @@ export class RecordsSearchToolbarComponent implements OnChanges {
   @Input() ariaLabel = 'Buscar';
   /** Deshabilita el input. */
   @Input() disabled = false;
+  /**
+   * Búsqueda en vivo desde N caracteres (RF-07): al llegar a N, la búsqueda sale sola (tras una pausa breve al teclear) y con
+   * menos de N se quita. Con 0, que es lo habitual, solo se busca con Enter o la lupa.
+   */
+  @Input() minChars = 0;
 
   /**
    * Emite al confirmar la búsqueda (Enter o clic en la lupa). La búsqueda ya
@@ -109,9 +114,21 @@ export class RecordsSearchToolbarComponent implements OnChanges {
   /** Último texto tecleado; `value` (input) puede ir detrás si el padre no lo re-emite. */
   private lastTyped: string | null = null;
 
+  private temporizador?: ReturnType<typeof setTimeout>;
+  private ultimoEmitido: string | null = null;
+
+  /** Con búsqueda en vivo, el texto de menos de `minChars` caracteres no busca nada. */
+  private efectivo(texto: string): string {
+    return this.minChars > 0 && texto.trim().length < this.minChars ? '' : texto;
+  }
+
+  ngOnDestroy(): void {
+    clearTimeout(this.temporizador);
+  }
+
   onSubmit(event: Event): void {
     event.preventDefault();
-    const texto = this.lastTyped ?? this.value;
+    const texto = this.efectivo(this.lastTyped ?? this.value);
     // Ambos eventos se emiten al confirmar: `searchSubmit` para quien
     // distingue el submit, `valueChange` para los consumidores existentes —
     // que así pasan a filtrar con Enter sin cambiar una línea.
@@ -120,7 +137,7 @@ export class RecordsSearchToolbarComponent implements OnChanges {
   }
 
   onLupa(): void {
-    const texto = this.lastTyped ?? this.value;
+    const texto = this.efectivo(this.lastTyped ?? this.value);
     this.valueChange.emit(texto);
     this.searchSubmit.emit(texto);
   }
@@ -131,5 +148,14 @@ export class RecordsSearchToolbarComponent implements OnChanges {
   /** El siaf-input interno emite al tipear; aquí solo se registra el texto. */
   onTyped(value: string | number | string[]): void {
     this.lastTyped = String(value ?? '');
+    if (this.minChars <= 0) return;
+    clearTimeout(this.temporizador);
+    this.temporizador = setTimeout(() => {
+      const texto = this.efectivo(this.lastTyped ?? '');
+      if (texto === (this.ultimoEmitido ?? this.value)) return;
+      this.ultimoEmitido = texto;
+      this.valueChange.emit(texto);
+      this.searchSubmit.emit(texto);
+    }, 250);
   }
 }
