@@ -42,7 +42,7 @@ export interface DetalleRegistro {
   numeroOperacion: string;
   secciones: DetalleRegistroSeccion[];
   importes: DetalleRegistroCampo[];
-  /** Solo en cuentas en dólares: los mismos cuatro importes convertidos a soles con el tipo de cambio de compra; vacío en soles. */
+  /** Solo en cuentas en dólares: los mismos cuatro importes convertidos a soles: crédito y saldo inicial con el tipo de compra, débito con el de venta; vacío en soles. */
   importesNacional: DetalleRegistroCampo[];
   descripcionDetallada: string;
   /** Registro de un documento rechazado: sin estado de registro y «No conciliado». */
@@ -150,9 +150,9 @@ export function construirDetalleRegistro(m: MovimientoLibretaRegistro, rechazado
     importesNacional: enDolares
       ? [
           { caption: 'Saldo inicial', value: monto(m.saldoInicial * compra) },
-          { caption: 'Débito', value: monto(m.debito * compra) },
+          { caption: 'Débito', value: monto(m.debito * venta) },
           { caption: 'Crédito', value: monto(m.credito * compra) },
-          { caption: 'Saldo final', value: monto(m.saldoFinal * compra) },
+          { caption: 'Saldo final', value: monto(m.saldoInicial * compra + m.credito * compra - m.debito * venta) },
         ]
       : [],
     descripcionDetallada: `Registro de ${tipo.split(' - ')[1]?.toLowerCase() ?? tipo.toLowerCase()}`,

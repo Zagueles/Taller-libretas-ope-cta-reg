@@ -139,15 +139,15 @@ const COLUMNAS: ReportTableColumn[] = [
 
         <siaf-solicitude-form-card title="Información de la cuenta bancaria">
           <div class="grid gap-siaf-lg md:grid-cols-2 lg:grid-cols-3" role="radiogroup" aria-label="Cuenta bancaria del documento">
-            @for (cuenta of cuentas; track cuenta.id) {
+            @for (cuenta of cuentasDelDocumento(); track cuenta.id) {
               <button
                 class="relative flex flex-col gap-siaf-xs rounded-siaf-md border p-siaf-md text-left transition focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sys-color-border-states-focus)]"
                 type="button"
                 role="radio"
-                [attr.aria-checked]="cuentaElegida() === cuenta.id"
-                [class.border-[var(--sys-color-border-states-active)]]="cuentaElegida() === cuenta.id"
-                [class.bg-[var(--sys-color-bg-states-light-selected)]]="cuentaElegida() === cuenta.id"
-                [class.border-[var(--sys-color-border-states-enabled)]]="cuentaElegida() !== cuenta.id"
+                [attr.aria-checked]="cuentaActiva() === cuenta.id"
+                [class.border-[var(--sys-color-border-states-active)]]="cuentaActiva() === cuenta.id"
+                [class.bg-[var(--sys-color-bg-states-light-selected)]]="cuentaActiva() === cuenta.id"
+                [class.border-[var(--sys-color-border-states-enabled)]]="cuentaActiva() !== cuenta.id"
                 (click)="cuentaElegida.set(cuenta.id)"
               >
                 <span class="absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r bg-brand-primary" aria-hidden="true"></span>
@@ -186,14 +186,14 @@ const COLUMNAS: ReportTableColumn[] = [
           <siaf-report-table [columns]="columnasVisibles()" [rows]="filas()" rowKey="sec" [clickableRows]="true" ariaLabel="Registros de operaciones en las libretas del documento" (rowClicked)="abrirRegistro($event)" />
         </siaf-solicitude-form-card>
 
-        @if (d.motivoRechazo) {
-          <siaf-detail-history-tabs [comentario]="{ label: 'Motivo de rechazo', texto: d.motivoRechazo }" [entries]="historialRechazo()" />
+        @if (d.textoError) {
+          <siaf-detail-history-tabs [comentario]="{ label: d.etiquetaError, texto: d.textoError }" [entries]="historialRechazo()" />
         }
 
         <siaf-action-tracker
           [summaryItems]="[
             { label: 'Registrado por', actionBy: 'SIAF RP', date: d.fechaRegistro },
-            { label: 'Procesado por', actionBy: d.motivoRechazo ? 'No asignado aún' : 'SIAF RP', date: d.motivoRechazo ? 'Fecha y hora no registradas' : d.fechaProcesado }
+            { label: 'Procesado por', actionBy: d.textoError ? '' : 'SIAF RP', date: d.textoError ? '' : d.fechaProcesado }
           ]"
         />
       }
@@ -293,6 +293,17 @@ export class RegistroLibretasDocumentoComponent implements OnInit {
     this.filtros.update((actual) => actual.filter((f) => elegidas.has(f.campo)));
   }
   readonly cuentaElegida = signal('mef-dgtp-cut');
+  /** Solo las cuentas con operaciones en el documento: sin movimientos en dólares no se ofrece la cuenta en dólares. */
+  readonly cuentasDelDocumento = computed(() => {
+    const ids = new Set(this.movimientos().map((m) => m.cuentaBancariaId));
+    const delDocumento = this.cuentas.filter((c) => ids.has(c.id));
+    return delDocumento.length ? delDocumento : this.cuentas;
+  });
+  /** La cuenta elegida si el documento la tiene; si no, la primera (la única, por defecto ya seleccionada). */
+  readonly cuentaActiva = computed(() => {
+    const lista = this.cuentasDelDocumento();
+    return lista.some((c) => c.id === this.cuentaElegida()) ? this.cuentaElegida() : lista[0].id;
+  });
   readonly busqueda = signal('');
   readonly preparandoDescarga = signal(false);
   /** El documento con sus movimientos, tal como lo entrega el backend simulado. */
@@ -311,11 +322,14 @@ export class RegistroLibretasDocumentoComponent implements OnInit {
     const detalle = this.detalle();
     const primero = this.movimientos()[0];
     if (!detalle || !primero) return null;
-    const motivoRechazo = detalle.documento.motivoRechazo ?? '';
+    const { codigoError, descripcionError, estado } = detalle.documento;
+    const textoError = codigoError ? `${codigoError} - ${descripcionError}` : '';
     return {
       numero: detalle.documento.numero,
       estado: detalle.documento.estado,
-      motivoRechazo,
+      textoError,
+      // El pendiente es parecido a una observación: su detalle es un comentario de observación, no un motivo de rechazo.
+      etiquetaError: estado === 'Pendiente' ? 'Comentario de observación' : 'Motivo de rechazo',
       fechaRegistro: `${fechaVisible(primero.fecha)}  18:01:00`,
       fechaProcesado: `${fechaVisible(primero.fecha)}  18:02:00`,
       // Operación del documento: la de su primer registro (número y tipo), no un dato fijo.
@@ -324,17 +338,17 @@ export class RegistroLibretasDocumentoComponent implements OnInit {
     };
   });
 
-  /** Historial de un documento rechazado: el rechazo automático con su motivo (pestaña «Historial»). */
+  /** Historial de un documento rechazado o pendiente: el resultado automático con su código de error (pestaña «Historial»). */
   readonly historialRechazo = computed<DetailHistoryEntry[]>(() => {
     const d = this.documento();
     const primero = this.movimientos()[0];
-    if (!d?.motivoRechazo || !primero) return [];
+    if (!d?.textoError || !primero) return [];
     return [
       {
         iteracion: 1,
-        proceso: 'Creación - Rechazado',
+        proceso: `Creación - ${d.estado}`,
         comentario: 'Comentario',
-        descripcion: d.motivoRechazo,
+        descripcion: d.textoError,
         fecha: fechaVisible(primero.fecha),
         hora: '18:02:00',
         rol: 'Automático',
@@ -346,7 +360,7 @@ export class RegistroLibretasDocumentoComponent implements OnInit {
   /** Las filas de la cuenta elegida, sin buscar ni filtrar. */
   private readonly filasCuenta = computed<ReportTableRow[]>(() =>
     this.movimientos()
-      .filter((m) => m.cuentaBancariaId === this.cuentaElegida())
+      .filter((m) => m.cuentaBancariaId === this.cuentaActiva())
       .map((m) => ({
         id: m.id,
         sec: m.sec,

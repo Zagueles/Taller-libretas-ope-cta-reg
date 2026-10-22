@@ -1,6 +1,6 @@
 import type { QueryReportParameters } from '../../../../../shared/types/query-report.types';
 import { cargarWorkbook } from '../../../../../shared/utils/librerias-dinamicas.util';
-import { saldosMNPorMovimiento, saldosPorCuentaRegistro, claveMovimiento } from '../registro-libretas-saldos.util';
+import { saldosMNPorMovimiento, saldosPorCuentaRegistro, claveMovimiento, tipoCambioDeMovimiento } from '../registro-libretas-saldos.util';
 import { CUENTAS_BANCARIAS_INFO, MovimientoLibretaRegistro, nombreBeneficiario, nombreTipoOperacion, TIPO_CAMBIO } from '../../models/registro-libretas.model';
 import { AZUL, BLANCO, BORDES, CELESTE, GRIS, aFecha, relleno } from './estilos-excel.util';
 import { descargar, fechaHoraVisible, fechaVisible } from './formato-exportacion.util';
@@ -42,6 +42,12 @@ const NOTA_RESUMEN =
 
 /** Columnas (1 = A) donde el Resumen coloca NIVEL 1, 2, 3… del agrupado o agregado, como la plantilla (B, E, K). */
 const COLUMNAS_NIVEL = [2, 5, 11, 14, 17, 20, 23];
+
+/** Columnas del documento que el Excel plano trae: ocultas por defecto en la tabla, salen solo si se habilitan. */
+export interface DocumentoExcel {
+  numero: boolean;
+  descripcion: boolean;
+}
 
 /** El agrupado o agregado aplicado en pantalla: cómo se estructura cada «Resultado N» del Excel. */
 export interface AgrupacionExcel {
@@ -96,9 +102,10 @@ const CLAVES_IMPORTE = new Set(['saldoInicial', 'debito', 'credito', 'saldoFinal
 
 const GRIS_SUBTOTAL = 'FFE7E6E6';
 
-/** Los valores que pueden ser nivel (y las columnas), por movimiento. Los importes en moneda nacional son importe × compra. */
+/** Los valores que pueden ser nivel (y las columnas), por movimiento. En moneda nacional el crédito es importe × compra y el débito, importe × venta. */
 function valoresMovimiento(m: MovimientoLibretaRegistro, enDolares: boolean): Record<string, string | number> {
   const compra = enDolares ? TIPO_CAMBIO.compra : 1;
+  const venta = enDolares ? TIPO_CAMBIO.venta : 1;
   return {
     sec: m.sec,
     fecha: fechaHoraVisible(m.fecha),
@@ -121,7 +128,7 @@ function valoresMovimiento(m: MovimientoLibretaRegistro, enDolares: boolean): Re
     credito: m.credito,
     saldoFinal: m.saldoFinal,
     saldoInicialMN: m.saldoInicial * compra,
-    debitoMN: m.debito * compra,
+    debitoMN: m.debito * venta,
     creditoMN: m.credito * compra,
     saldoFinalMN: m.saldoFinal * compra,
     numeroDocumento: m.numeroDocumento,
@@ -182,8 +189,7 @@ function hojaAgrupada(
 
   const primerImporte = Math.min(...['saldoInicial', 'saldoInicialMN'].map(indice).filter((n) => n > 0));
   const colCompra = indice('tipoCambioCompra');
-  const compraGrupo = enDolares ? TIPO_CAMBIO.compra : 1;
-  const mnPorMovimiento = saldosMNPorMovimiento(movimientos, () => compraGrupo);
+  const mnPorMovimiento = saldosMNPorMovimiento(movimientos, tipoCambioDeMovimiento);
   const niveles = agrupacion.niveles;
   let f = filaGrupo + 2;
 
@@ -217,7 +223,7 @@ function hojaAgrupada(
     hoja.getCell(f, 1).numFmt = '@';
     if (conSaldos) {
       // RN-069: una sola vez el saldo de cada cuenta de registro (inicial del primer registro, final del último), sumadas.
-      const saldos = saldosPorCuentaRegistro(filas, () => compraGrupo);
+      const saldos = saldosPorCuentaRegistro(filas, tipoCambioDeMovimiento);
       (['saldoInicial', 'saldoFinal', 'saldoInicialMN', 'saldoFinalMN'] as const).forEach((clave) => {
         const c = indice(clave);
         if (c) hoja.getCell(f, c).value = saldos[clave];
@@ -287,8 +293,9 @@ export async function exportarConsultaExcel(
   parametros: QueryReportParameters,
   cuentas: CuentaConsultaExcel[],
   agrupacion?: AgrupacionExcel,
+  documento: DocumentoExcel = { numero: false, descripcion: false },
 ): Promise<void> {
-  const libro = await construirLibroConsulta(parametros, cuentas, agrupacion);
+  const libro = await construirLibroConsulta(parametros, cuentas, agrupacion, documento);
   const nombreArchivo = `registro-libretas-cuentas-registro-${new Date().toISOString().slice(0, 10)}.xlsx`;
   const buffer = await libro.xlsx.writeBuffer();
   descargar(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), nombreArchivo);
@@ -299,6 +306,7 @@ export async function construirLibroConsulta(
   parametros: QueryReportParameters,
   cuentas: CuentaConsultaExcel[],
   agrupacion?: AgrupacionExcel,
+  documento: DocumentoExcel = { numero: false, descripcion: false },
 ): Promise<import('exceljs').Workbook> {
   const Workbook = await cargarWorkbook();
   const libro = new Workbook();
@@ -435,9 +443,9 @@ export async function construirLibroConsulta(
       pageSetup: { orientation: 'landscape' },
       views: [{ zoomScale: 75, zoomScaleNormal: 75 }],
     });
-    if (!agrupacion) (enDolares ? ANCHOS_USD : ANCHOS_PEN).forEach((ancho, i) => (hoja.getColumn(i + 1).width = ancho));
+    if (!agrupacion) (enDolares ? ANCHOS_USD : ANCHOS_PEN).slice(0, enDolares ? 22 : 15).concat(documento.numero ? [enDolares ? 16.5 : 16] : [], documento.descripcion ? [49] : []).forEach((ancho, i) => (hoja.getColumn(i + 1).width = ancho));
 
-    const saldosCuenta = saldos ?? saldosPorCuentaRegistro(movimientos);
+    const saldosCuenta = saldos ?? saldosPorCuentaRegistro(movimientos, tipoCambioDeMovimiento);
     // Cabecera de la cuenta: «Cta. Bancaria» (gris), saldo inicial y saldo final (B:D combinadas).
     [2, 3, 4].forEach((f) => (hoja.getRow(f).height = 36));
     const cabecera: [number, string, string | number, boolean][] = [
@@ -473,7 +481,9 @@ export async function construirLibroConsulta(
       ...(enDolares ? [{ grupo: 'TIPO DE CAMBIO', subs: ['TIPO DE COTIZACIÓN', 'COMPRA', 'VENTA'] }] : []),
       { grupo: 'IMPORTE EN MONEDA DE LA CUENTA', subs: ['SALDO INICIAL', 'DÉBITO', 'CRÉDITO', 'SALDO FINAL'] },
       ...(enDolares ? [{ grupo: 'IMPORTE EN MONEDA NACIONAL', subs: ['SALDO INICIAL', 'DÉBITO', 'CRÉDITO', 'SALDO FINAL'] }] : []),
-      { grupo: 'DOCUMENTO', subs: ['NÚMERO', 'DESCRIPCIÓN'] },
+      ...(documento.numero || documento.descripcion
+        ? [{ grupo: 'DOCUMENTO', subs: [...(documento.numero ? ['NÚMERO'] : []), ...(documento.descripcion ? ['DESCRIPCIÓN'] : [])] }]
+        : []),
     ];
 
     const filaGrupo = 6;
@@ -499,12 +509,13 @@ export async function construirLibroConsulta(
     const primerImporte = enDolares ? 15 : 12;
     const importes = new Set(enDolares ? [15, 16, 17, 18, 19, 20, 21, 22] : [12, 13, 14, 15]);
     const columnaDocumento = enDolares ? 23 : 16;
+    const columnaDescripcion = columnaDocumento + (documento.numero ? 1 : 0);
     const centradas = new Set([1, 3]);
     const textoPlano = new Set([1]); // formato «@»: secuencia
-    const totalColumnas = columnaDocumento + 1;
+    const totalColumnas = columnaDocumento - 1 + Number(documento.numero) + Number(documento.descripcion);
     const letra = (c: number): string => String.fromCharCode(64 + c);
 
-    const mnPlano = saldosMNPorMovimiento(movimientos, () => (enDolares ? TIPO_CAMBIO.compra : 1));
+    const mnPlano = saldosMNPorMovimiento(movimientos, tipoCambioDeMovimiento);
     movimientos.forEach((m, i) => {
       const f = filaGrupo + 2 + i;
       hoja.getRow(f).height = 40.5;
@@ -529,16 +540,17 @@ export async function construirLibroConsulta(
       fijos.forEach((valor, k) => (hoja.getCell(f, k + 1).value = valor));
       let siguiente = fijos.length + 1;
       if (enDolares) {
-        // Moneda nacional = importe de la cuenta × tipo de cambio de compra (fórmula viva, como la plantilla).
+        // Moneda nacional (RN-032/033): crédito = importe × compra (col. M) y débito = importe × venta (col. N), fórmulas vivas
+        // como la plantilla; los saldos van encadenados por libreta (RN-044/045), así que salen como valor.
         const encadenado = mnPlano.get(claveMovimiento(m))!;
-        [m.saldoInicial, m.debito, m.credito, m.saldoFinal].forEach((importe, k) => {
-          const resultado = k === 0 ? encadenado.saldoInicialMN : k === 3 ? encadenado.saldoFinalMN : importe * TIPO_CAMBIO.compra;
-          hoja.getCell(f, siguiente + k).value = { formula: `${letra(primerImporte + k)}${f}*M${f}`, result: resultado };
-        });
+        hoja.getCell(f, siguiente).value = encadenado.saldoInicialMN;
+        hoja.getCell(f, siguiente + 1).value = { formula: `${letra(primerImporte + 1)}${f}*N${f}`, result: m.debito * TIPO_CAMBIO.venta };
+        hoja.getCell(f, siguiente + 2).value = { formula: `${letra(primerImporte + 2)}${f}*M${f}`, result: m.credito * TIPO_CAMBIO.compra };
+        hoja.getCell(f, siguiente + 3).value = encadenado.saldoFinalMN;
         siguiente += 4;
       }
-      hoja.getCell(f, siguiente).value = m.numeroDocumento;
-      hoja.getCell(f, siguiente + 1).value = m.descripcionDocumento;
+      if (documento.numero) hoja.getCell(f, siguiente++).value = m.numeroDocumento;
+      if (documento.descripcion) hoja.getCell(f, siguiente).value = m.descripcionDocumento;
 
       for (let c = 1; c <= totalColumnas; c++) {
         const celda = hoja.getCell(f, c);
@@ -547,7 +559,7 @@ export async function construirLibroConsulta(
         celda.font = { name: 'Calibri', size: 11 };
         const esImporte = importes.has(c);
         celda.alignment = {
-          horizontal: centradas.has(c) ? 'center' : esImporte || c === columnaDocumento ? 'right' : c === 2 || c === 4 || c === 5 || (c >= 9 && c <= 11) || c === columnaDocumento + 1 ? 'left' : undefined,
+          horizontal: centradas.has(c) ? 'center' : esImporte || (documento.numero && c === columnaDocumento) ? 'right' : c === 2 || c === 4 || c === 5 || (c >= 9 && c <= 11) || (documento.descripcion && c === columnaDescripcion) ? 'left' : undefined,
           vertical: 'middle',
           wrapText: true,
         };

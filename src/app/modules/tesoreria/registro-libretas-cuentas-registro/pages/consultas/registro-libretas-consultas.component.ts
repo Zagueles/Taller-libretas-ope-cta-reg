@@ -31,13 +31,13 @@ import {
 
 /** Columnas que solo interesan en la cuenta en dólares (tipo de cambio e importe en moneda nacional): visibles por
  *  defecto solo en esa pestaña (Figma nodo 6094:125648); en soles quedan disponibles en «Columnas visibles». */
-const COLUMNAS_MONEDA_EXTRANJERA = new Set(['tipoCotizacion', 'tipoCambioCompra', 'tipoCambioVenta', 'saldoInicialMN', 'debitoMN', 'creditoMN', 'saldoFinalMN']);
+const COLUMNAS_MONEDA_EXTRANJERA = new Set(['tipoCotizacion', 'tipoCambioCompra', 'tipoCambioVenta', 'saldoInicialMN', 'debitoMN', 'creditoMN', 'saldoDisponibleMN', 'saldoFinalMN']);
 
 /** Prefijo de los montos en los KPI de la vista de gráficas, según la moneda de la cuenta bancaria de la pestaña activa. */
 const SIMBOLO_MONEDA: Record<'PEN' | 'USD', string> = { PEN: 'S/ ', USD: 'US$ ' };
 
 import { campoDetalleRegistro, construirDetalleRegistro } from '../../utils/registro-libretas-detalle.util';
-import { saldosPorCuentaRegistro, TIPO_OPERACION_SALDO_INICIAL } from '../../utils/registro-libretas-saldos.util';
+import { claveMovimiento, importesMN, saldosMNPorMovimiento, saldosPorCuentaRegistro, tipoCambioDeMovimiento, TIPO_OPERACION_SALDO_INICIAL } from '../../utils/registro-libretas-saldos.util';
 import { exportarConsultaExcel } from '../../utils/exportacion/excel-consulta.util';
 
 /** Beneficiario y Cuenta de registro van asociados: elegir cualquiera como nivel oculta los dos grupos de cabecera. */
@@ -68,7 +68,7 @@ function detallesDeCuentasRegistro(cuentas: CuentaRegistroCatalogo[]): { cuentaR
   };
 }
 
-const TITULO = 'Consulta y reporte de operaciones en las libretas de las cuentas de registro';
+const TITULO = 'Consultas y reportes de operaciones en las libretas de las cuentas de registro';
 
 const formatoMonto = new Intl.NumberFormat('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const monto = (valor: number): string => formatoMonto.format(valor);
@@ -113,6 +113,8 @@ export class RegistroLibretasConsultasComponent {
   private readonly location = inject(Location);
 
   private filasPorCuenta = new Map<string, MovimientoLibretaRegistro[]>();
+  /** Saldo inicial y final en moneda nacional de cada movimiento, encadenados por libreta (RN-044/045). */
+  private saldosMN = new Map<string, { saldoInicialMN: number; saldoFinalMN: number }>();
   /** Saldo inicial y final de cada cuenta bancaria (el total de su libreta, no el del período consultado). */
   private saldosCuentas = new Map<string, SaldosCuentaBancaria>();
 
@@ -184,7 +186,7 @@ export class RegistroLibretasConsultasComponent {
           { column: 'saldoInicialMN', openingColumn: 'creditoSaldoInicialMN' },
         ],
         endColumns: ['saldoFinal', 'saldoFinalMN'],
-      }, hiddenColumns: ['sec', 'fecha', 'tipoOperacion', 'entidad', 'unidadEjecutora', 'grupo', 'numeroDocumento', 'descripcionDocumento', 'fechaRegistro', 'numeroOperacion', 'tipoBeneficiario', 'entidadAdministradoraCodigo', 'entidadAdministradoraSigla', 'movimientoInternoCodigo', 'movimientoInternoDescripcion', 'movimientoInternoSigla', 'movimientoExternoCodigo', 'movimientoExternoDescripcion', 'documentoCutNumero', 'documentoCutArchivo', 'documentoCutSigla', 'descripcionDetallada'] },
+      }, hiddenColumns: ['saldoDisponible', 'saldoDisponibleMN', 'sec', 'fecha', 'tipoOperacion', 'entidad', 'unidadEjecutora', 'grupo', 'numeroDocumento', 'descripcionDocumento', 'fechaRegistro', 'numeroOperacion', 'tipoBeneficiario', 'entidadAdministradoraCodigo', 'entidadAdministradoraSigla', 'movimientoInternoCodigo', 'movimientoInternoDescripcion', 'movimientoInternoSigla', 'movimientoExternoCodigo', 'movimientoExternoDescripcion', 'documentoCutNumero', 'documentoCutArchivo', 'documentoCutSigla', 'descripcionDetallada'] },
     columns: [
       { key: 'sec', label: 'Sec.', panelLabel: 'Secuencia', group: 'Acreditación', width: 90 },
       { key: 'fecha', label: 'Fecha', group: 'Acreditación', width: 130 },
@@ -204,9 +206,11 @@ export class RegistroLibretasConsultasComponent {
       { key: 'saldoInicial', label: 'Saldo inicial', group: 'Imp. m. cuenta', align: 'right', width: 120 },
       { key: 'debito', label: 'Débito', group: 'Imp. m. cuenta', align: 'right', width: 110 },
       { key: 'credito', label: 'Crédito', group: 'Imp. m. cuenta', align: 'right', width: 110 },
+      { key: 'saldoDisponible', label: 'Saldo disponible', group: 'Imp. m. cuenta', hiddenByDefault: true, align: 'right', width: 140 },
       { key: 'saldoInicialMN', label: 'Saldo inicial', group: 'Imp. m. nacional', hiddenByDefault: true, align: 'right', width: 130 },
       { key: 'debitoMN', label: 'Débito', group: 'Imp. m. nacional', hiddenByDefault: true, align: 'right', width: 120 },
       { key: 'creditoMN', label: 'Crédito', group: 'Imp. m. nacional', hiddenByDefault: true, align: 'right', width: 130 },
+      { key: 'saldoDisponibleMN', label: 'Saldo disponible', group: 'Imp. m. nacional', hiddenByDefault: true, align: 'right', width: 140 },
       { key: 'saldoFinalMN', label: 'Saldo final', group: 'Imp. m. nacional', hiddenByDefault: true, align: 'right', width: 140 },
       // «Más columnas» del detalle del registro (las mismas de la pestaña Registros): ocultas hasta que se activen.
       { key: 'fechaRegistro', label: 'Fecha de registro', hiddenByDefault: true, width: 170 },
@@ -222,6 +226,7 @@ export class RegistroLibretasConsultasComponent {
       { key: 'documentoCutArchivo', label: 'Archivo', group: 'Documento CUT', hiddenByDefault: true, width: 130 },
       { key: 'documentoCutSigla', label: 'Sigla', group: 'Documento CUT', hiddenByDefault: true, width: 100 },
       { key: 'descripcionDetallada', label: 'Descripción detallada', hiddenByDefault: true, width: 260 },
+      { key: 'estadoConciliacion', label: 'Estado de conciliación', hiddenByDefault: true, width: 170 },
       { key: 'numeroDocumento', label: 'Número', group: 'Documento', hiddenByDefault: true, width: 150, kind: 'link' },
       { key: 'descripcionDocumento', label: 'Descripción', group: 'Documento', hiddenByDefault: true, width: 300 },
       { key: 'saldoFinal', label: 'Saldo final', group: 'Imp. m. cuenta', align: 'right', width: 135, fixed: true },
@@ -292,6 +297,7 @@ export class RegistroLibretasConsultasComponent {
         const idsConPestana = cuentasSeleccionadas.length ? cuentasSeleccionadas : [...new Set(filtrados.map((m) => m.cuentaBancariaId))];
         const tabs: TabItem[] = idsConPestana.map((id) => ({ id, label: nombreCuentaBancaria(id) }));
 
+        this.saldosMN = saldosMNPorMovimiento(filtrados, tipoCambioDeMovimiento);
         this.filasPorCuenta = new Map(idsConPestana.map((id) => [id, filtrados.filter((m) => m.cuentaBancariaId === id)]));
         this.config.update((actual) => ({ ...actual, tabs }));
         this.mostrarPestana(idsConPestana[0] ?? '');
@@ -351,14 +357,25 @@ export class RegistroLibretasConsultasComponent {
       .map(([id, movimientos]) => ({ id, movimientos: movimientos.filter((m) => permitidas.has(m.id)), saldos: this.saldosCuentas.get(id) }))
       .filter((cuenta) => cuenta.movimientos.length);
     const { resultType, levels } = evento.advanced;
+    // Número y descripción del documento van ocultos por defecto en la tabla: el Excel los trae solo si se habilitan.
+    const documento = {
+      numero: evento.visibleColumns.includes('numeroDocumento'),
+      descripcion: evento.visibleColumns.includes('descripcionDocumento'),
+    };
+    const sinDocumento = [...(documento.numero ? [] : ['numeroDocumento']), ...(documento.descripcion ? [] : ['descripcionDocumento'])];
     const agrupacion = levels.length
-      ? { tipo: resultType, niveles: evento.levels, columnasOcultas: evento.hiddenColumns, gruposOcultos: evento.hiddenGroups }
+      ? {
+          tipo: resultType,
+          niveles: evento.levels,
+          columnasOcultas: [...new Set([...evento.hiddenColumns, ...sinDocumento])],
+          gruposOcultos: evento.hiddenGroups,
+        }
       : undefined;
     // Armar el Excel es casi instantáneo: se le da un mínimo de tiempo visible al snackbar para que alcance a leerse.
     this.preparandoExportacion.set(true);
     try {
       const minimoVisible = new Promise((resuelve) => setTimeout(resuelve, 1200));
-      await Promise.all([exportarConsultaExcel(evento.parameters, cuentas, agrupacion), minimoVisible]);
+      await Promise.all([exportarConsultaExcel(evento.parameters, cuentas, agrupacion, documento), minimoVisible]);
     } finally {
       this.preparandoExportacion.set(false);
     }
@@ -378,10 +395,13 @@ export class RegistroLibretasConsultasComponent {
     const enDolares = CUENTAS_BANCARIAS_INFO.find((c) => c.id === m.cuentaBancariaId)?.moneda === 'USD';
     const tipoCambioCompra = enDolares ? TIPO_CAMBIO.compra : 1;
     const tipoCambioVenta = enDolares ? TIPO_CAMBIO.venta : 1;
-    const tipoCambio = tipoCambioVenta;
+    const mn = importesMN(m);
+    const saldosMN = this.saldosMN.get(claveMovimiento(m));
     return {
       id: m.id,
       sec: m.sec,
+      // La consulta solo trae movimientos de la libreta: los de documentos rechazados o pendientes no están en ella.
+      estadoConciliacion: 'Conciliado',
       fecha: fechaHoraVisible(m.fecha),
       /** Solo para «Filtros avanzados» (Fecha de acreditación): comparable como aaaa-mm-dd, a diferencia de `fecha`, que ya viene formateada para mostrarse. */
       fechaAcreditacion: m.fecha.slice(0, 10),
@@ -400,9 +420,11 @@ export class RegistroLibretasConsultasComponent {
       saldoInicial: monto(m.saldoInicial),
       debito: monto(m.debito),
       credito: monto(m.credito),
+      /** Saldo disponible del movimiento: crédito menos débito (se deriva, no se guarda). */
+      saldoDisponible: monto(m.credito - m.debito),
       /** Solo para los totales: el crédito del movimiento interno «Saldo inicial» forma parte del saldo inicial. */
       creditoSaldoInicial: monto(m.tipoOperacionCodigo === TIPO_OPERACION_SALDO_INICIAL ? m.credito : 0),
-      creditoSaldoInicialMN: monto(m.tipoOperacionCodigo === TIPO_OPERACION_SALDO_INICIAL ? m.credito * tipoCambio : 0),
+      creditoSaldoInicialMN: monto(m.tipoOperacionCodigo === TIPO_OPERACION_SALDO_INICIAL ? m.credito * tipoCambioCompra : 0),
       fechaRegistro: construirDetalleRegistro(m).fechaRegistro,
       numeroOperacion: construirDetalleRegistro(m).numeroOperacion,
       tipoBeneficiario: campoDetalleRegistro(m, 'Beneficiario', 'Tipo'),
@@ -424,10 +446,12 @@ export class RegistroLibretasConsultasComponent {
       tipoCotizacion: '1. Compra / Venta',
       tipoCambioCompra: tipoCambioCompra.toFixed(2),
       tipoCambioVenta: tipoCambioVenta.toFixed(2),
-      saldoInicialMN: monto(m.saldoInicial * tipoCambio),
-      debitoMN: monto(m.debito * tipoCambio),
-      creditoMN: monto(m.credito * tipoCambio),
-      saldoFinalMN: monto(m.saldoFinal * tipoCambio),
+      // Moneda nacional (RN-032/033): crédito a tipo de compra, débito a tipo de venta; los saldos van encadenados.
+      saldoInicialMN: monto(saldosMN?.saldoInicialMN ?? m.saldoInicial * tipoCambioCompra),
+      debitoMN: monto(mn.debito),
+      creditoMN: monto(mn.credito),
+      saldoDisponibleMN: monto(mn.disponible),
+      saldoFinalMN: monto(saldosMN?.saldoFinalMN ?? m.saldoFinal * tipoCambioCompra),
     };
   }
 }

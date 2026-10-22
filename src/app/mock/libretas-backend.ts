@@ -9,7 +9,7 @@ import type {
   SaldosCuentaBancaria,
 } from '../modules/tesoreria/registro-libretas-cuentas-registro/models/registro-libretas.model';
 import { saldosPorCuentaRegistro } from '../modules/tesoreria/registro-libretas-cuentas-registro/utils/registro-libretas-saldos.util';
-import { DOCUMENTOS_RECHAZADOS, MOVIMIENTOS_LIBRETA_REGISTRO, MOVIMIENTOS_RECHAZADOS } from './libretas-seed';
+import { DOCUMENTOS_NO_PROCESADOS, DocumentoNoProcesado, MOVIMIENTOS_LIBRETA_REGISTRO, MOVIMIENTOS_RECHAZADOS } from './libretas-seed';
 
 /**
  * Reglas del backend simulado de «Registro de operaciones en las libretas de las cuentas de registro»: funciones puras
@@ -22,14 +22,14 @@ export interface DatosLibretas {
   /** Los movimientos que traían los documentos rechazados: no están en la libreta y solo se ven en su documento. */
   rechazados: MovimientoLibretaRegistro[];
   /** Motivo del rechazo de cada documento rechazado, por número. */
-  motivosRechazo: Record<string, string>;
+  noProcesados: Record<string, DocumentoNoProcesado>;
 }
 
 export function datosLibretasIniciales(): DatosLibretas {
   return {
     movimientos: MOVIMIENTOS_LIBRETA_REGISTRO.map((m) => ({ ...m })),
     rechazados: MOVIMIENTOS_RECHAZADOS.map((m) => ({ ...m })),
-    motivosRechazo: { ...DOCUMENTOS_RECHAZADOS },
+    noProcesados: { ...DOCUMENTOS_NO_PROCESADOS },
   };
 }
 
@@ -56,9 +56,16 @@ function todosLosMovimientos(libretas: DatosLibretas): MovimientoLibretaRegistro
 }
 
 function documentoDe(libretas: DatosLibretas, m: MovimientoLibretaRegistro): DocumentoLibreta {
-  const motivo = libretas.motivosRechazo[m.numeroDocumento] ?? null;
-  const estado: EstadoDocumentoLibreta = motivo ? 'Rechazado' : 'Procesado';
-  return { numero: m.numeroDocumento, documentoId: m.documentoId, fecha: m.fecha, estado, motivoRechazo: motivo };
+  const error = libretas.noProcesados[m.numeroDocumento];
+  const estado: EstadoDocumentoLibreta = error?.estado ?? 'Procesado';
+  return {
+    numero: m.numeroDocumento,
+    documentoId: m.documentoId,
+    fecha: m.fecha,
+    estado,
+    codigoError: error?.codigoError ?? null,
+    descripcionError: error?.descripcionError ?? null,
+  };
 }
 
 /** Un documento por número que los movimientos referencian, ordenados por número. Filtra por estado y por texto. */

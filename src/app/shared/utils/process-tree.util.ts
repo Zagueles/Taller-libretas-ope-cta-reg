@@ -115,7 +115,7 @@ export const DEFAULT_PROCESS_TREE: ProcessMenuNode[] = [
                   },
                   {
                     id: 'registro-libretas-cuentas-registro-consultas',
-                    label: 'Consulta y reporte de operaciones en las libretas de las cuentas de registro',
+                    label: 'Consultas y reportes de operaciones en las libretas de las cuentas de registro',
                     moduleRoute: '/procesos/registro-libretas-cuentas-registro/consultas',
                   },
                 ],

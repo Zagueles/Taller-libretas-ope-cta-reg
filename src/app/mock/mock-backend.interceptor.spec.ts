@@ -120,7 +120,7 @@ describe('mockBackendInterceptor', () => {
     esperar(http.post(`${API}/solicitudes/${id}/cuenta-bancaria`, CUENTA, { headers: ana }));
     esperar(http.post(`${API}/solicitudes/${id}/sustentos`, archivo(), { headers: ana }));
     const elaborada = esperar(http.patch<{ numero: string }>(`${API}/solicitudes/${id}/estado`, { estadoNuevo: 'ELABORADO' }, { headers: ana }));
-    expect(elaborada.valor?.numero).toMatch(/^PCB-SRCB-00013-\d{4}-MEF-OGA$/);
+    expect(elaborada.valor?.numero).toMatch(/^PCB-SRCB-00013-\d{4}-MEF-DGTP$/);
 
     // El creador no puede aprobar.
     expect(esperar(http.patch(`${API}/solicitudes/${id}/estado`, { estadoNuevo: 'APROBADO' }, { headers: ana })).error?.status).toBe(409);
@@ -240,10 +240,12 @@ describe('mockBackendInterceptor', () => {
 
     it('lista los documentos (con filtro de estado) y entrega el detalle de uno, rechazado incluido', fakeAsync(() => {
       const rechazados = esperar(http.get<DocumentoLibreta[]>(`${API}/libretas/documentos?estado=Rechazado`));
-      expect(rechazados.valor!.map((d) => d.numero)).toEqual(['000016-2026', '000017-2026', '000018-2026']);
+      expect(rechazados.valor!.map((d) => d.numero)).toEqual(['000017-2026']);
+      const pendientes = esperar(http.get<DocumentoLibreta[]>(`${API}/libretas/documentos?estado=Pendiente`));
+      expect(pendientes.valor!.map((d) => d.numero)).toEqual(['000016-2026', '000018-2026']);
 
       const detalle = esperar(http.get<DetalleDocumentoLibreta>(`${API}/libretas/documentos/000016-2026`));
-      expect(detalle.valor?.documento.motivoRechazo).toContain('validaciones');
+      expect(detalle.valor?.documento.codigoError).toBe('P-001');
       expect(detalle.valor?.movimientos.length).toBe(2);
 
       expect(esperar(http.get(`${API}/libretas/documentos/no-existe`)).error?.status).toBe(404);

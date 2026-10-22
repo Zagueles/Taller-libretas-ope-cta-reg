@@ -42,7 +42,7 @@ verificación es `123456`.
 2. **Procesos → Gestión de tesorería → Registro de cuentas bancarias → Documentos y registros**. La pestaña Documentos
    es la bandeja; Registros, las cuentas ya aprobadas (con el historial de la solicitud que las creó).
 3. **Crear documento → Solicitud de Registro de Cuenta Bancaria**: llenar el formulario, adjuntar un PDF de sustento
-   y **Grabar**. La solicitud recibe su número (`PCB-SRCB-00013-2026-MEF-OGA`) y queda Elaborada; luego **Verificar**.
+   y **Grabar**. La solicitud recibe su número (`PCB-SRCB-00013-2026-MEF-DGTP`) y queda Elaborada; luego **Verificar**.
 4. **Cambiar de perfil** a Aprobador desde el menú del usuario: tiene la notificación «Solicitud por aprobar». Abrir la solicitud y
    **Aprobar** (la cuenta aparece en Registros con el código `CB-0009`), **Observar** o **Rechazar** (piden comentario).
 5. Volver al perfil Creador: le llega el aviso. Una solicitud observada se corrige y se vuelve a verificar, pero ya no

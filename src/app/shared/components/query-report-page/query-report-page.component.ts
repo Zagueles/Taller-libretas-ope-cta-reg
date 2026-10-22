@@ -76,6 +76,8 @@ export interface QueryReportExportEvent {
   hiddenColumns: string[];
   /** Grupos de cabecera que la tabla oculta con los niveles aplicados (Beneficiario y Cuenta de registro, por ejemplo). */
   hiddenGroups: string[];
+  /** Claves de las columnas elegidas en «Columnas visibles»: el archivo puede omitir las que la tabla no muestra. */
+  visibleColumns: string[];
   /** Aplica a cualquier lista de filas lo mismo que la tabla (condiciones, filtros rápidos y búsqueda): para exportar las cuentas de otras pestañas. */
   filterRows: (rows: QueryReportRow[]) => QueryReportRow[];
 }
@@ -1082,6 +1084,7 @@ export class QueryReportPageComponent {
       levels: this.aNivelesTabla(niveles),
       hiddenColumns,
       hiddenGroups: gruposOcultos,
+      visibleColumns: [...this.columnasActivas()],
       filterRows: (filas) => this.aplicarFiltros(filas),
     });
   }

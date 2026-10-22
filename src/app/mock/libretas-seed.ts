@@ -146,11 +146,24 @@ export const MOVIMIENTOS_LIBRETA_REGISTRO: MovimientoLibretaRegistro[] = (() => 
   return todos;
 })();
 
-/** Motivo de rechazo de cada documento que el sistema rechazó por traer datos incorrectos (no llegan a la libreta). */
-export const DOCUMENTOS_RECHAZADOS: Record<string, string> = {
-  '000016-2026': 'El documento no cumple con las validaciones del procedimiento.',
-  '000017-2026': 'El saldo final de los registros no coincide con el saldo inicial más abonos y menos cargos.',
-  '000018-2026': 'El débito supera el saldo disponible de la cuenta de registro.',
+/** Códigos de error genéricos (de momento no hay tabla paramétrica): E- para los rechazados y P- para los pendientes. */
+export const ERRORES_GENERICOS = {
+  duplicado: { codigoError: 'E-001', descripcionError: 'El documento está duplicado: ya existe uno con las mismas operaciones.' },
+  saldoInsuficiente: { codigoError: 'P-001', descripcionError: 'El saldo de la cuenta de registro es insuficiente para aplicar el débito.' },
+} as const;
+
+/** Un documento que el sistema no llegó a procesar: su estado y el código de error con el que quedó. */
+export interface DocumentoNoProcesado {
+  estado: 'Rechazado' | 'Pendiente';
+  codigoError: string;
+  descripcionError: string;
+}
+
+/** Documentos rechazados (duplicidad) o pendientes (saldo insuficiente) por número: no llegan a la libreta. */
+export const DOCUMENTOS_NO_PROCESADOS: Record<string, DocumentoNoProcesado> = {
+  '000016-2026': { estado: 'Pendiente', ...ERRORES_GENERICOS.saldoInsuficiente },
+  '000017-2026': { estado: 'Rechazado', ...ERRORES_GENERICOS.duplicado },
+  '000018-2026': { estado: 'Pendiente', ...ERRORES_GENERICOS.saldoInsuficiente },
 };
 
 const incorrecto = (
@@ -181,9 +194,9 @@ const incorrecto = (
  * vista del propio documento y en su descarga.
  */
 export const MOVIMIENTOS_RECHAZADOS: MovimientoLibretaRegistro[] = [
-  incorrecto('000056', '2026-07-15T16:20:00', 'mef-dgtp-cut', '000360', '2', '000016-2026', { saldoInicial: 999_999, debito: 0, credito: 8_000, saldoFinal: 7_500 }),
+  incorrecto('000056', '2026-07-15T16:20:00', 'mef-dgtp-cut', '000360', '2', '000016-2026', { saldoInicial: 500, debito: 0, credito: 8_000, saldoFinal: 8_500 }),
   incorrecto('000057', '2026-07-15T16:20:00', 'mef-dgtp-cut', '000193', '3', '000016-2026', { saldoInicial: 10_000, debito: 90_000, credito: 0, saldoFinal: -80_000 }),
-  incorrecto('000058', '2026-08-27T11:45:00', 'mef-dgtp', '000009', '2', '000017-2026', { saldoInicial: 3_630_000, debito: 0, credito: 150_000, saldoFinal: 3_700_000 }),
-  incorrecto('000059', '2026-08-27T11:45:00', 'mef-dgtp-cut', '000120', '2', '000017-2026', { saldoInicial: 46_000, debito: 0, credito: 12_000, saldoFinal: 50_000 }),
+  incorrecto('000058', '2026-08-27T11:45:00', 'mef-dgtp', '000009', '2', '000017-2026', { saldoInicial: 3_630_000, debito: 0, credito: 150_000, saldoFinal: 3_780_000 }),
+  incorrecto('000059', '2026-08-27T11:45:00', 'mef-dgtp-cut', '000120', '2', '000017-2026', { saldoInicial: 46_000, debito: 0, credito: 12_000, saldoFinal: 58_000 }),
   incorrecto('000060', '2026-09-22T09:30:00', 'mef-dgtp-cut', '000366', '3', '000018-2026', { saldoInicial: 19_553, debito: 500_000, credito: 0, saldoFinal: -480_447 }),
 ];

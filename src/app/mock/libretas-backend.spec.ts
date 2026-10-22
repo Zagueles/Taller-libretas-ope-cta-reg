@@ -53,20 +53,26 @@ describe('libretas-backend', () => {
       const numeros = documentos.map((d) => d.numero);
       expect(numeros).toEqual([...new Set(numeros)].sort());
 
-      const rechazado = documentos.find((d) => d.numero === '000016-2026')!;
+      const pendiente = documentos.find((d) => d.numero === '000016-2026')!;
+      expect(pendiente.estado).toBe('Pendiente');
+      expect(pendiente.codigoError).toBe('P-001');
+      expect(pendiente.descripcionError).toContain('saldo');
+      const rechazado = documentos.find((d) => d.numero === '000017-2026')!;
       expect(rechazado.estado).toBe('Rechazado');
-      expect(rechazado.motivoRechazo).toContain('validaciones');
+      expect(rechazado.codigoError).toBe('E-001');
+      expect(documentos.find((d) => d.numero === '000011-2026')!.codigoError).toBeNull();
       expect(documentos.find((d) => d.numero === '000011-2026')!.estado).toBe('Procesado');
     });
 
     it('filtra por estado y por texto', () => {
-      expect(listarDocumentos(libretas, { estado: 'Rechazado' }).map((d) => d.numero)).toEqual(['000016-2026', '000017-2026', '000018-2026']);
+      expect(listarDocumentos(libretas, { estado: 'Rechazado' }).map((d) => d.numero)).toEqual(['000017-2026']);
+      expect(listarDocumentos(libretas, { estado: 'Pendiente' }).map((d) => d.numero)).toEqual(['000016-2026', '000018-2026']);
       expect(listarDocumentos(libretas, { search: '000011' }).map((d) => d.numero)).toEqual(['000011-2026']);
     });
 
     it('el detalle de un documento rechazado trae los movimientos que traía; uno que no existe es null', () => {
       const detalle = detalleDocumento(libretas, '000016-2026')!;
-      expect(detalle.documento.estado).toBe('Rechazado');
+      expect(detalle.documento.estado).toBe('Pendiente');
       expect(detalle.movimientos.length).toBe(2);
       expect(detalleDocumento(libretas, 'inexistente')).toBeNull();
     });
@@ -76,7 +82,7 @@ describe('libretas-backend', () => {
     it('marca como rechazado el movimiento de un documento rechazado y devuelve su documento', () => {
       const rechazado = detalleMovimiento(libretas, libretas.rechazados[0].sec)!;
       expect(rechazado.rechazado).toBeTrue();
-      expect(rechazado.documento.estado).toBe('Rechazado');
+      expect(rechazado.documento.estado).toBe('Pendiente');
 
       const normal = detalleMovimiento(libretas, libretas.movimientos[0].sec)!;
       expect(normal.rechazado).toBeFalse();

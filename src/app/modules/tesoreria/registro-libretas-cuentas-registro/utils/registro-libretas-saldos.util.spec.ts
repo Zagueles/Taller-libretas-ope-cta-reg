@@ -1,6 +1,6 @@
 import { datosLibretasIniciales } from '../../../../mock/libretas-backend';
 import { MovimientoLibretaRegistro } from '../models/registro-libretas.model';
-import { saldosMNPorMovimiento, saldosPorCuentaRegistro } from './registro-libretas-saldos.util';
+import { claveMovimiento, importesMN, saldosMNPorMovimiento, saldosPorCuentaRegistro } from './registro-libretas-saldos.util';
 
 /** Reglas de saldos del Anexo 14 (RN-036 a RN-047 y RN-069) sobre las libretas de ejemplo y sobre casos armados. */
 describe('registro-libretas-saldos', () => {
@@ -98,6 +98,14 @@ describe('registro-libretas-saldos', () => {
       expect(mn.get('cb|A-000001')).toEqual({ saldoInicialMN: 300, saldoFinalMN: 330 });
       expect(mn.get('cb|A-000002')).toEqual({ saldoInicialMN: 330, saldoFinalMN: 370 });
       expect(saldosPorCuentaRegistro([a, b], tc)).toEqual(jasmine.objectContaining({ saldoInicialMN: 300, saldoFinalMN: 370 }));
+    });
+
+    it('RN-032/033: el crédito en moneda nacional usa el tipo de compra y el débito el de venta', () => {
+      const m = { ...mov('000001', 'A', 1000, 50_000, 180_000), cuentaBancariaId: 'mef-dgtp' } as MovimientoLibretaRegistro;
+      // Compra 3.35 y venta 3.32: 180,000 × 3.35 = 603,000 y 50,000 × 3.32 = 166,000.
+      expect(importesMN(m)).toEqual({ debito: 166_000, credito: 603_000, disponible: 437_000 });
+      const mn = saldosMNPorMovimiento([m], () => ({ compra: 3.35, venta: 3.32 })).get(claveMovimiento(m))!;
+      expect(mn.saldoFinalMN).toBeCloseTo(1000 * 3.35 + 603_000 - 166_000, 2);
     });
   });
 });

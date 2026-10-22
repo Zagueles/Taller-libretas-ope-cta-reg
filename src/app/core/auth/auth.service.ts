@@ -17,6 +17,7 @@ import { NotificationsStateService } from '../realtime/notifications-state.servi
  *  Para un usuario de U.E. su identidad operativa es la Unidad Ejecutora
  *  (p. ej. el hospital), no el Pliego; para DGCP/Pliego se usa la entidad. */
 function buildOfficeLabel(p: PerfilItem): string {
+  if (p.etiquetaOficina) return p.etiquetaOficina;
   const principal =
     p.nivelAmbito === 'UE'
       ? (p.ueSiglas ?? p.ue ?? p.entidadSiglas ?? p.entidad)

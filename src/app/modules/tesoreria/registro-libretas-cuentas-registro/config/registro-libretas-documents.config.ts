@@ -41,6 +41,7 @@ const recordColumns: DocumentsRecordsColumn[] = [
   { key: 'saldoInicial', label: 'Saldo inicial', headerGroup: 'Imp. m. cuenta', visibility: 'visible', group: 'default', align: 'right', widthClass: 'w-[135px]', sortable: true, sortType: 'number' },
   { key: 'debito', label: 'Débito', headerGroup: 'Imp. m. cuenta', visibility: 'visible', group: 'default', align: 'right', widthClass: 'w-[110px]', sortable: true, sortType: 'number' },
   { key: 'credito', label: 'Crédito', headerGroup: 'Imp. m. cuenta', visibility: 'visible', group: 'default', align: 'right', widthClass: 'w-[110px]', sortable: true, sortType: 'number' },
+  { key: 'saldoDisponible', label: 'Saldo disponible', headerGroup: 'Imp. m. cuenta', visibility: 'hidden', group: 'more', align: 'right', widthClass: 'w-[135px]', sortable: true, sortType: 'number' },
   { key: 'status', label: 'Estado de registro', visibility: 'visible', group: 'default', widthClass: 'w-[130px]', kind: 'record-status', borderRight: true, sortable: true },
   { key: 'number', label: 'Número', panelLabel: 'Documento · Número', headerGroup: 'Documento', visibility: 'visible', group: 'default', widthClass: 'w-[150px]', sortable: true },
   { key: 'descripcionDocumento', label: 'Descripción', panelLabel: 'Documento · Descripción', headerGroup: 'Documento', visibility: 'visible', group: 'default', widthClass: 'w-[300px]', sortable: true },
@@ -59,6 +60,7 @@ const recordColumns: DocumentsRecordsColumn[] = [
   { key: 'documentoCutArchivo', label: 'Archivo', headerGroup: 'Documento CUT', panelLabel: 'Documento CUT · Archivo', visibility: 'hidden', group: 'more', widthClass: 'w-[130px]', sortable: true },
   { key: 'documentoCutSigla', label: 'Sigla', headerGroup: 'Documento CUT', panelLabel: 'Documento CUT · Sigla', visibility: 'hidden', group: 'more', widthClass: 'w-[100px]', sortable: true },
   { key: 'descripcionDetallada', label: 'Descripción detallada', visibility: 'hidden', group: 'more', widthClass: 'w-[260px]', sortable: true },
+  { key: 'estadoConciliacion', label: 'Estado de conciliación', visibility: 'hidden', group: 'more', widthClass: 'w-[170px]', sortable: true },
   { key: 'saldoFinal', label: 'Saldo final', headerGroup: 'Imp. m. cuenta', visibility: 'visible', group: 'default', align: 'right', widthClass: 'w-[135px]', fixed: true, sortable: true, sortType: 'number' },
 ];
 
@@ -104,11 +106,12 @@ export const REGISTRO_LIBRETAS_DOCUMENTS_CONFIG: DocumentsRecordsConfig = {
   recordTrackKey: 'id',
   recordHistoryDocumentLabel: 'Registro de operaciones en las libretas de las cuentas de registro',
   recordHistoryKind: 'documento',
-  statusFilterOptions: ['Procesado', 'Rechazado'],
+  statusFilterOptions: ['Procesado', 'Pendiente', 'Rechazado'],
   actionTypeFilterOptions: ['Creación'],
   filterCampoOptions,
   filterValorOptions: [
     { label: 'Procesado', value: 'Procesado' },
+    { label: 'Pendiente', value: 'Pendiente' },
     { label: 'Rechazado', value: 'Rechazado' },
     { label: 'Creación', value: 'Creación' },
   ],

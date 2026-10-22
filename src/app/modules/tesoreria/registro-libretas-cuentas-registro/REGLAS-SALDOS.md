@@ -14,7 +14,7 @@ Leyenda: ✅ implementado y probado · ⚠️ parcial · ⏸️ descartado por a
 - [x] **RN-039 / RN-041** Saldo final = saldo inicial + saldo disponible. ✅ Corregido el registro 17 (el débito de 5,000 era un crédito).
 - [x] **RN-042 a RN-045** Lo mismo en moneda nacional, con el tipo de cambio de la operación. ✅ `saldosMNPorMovimiento` encadena el saldo MN (inicial MN = final MN anterior).
 - [x] **RN-043** Un débito requiere saldo inicial ≥ débito. ✅ Probado sobre los datos de ejemplo.
-- [ ] **RN-046 / RN-047** Si no cuadran las fórmulas, saldo insuficiente o cuadre roto → la operación queda **PENDIENTE** con su causal. ⏸️ Descartado de momento (el backend simulado solo tiene PROCESADO y RECHAZADO).
+- [ ] **RN-046 / RN-047** Si no cuadran las fórmulas, saldo insuficiente o cuadre roto → la operación queda **PENDIENTE** con su causal. ✅ Demostrativo: el backend simulado tiene PROCESADO, PENDIENTE (saldo insuficiente, código P-001) y RECHAZADO (duplicidad, código E-001); los códigos son genéricos hasta contar con la tabla paramétrica. El pendiente solo se muestra (no se reprocesa).
 
 ## Saldos de la Cuenta de Registro (Actividad 05)
 

@@ -24,7 +24,7 @@ import { USUARIOS_DEMO, UsuarioDemo } from './usuarios-demo';
  */
 
 const CLAVE = 'taller-siaf-rp:datos';
-const VERSION = 8;
+const VERSION = 10;
 
 export interface NotificacionMock extends NotificacionResponse {
   /** Destinatario: un usuario puntual o, si no hay, todos los perfiles con este rol. */
@@ -51,7 +51,7 @@ export interface DatosTaller {
 export const TIPO_DOCUMENTO = { id: 'td-srcb', codigo: CODIGO_DOCUMENTO, nombre: NOMBRE_DOCUMENTO };
 export const TIPO_DOCUMENTO_CONCILIACION = { id: 'td-scmd', codigo: CODIGO_CONCILIACION, nombre: NOMBRE_CONCILIACION };
 export const ENTIDAD_CREADORA = { id: 'ent-mef', codMef: '0001', siglas: 'MEF', nombre: 'Ministerio de Economía y Finanzas' };
-export const UNIDAD_CREADORA = { id: 'uo-oga', sigla: 'OGA', nombre: 'Oficina General de Administración' };
+export const UNIDAD_CREADORA = { id: 'uo-dgtp', sigla: 'DGTP', nombre: 'Dirección General del Tesoro Público' };
 
 export function leerDatos(): DatosTaller {
   try {
@@ -97,7 +97,7 @@ export function nuevoId(datos: DatosTaller, prefijo: string): string {
 }
 
 export function numeroDocumento(correlativo: number, fecha: Date): string {
-  return `PCB-SRCB-${String(correlativo).padStart(5, '0')}-${fecha.getFullYear()}-MEF-OGA`;
+  return `PCB-SRCB-${String(correlativo).padStart(5, '0')}-${fecha.getFullYear()}-MEF-DGTP`;
 }
 
 /** Número de la conciliación manual diaria: correlativo de 6 dígitos y año («000010-2025»). */

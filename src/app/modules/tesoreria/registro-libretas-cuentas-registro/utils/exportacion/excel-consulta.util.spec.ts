@@ -49,6 +49,26 @@ describe('construirLibroConsulta', () => {
       expect(libro.worksheets.map((h) => h.name)).toEqual(['Resumen', 'Resultado 1', 'Resultado 2']);
     });
 
+    it('sin habilitar las columnas del documento, el detalle no trae Número ni Descripción del documento; habilitadas, sí', async () => {
+      const sin = (await construirLibroConsulta(PARAMETROS, [{ id: CUT, movimientos: deCuenta(CUT) }])).getWorksheet('Resultado 1')!;
+      expect(grupos(sin)).not.toContain('DOCUMENTO');
+      expect(sin.getRow(7).cellCount).toBeLessThan(16);
+
+      const con = (
+        await construirLibroConsulta(PARAMETROS, [{ id: CUT, movimientos: deCuenta(CUT) }], undefined, { numero: true, descripcion: true })
+      ).getWorksheet('Resultado 1')!;
+      expect(grupos(con)).toContain('DOCUMENTO');
+      expect(textos(con.getRow(7)).slice(-2)).toEqual(['NÚMERO', 'DESCRIPCIÓN']);
+    });
+
+    it('con solo una columna del documento habilitada, el detalle trae solo esa', async () => {
+      const hoja = (
+        await construirLibroConsulta(PARAMETROS, [{ id: CUT, movimientos: deCuenta(CUT) }], undefined, { numero: false, descripcion: true })
+      ).getWorksheet('Resultado 1')!;
+      expect(textos(hoja.getRow(7)).slice(-1)).toEqual(['DESCRIPCIÓN']);
+      expect(textos(hoja.getRow(7)).slice(-5)).toEqual(['SALDO INICIAL', 'DÉBITO', 'CRÉDITO', 'SALDO FINAL', 'DESCRIPCIÓN']);
+    });
+
     it('con una sola cuenta, solo hay «Resultado 1»', async () => {
       const libro = await construirLibroConsulta(PARAMETROS, [{ id: CUT, movimientos: deCuenta(CUT) }]);
 

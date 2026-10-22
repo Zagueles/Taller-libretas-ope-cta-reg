@@ -15,7 +15,7 @@ import { generarPdfRegistro } from '../../utils/exportacion/pdf-registro.util';
 
 const NOMBRE_DOCUMENTO = 'Registro de operaciones en las libretas de las cuentas de registro';
 const ENTIDAD = '009 - Ministerio de Economía y Finanzas';
-const USUARIO_HISTORIAL = 'JUAN DOE PEREZ PEREZ';
+const USUARIO_HISTORIAL = 'SIAF RP';
 const UNIDAD_HISTORIAL = 'Dirección General del Tesoro Público';
 
 /** hh:mm:ss menos un minuto (el documento se registra justo antes de procesarse). */
@@ -81,7 +81,7 @@ export class RegistroLibretasDocumentsComponent implements OnInit {
     // filtros rápidos de la pestaña Documentos son, en su lugar, el número de documento y la fecha de registro.
     documentFilter1Label: 'Estado',
     documentFilter1Key: 'status',
-    documentFilter1Options: ['Procesado', 'Rechazado'],
+    documentFilter1Options: ['Procesado', 'Pendiente', 'Rechazado'],
     documentFilter2Label: 'Fecha de registro',
     documentFilter2Key: 'dateIso',
     documentFilter2Type: 'dateRange',
@@ -135,7 +135,10 @@ export class RegistroLibretasDocumentsComponent implements OnInit {
         saldoInicial: monto(m.saldoInicial),
         debito: monto(m.debito),
         credito: monto(m.credito),
+        saldoDisponible: monto(m.credito - m.debito),
         status: 'Activo',
+        // Los registros de esta pestaña son los de la libreta: los de un documento rechazado o pendiente no están en ella.
+        estadoConciliacion: 'Conciliado',
         number: m.numeroDocumento,
         descripcionDocumento: m.descripcionDocumento,
         saldoFinal: monto(m.saldoFinal),

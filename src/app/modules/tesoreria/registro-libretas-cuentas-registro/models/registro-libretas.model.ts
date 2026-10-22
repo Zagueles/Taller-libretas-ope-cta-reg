@@ -105,8 +105,11 @@ export function nombreCuentaBancaria(id: string): string {
   return CUENTAS_BANCARIAS_INFO.find((c) => c.id === id)?.nombre ?? id;
 }
 
-/** Estado de un documento del proceso: lo genera el sistema al registrar las operaciones, ya procesado o rechazado. */
-export type EstadoDocumentoLibreta = 'Procesado' | 'Rechazado';
+/**
+ * Estado de un documento del proceso: lo genera el sistema al registrar las operaciones. «Rechazado» es el que no pasó
+ * una validación (duplicidad); «Pendiente» el que quedó a la espera por saldo insuficiente, algo parecido a una observación.
+ */
+export type EstadoDocumentoLibreta = 'Procesado' | 'Rechazado' | 'Pendiente';
 
 /** Un documento que generó el sistema, con la fecha de su primer movimiento. */
 export interface DocumentoLibreta {
@@ -115,8 +118,10 @@ export interface DocumentoLibreta {
   /** Fecha y hora del documento (la de su último movimiento), ISO. */
   fecha: string;
   estado: EstadoDocumentoLibreta;
-  /** Solo en los rechazados: por qué el sistema no lo procesó. */
-  motivoRechazo: string | null;
+  /** Solo en los rechazados y pendientes: código del error (tabla paramétrica) con el que el sistema no lo procesó. */
+  codigoError: string | null;
+  /** Solo en los rechazados y pendientes: descripción del error. */
+  descripcionError: string | null;
 }
 
 /** El documento con todos los movimientos que referencia (los de la libreta y, si fue rechazado, los que traía). */

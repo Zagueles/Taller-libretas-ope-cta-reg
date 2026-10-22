@@ -31,6 +31,8 @@ export interface PerfilItem {
   unidad: string | null;
   /** Sigla de la unidad orgánica principal (ej. "OGC") */
   unidadSigla?: string | null;
+  /** Cómo se rotula la oficina del usuario en la barra superior; sin ella, «ENTIDAD - UNIDAD». */
+  etiquetaOficina?: string | null;
   unidadId: string | null;
 
   // ── Rol y perfil funcional ──
