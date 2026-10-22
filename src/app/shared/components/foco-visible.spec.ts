@@ -193,14 +193,15 @@ describe('Foco visible del kit (WCAG 2.4.7)', () => {
       });
 
       it('siaf-date-time-picker: borde azul al enfocar el campo y, con error, contorno azul', () => {
-        const campo = q('[data-prueba="fecha"] button[aria-haspopup="dialog"]');
+        // El campo se escribe: el foco va al input y el borde lo pinta su contenedor (focus-within).
+        const campo = q('[data-prueba="fecha"] input[type="text"]');
         enfocar(campo);
-        expect(getComputedStyle(campo).borderTopColor).toBe(foco);
+        expect(getComputedStyle(campo.parentElement!).borderTopColor).toBe(foco);
 
-        const conError = q('[data-prueba="fecha-error"] button[aria-haspopup="dialog"]');
+        const conError = q('[data-prueba="fecha-error"] input[type="text"]');
         enfocar(conError);
-        expect(getComputedStyle(conError).borderTopColor).toBe(colorDe('--sys-color-border-feedback-danger'));
-        esperarContorno(conError, 'fecha con error');
+        expect(getComputedStyle(conError.parentElement!).borderTopColor).toBe(colorDe('--sys-color-border-feedback-danger'));
+        esperarContorno(conError.parentElement!, 'fecha con error');
       });
 
       it('siaf-uploader: la etiqueta del selector muestra el contorno cuando el input oculto recibe el foco', () => {

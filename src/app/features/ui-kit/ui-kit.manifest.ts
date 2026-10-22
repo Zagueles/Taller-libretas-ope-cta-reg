@@ -4135,8 +4135,8 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     ],
     "usar": "- Para las fechas de vigencia de una solicitud («Fecha inicio desde» y «Fecha fin hasta» en clase de ajuste, tipo de\n  asiento, evento y evento contable), con `[minDate]` para que el fin no quede antes del inicio.\n- Para los rangos «Fecha desde» / «Fecha hasta» de los paneles de búsqueda de las consultas y de libros contables.\n- Para una fecha puntual de un formulario: la fecha del asiento de ajuste o las fechas de contrato del usuario en Admin.",
     "evitar": "- Un `input type=\"date\"` nativo o un `siaf-input` con `trailingIcon=\"calendar_today\"` (como la vigencia del\n  formulario de cuenta contable): usar este componente.\n- Dejar `defaultToToday` en `true` en filtros o fechas opcionales: pinta la fecha de hoy sin emitirla, así que el\n  padre sigue vacío. Pasar `[defaultToToday]=\"false\"`.\n- `variant=\"datetime\"` esperando solo la fecha: emite `aaaa-mm-ddThh:mm:ss` (con la hora, minutos y segundos del panel) y\n  acepta ese mismo formato en `value`.\n- Para mostrar una fecha que no se edita: en modo lectura va `readonly-field`, no el selector `[disabled]`.",
-    "teclado": "- **Tab**: enfoca el campo. Al abrir el calendario el foco entra en el día elegido (o en hoy); desde ahí recorre\n  las flechas de la cabecera, el mes, el año y cada día habilitado, y salir con Tab cierra el calendario.\n- **Enter / Espacio**: en el campo abren o cierran el calendario; dentro, activan la flecha o eligen el día, mes o\n  año enfocado (botones nativos). Cancelar y Aceptar de `datetime` siguen `siaf-button`.\n- **Escape**: cierra el calendario y el foco vuelve al campo.\n- **Flechas**: no están implementadas entre los días; el calendario también se cierra al elegir un día (variante\n  `date`) o con Cancelar o Aceptar.",
-    "accesibilidad": "- **Pendiente · 1.3.1 Información y relaciones (A)**: la etiqueta no se une al botón del campo con `aria-labelledby`\n  ni `aria-label`: un único `<label>` envuelve etiqueta flotante, botón, ayuda, error y calendario, y con fecha\n  elegida el botón muestra solo la fecha. En `datetime`, los tres campos de hora no tienen etiqueta.\n- **Pendiente · 3.3.1 Identificación de errores (A)**: el texto de `error` se ve bajo el campo, pero no se asocia con\n  `aria-describedby` ni se anuncia al aparecer; con `state=\"error\"` y sin `error`, el aviso es solo el borde rojo.\n- **Pendiente · 3.3.2 Etiquetas o instrucciones (A)**: el obligatorio es solo el asterisco rojo: `aria-required` va\n  en un `<button>`, rol que no admite ese atributo en ARIA 1.2.\n- **4.1.2 Nombre, función y valor (A)**: el campo publica `aria-haspopup=\"dialog\"` y `aria-expanded`; el calendario\n  es `role=\"dialog\"` con `aria-label`, y las grillas de meses y años, `role=\"listbox\"` con `aria-selected`.\n- **Pendiente · 4.1.2 Nombre, función y valor (A)**: cada día se lee solo como número («05») y el día elegido no\n  publica estado (`aria-selected` o `aria-pressed`); las grillas `listbox` no responden a flechas.\n- **2.4.3 Orden del foco (A)**: con `siafFoco`, al abrir el foco entra en el día elegido (o en hoy) y al cerrarse\n  (un día, Cancelar, Aceptar, Escape o salir con Tab) vuelve al campo.\n- **2.4.7 Foco visible (AA)**: el botón del campo pasa al borde azul de 2 px (`border-states-focus`, 5.35:1 claro /\n  10.15:1 oscuro) al recibir el foco, también con valor (éxito); con error, el borde sigue rojo y el foco se ve en un\n  contorno azul por fuera. Los botones del calendario conservan el anillo nativo.\n- **Pendiente · 1.4.11 Contraste no textual (AA)**: el borde del campo vacío es `border-states-enabled` (2.44:1\n  claro, 2.59:1 oscuro).\n- **1.4.3 Contraste mínimo (AA)**: valor `text-neutral-high` 16.29:1, etiqueta `text-neutral-low` 5.01:1, días\n  `text-neutral-medium` 14.53:1 y día elegido en blanco sobre `bg-brand-primary` 8.79:1 (6.67:1 oscuro). Con valor,\n  la ayuda pasa a `text-feedback-success`, par que la tabla no mide.\n- **Pendiente · 2.5.8 Tamaño del objetivo (AA)**: las flechas de la cabecera miden 20 px (`size-5`) con 4 px entre\n  ellas; los días miden 36 px y el campo, 40 px.",
+    "teclado": "- **Escribir**: el campo acepta dígitos con la máscara dd/mm/aaaa (y hh:mm:ss en `datetime`); la fecha se elige al\n  completarla si es válida y respeta `minDate`; al salir del campo o con Enter, una fecha inválida vuelve a la elegida.\n  Con `defaultToToday` en `false`, vaciar el campo borra la fecha.\n- **Tab**: enfoca el campo y luego el botón del calendario (Alt + flecha abajo también lo abre). Al abrir el calendario el foco entra en el día elegido (o en hoy); desde ahí recorre\n  las flechas de la cabecera, el mes, el año y cada día habilitado, y salir con Tab cierra el calendario.\n- **Enter / Espacio**: en el botón abren o cierran el calendario (Enter en el campo confirma lo escrito); dentro, activan la flecha o eligen el día, mes o\n  año enfocado (botones nativos). Cancelar y Aceptar de `datetime` siguen `siaf-button`.\n- **Escape**: cierra el calendario y el foco vuelve al campo.\n- **Flechas**: no están implementadas entre los días; el calendario también se cierra al elegir un día (variante\n  `date`) o con Cancelar o Aceptar.",
+    "accesibilidad": "- **1.3.1 Información y relaciones (A)**: el campo de texto y los tres de la hora llevan `aria-label` (la etiqueta del\n  campo y «Hora», «Minutos», «Segundos»); el botón del calendario se llama «Abrir calendario».\n- **Pendiente · 3.3.1 Identificación de errores (A)**: el texto de `error` se ve bajo el campo, pero no se asocia con\n  `aria-describedby` ni se anuncia al aparecer; con `state=\"error\"` y sin `error`, el aviso es solo el borde rojo.\n- **3.3.2 Etiquetas o instrucciones (A)**: el campo de texto publica `aria-required` y `aria-invalid`; el obligatorio se\n  ve además con el asterisco rojo y el formato dd/mm/aaaa aparece como texto guía al enfocar.\n- **4.1.2 Nombre, función y valor (A)**: el botón del calendario publica `aria-haspopup=\"dialog\"` y `aria-expanded`; el calendario\n  es `role=\"dialog\"` con `aria-label`, y las grillas de meses y años, `role=\"listbox\"` con `aria-selected`.\n- **Pendiente · 4.1.2 Nombre, función y valor (A)**: cada día se lee solo como número («05») y el día elegido no\n  publica estado (`aria-selected` o `aria-pressed`); las grillas `listbox` no responden a flechas.\n- **2.4.3 Orden del foco (A)**: con `siafFoco`, al abrir el foco entra en el día elegido (o en hoy) y al cerrarse\n  (un día, Cancelar, Aceptar, Escape o salir con Tab) vuelve al campo.\n- **2.4.7 Foco visible (AA)**: el botón del campo pasa al borde azul de 2 px (`border-states-focus`, 5.35:1 claro /\n  10.15:1 oscuro) al recibir el foco, también con valor (éxito); con error, el borde sigue rojo y el foco se ve en un\n  contorno azul por fuera. Los botones del calendario conservan el anillo nativo.\n- **Pendiente · 1.4.11 Contraste no textual (AA)**: el borde del campo vacío es `border-states-enabled` (2.44:1\n  claro, 2.59:1 oscuro).\n- **1.4.3 Contraste mínimo (AA)**: valor `text-neutral-high` 16.29:1, etiqueta `text-neutral-low` 5.01:1, días\n  `text-neutral-medium` 14.53:1 y día elegido en blanco sobre `bg-brand-primary` 8.79:1 (6.67:1 oscuro). Con valor,\n  la ayuda pasa a `text-feedback-success`, par que la tabla no mide.\n- **Pendiente · 2.5.8 Tamaño del objetivo (AA)**: las flechas de la cabecera miden 20 px (`size-5`) con 4 px entre\n  ellas; los días miden 36 px y el campo, 40 px.",
     "figma": [],
     "aria": {
       "roles": [
@@ -4148,6 +4148,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "aria-expanded",
         "aria-haspopup",
         "aria-hidden",
+        "aria-invalid",
         "aria-label",
         "aria-required",
         "aria-selected"
@@ -4272,6 +4273,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       {
         "token": "--sys-gap-base-md",
         "via": [
+          "pl-siaf-md",
           "px-siaf-md"
         ]
       },
@@ -4279,8 +4281,10 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "token": "--sys-gap-base-xs",
         "via": [
           "gap-siaf-xs",
+          "mr-siaf-xs",
           "mt-siaf-xs",
           "p-siaf-xs",
+          "pr-siaf-xs",
           "pt-siaf-xs",
           "px-siaf-xs",
           "py-siaf-xs"
@@ -4315,7 +4319,6 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     ],
     "usa": [
       "[siafFoco]",
-      "[siafTooltip]",
       "siaf-button",
       "siaf-icon"
     ],

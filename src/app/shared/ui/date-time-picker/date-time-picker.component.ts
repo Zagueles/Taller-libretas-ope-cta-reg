@@ -39,22 +39,24 @@ type CalendarDay = {
  *   acepta ese mismo formato en `value`.
  * - Para mostrar una fecha que no se edita: en modo lectura va `readonly-field`, no el selector `[disabled]`.
  * @teclado
- * - **Tab**: enfoca el campo. Al abrir el calendario el foco entra en el día elegido (o en hoy); desde ahí recorre
+ * - **Escribir**: el campo acepta dígitos con la máscara dd/mm/aaaa (y hh:mm:ss en `datetime`); la fecha se elige al
+ *   completarla si es válida y respeta `minDate`; al salir del campo o con Enter, una fecha inválida vuelve a la elegida.
+ *   Con `defaultToToday` en `false`, vaciar el campo borra la fecha.
+ * - **Tab**: enfoca el campo y luego el botón del calendario (Alt + flecha abajo también lo abre). Al abrir el calendario el foco entra en el día elegido (o en hoy); desde ahí recorre
  *   las flechas de la cabecera, el mes, el año y cada día habilitado, y salir con Tab cierra el calendario.
- * - **Enter / Espacio**: en el campo abren o cierran el calendario; dentro, activan la flecha o eligen el día, mes o
+ * - **Enter / Espacio**: en el botón abren o cierran el calendario (Enter en el campo confirma lo escrito); dentro, activan la flecha o eligen el día, mes o
  *   año enfocado (botones nativos). Cancelar y Aceptar de `datetime` siguen `siaf-button`.
  * - **Escape**: cierra el calendario y el foco vuelve al campo.
  * - **Flechas**: no están implementadas entre los días; el calendario también se cierra al elegir un día (variante
  *   `date`) o con Cancelar o Aceptar.
  * @accesibilidad
- * - **Pendiente · 1.3.1 Información y relaciones (A)**: la etiqueta no se une al botón del campo con `aria-labelledby`
- *   ni `aria-label`: un único `<label>` envuelve etiqueta flotante, botón, ayuda, error y calendario, y con fecha
- *   elegida el botón muestra solo la fecha. En `datetime`, los tres campos de hora no tienen etiqueta.
+ * - **1.3.1 Información y relaciones (A)**: el campo de texto y los tres de la hora llevan `aria-label` (la etiqueta del
+ *   campo y «Hora», «Minutos», «Segundos»); el botón del calendario se llama «Abrir calendario».
  * - **Pendiente · 3.3.1 Identificación de errores (A)**: el texto de `error` se ve bajo el campo, pero no se asocia con
  *   `aria-describedby` ni se anuncia al aparecer; con `state="error"` y sin `error`, el aviso es solo el borde rojo.
- * - **Pendiente · 3.3.2 Etiquetas o instrucciones (A)**: el obligatorio es solo el asterisco rojo: `aria-required` va
- *   en un `<button>`, rol que no admite ese atributo en ARIA 1.2.
- * - **4.1.2 Nombre, función y valor (A)**: el campo publica `aria-haspopup="dialog"` y `aria-expanded`; el calendario
+ * - **3.3.2 Etiquetas o instrucciones (A)**: el campo de texto publica `aria-required` y `aria-invalid`; el obligatorio se
+ *   ve además con el asterisco rojo y el formato dd/mm/aaaa aparece como texto guía al enfocar.
+ * - **4.1.2 Nombre, función y valor (A)**: el botón del calendario publica `aria-haspopup="dialog"` y `aria-expanded`; el calendario
  *   es `role="dialog"` con `aria-label`, y las grillas de meses y años, `role="listbox"` con `aria-selected`.
  * - **Pendiente · 4.1.2 Nombre, función y valor (A)**: cada día se lee solo como número («05») y el día elegido no
  *   publica estado (`aria-selected` o `aria-pressed`); las grillas `listbox` no responden a flechas.
@@ -84,21 +86,45 @@ type CalendarDay = {
           </span>
         }
 
-        <button
-          class="flex h-10 w-full items-center rounded-siaf-md border bg-surface px-siaf-md text-left text-sm text-text outline-none transition disabled:cursor-not-allowed disabled:border-[var(--sys-color-border-states-disabled)] disabled:bg-[var(--sys-color-bg-surfaces-disabled)] disabled:text-[var(--sys-color-text-neutral-disabled)]"
-          type="button"
+        <!-- El campo se escribe (dd/mm/aaaa, y hh:mm:ss con datetime) o se elige en el calendario del botón. -->
+        <span
+          class="flex h-10 w-full items-center rounded-siaf-md border bg-surface text-sm text-text outline-none transition"
           [class]="controlClass"
-          [disabled]="disabled"
-          [attr.aria-expanded]="pickerOpen"
-          [attr.aria-required]="required"
-          aria-haspopup="dialog"
-          (click)="togglePicker()"
+          [class.cursor-not-allowed]="disabled"
+          [class.border-[var(--sys-color-border-states-disabled)]]="disabled"
+          [class.bg-[var(--sys-color-bg-surfaces-disabled)]]="disabled"
+          [class.text-[var(--sys-color-text-neutral-disabled)]]="disabled"
         >
-          <span class="min-w-0 flex-1 truncate" siafTooltip [class.text-[var(--sys-color-text-neutral-low)]]="!hasValue">
-            {{ displayValue || labelText }}@if (!hasValue && required) { <span class="text-[var(--sys-color-text-feedback-danger)]">*</span> }
-          </span>
-          <siaf-icon class="shrink-0 text-text-muted" name="calendar_today" [size]="20" />
-        </button>
+          <input
+            class="h-full min-w-0 flex-1 bg-transparent pl-siaf-md pr-siaf-xs text-sm text-text outline-none placeholder:text-[var(--sys-color-text-neutral-low)] disabled:cursor-not-allowed disabled:text-[var(--sys-color-text-neutral-disabled)]"
+            type="text"
+            inputmode="numeric"
+            autocomplete="off"
+            [value]="texto"
+            [placeholder]="placeholderCampo"
+            [disabled]="disabled"
+            [attr.maxlength]="variant === 'datetime' ? 19 : 10"
+            [attr.aria-label]="labelText"
+            [attr.aria-required]="required"
+            [attr.aria-invalid]="effectiveState === 'error'"
+            (focus)="enfocado = true"
+            (input)="escribir($any($event.target))"
+            (blur)="enfocado = false; confirmarTexto()"
+            (keydown.enter)="confirmarTexto($event)"
+            (keydown.alt.arrowdown)="abrirCalendario($event)"
+          />
+          <button
+            class="mr-siaf-xs inline-flex size-7 shrink-0 items-center justify-center rounded-siaf-sm text-text-muted outline-none transition hover:bg-surface-muted focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-[var(--sys-color-border-states-focus)] disabled:cursor-not-allowed"
+            type="button"
+            [disabled]="disabled"
+            [attr.aria-expanded]="pickerOpen"
+            aria-label="Abrir calendario"
+            aria-haspopup="dialog"
+            (click)="togglePicker()"
+          >
+            <siaf-icon name="calendar_today" [size]="20" />
+          </button>
+        </span>
 
         @if (pickerOpen) {
           <button class="fixed inset-0 z-30 cursor-default bg-transparent" type="button" data-capa-cierre tabindex="-1" aria-hidden="true" (mousedown)="$event.preventDefault()" (click)="closePicker()"></button>
@@ -279,6 +305,9 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
   @Output() valueChange = new EventEmitter<string>();
 
   pickerOpen = false;
+  /** Texto del campo mientras se escribe (con la máscara dd/mm/aaaa); se vuelve a armar al elegir una fecha. */
+  texto = '';
+  enfocado = false;
   /** Qué muestra el calendario: los días del mes, la grilla de meses o la de años. */
   vista: 'dias' | 'meses' | 'anios' = 'dias';
   selectedDate = '';
@@ -311,7 +340,13 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
   }
 
   get floatingLabel(): boolean {
-    return this.pickerOpen || this.hasValue;
+    return this.pickerOpen || this.hasValue || this.enfocado || this.texto !== '';
+  }
+
+  /** Con la etiqueta flotando, el campo guía el formato; vacío y sin foco, la etiqueta hace de texto de ayuda. */
+  get placeholderCampo(): string {
+    if (this.floatingLabel) return this.variant === 'datetime' ? 'dd/mm/aaaa hh:mm:ss' : 'dd/mm/aaaa';
+    return `${this.labelText}${this.required ? ' *' : ''}`;
   }
 
   get displayValue(): string {
@@ -388,16 +423,16 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
 
     // Con error, el borde sigue rojo al enfocar y el foco se ve en un contorno azul por fuera (WCAG 2.4.7).
     if (this.effectiveState === 'error') {
-      return 'border-2 border-[var(--sys-color-border-feedback-danger)] hover:border-[var(--sys-color-border-feedback-danger)] focus:outline-solid focus:outline-2 focus:outline-offset-2 focus:outline-[var(--sys-color-border-states-focus)]';
+      return 'border-2 border-[var(--sys-color-border-feedback-danger)] hover:border-[var(--sys-color-border-feedback-danger)] focus-within:outline-solid focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--sys-color-border-states-focus)]';
     }
 
     if (this.effectiveState === 'success') {
-      return 'border-2 border-[var(--sys-color-border-feedback-success)] hover:border-[var(--sys-color-border-feedback-success)] focus:border-[var(--sys-color-border-states-focus)]';
+      return 'border-2 border-[var(--sys-color-border-feedback-success)] hover:border-[var(--sys-color-border-feedback-success)] focus-within:border-[var(--sys-color-border-states-focus)]';
     }
 
     return this.pickerOpen
       ? 'border-2 border-[var(--sys-color-border-states-focus)]'
-      : 'border-[var(--sys-color-border-states-enabled)] hover:border-2 hover:border-[var(--sys-color-border-states-hover)] focus:border-2 focus:border-[var(--sys-color-border-states-focus)]';
+      : 'border-[var(--sys-color-border-states-enabled)] hover:border-2 hover:border-[var(--sys-color-border-states-hover)] focus-within:border-2 focus-within:border-[var(--sys-color-border-states-focus)]';
   }
 
   get labelClass(): string {
@@ -477,6 +512,57 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
     return this.selectedDate || this.todayDate;
   }
 
+  abrirCalendario(event?: Event): void {
+    event?.preventDefault();
+    if (!this.pickerOpen) this.togglePicker();
+  }
+
+  /** Escribe en el campo: solo dígitos con la máscara; al completarse una fecha válida se elige y se emite. */
+  escribir(campo: HTMLInputElement): void {
+    const total = this.variant === 'datetime' ? 14 : 8;
+    const digitos = campo.value.replace(/\D/g, '').slice(0, total);
+    this.texto = this.mascara(digitos);
+    campo.value = this.texto;
+    if (digitos.length === total) this.aplicarTexto();
+  }
+
+  /** Al salir del campo o con Enter: aplica lo escrito si es una fecha válida; si no, vuelve a la fecha elegida. */
+  confirmarTexto(event?: Event): void {
+    event?.preventDefault();
+    if (this.texto === '' && this.selectedDate && !this.defaultToToday) {
+      this.selectedDate = '';
+      this.valueChange.emit('');
+      return;
+    }
+    if (!this.aplicarTexto()) this.texto = this.displayValue;
+  }
+
+  /** Aplica el texto del campo; devuelve si era una fecha (y hora) válida y permitida por `minDate`. */
+  private aplicarTexto(): boolean {
+    const coincidencia = this.texto.match(/^(\d{2})\/(\d{2})\/(\d{4})(?: (\d{2}):(\d{2}):(\d{2}))?$/);
+    if (!coincidencia) return false;
+    const [, dia, mes, anio, hora, minuto, segundo] = coincidencia;
+    const fecha = new Date(Number(anio), Number(mes) - 1, Number(dia));
+    const existe = fecha.getFullYear() === Number(anio) && fecha.getMonth() === Number(mes) - 1 && fecha.getDate() === Number(dia);
+    const iso = `${anio}-${mes}-${dia}`;
+    if (!existe || Number(anio) < 1900 || (this.minDate && iso < this.minDate)) return false;
+    if (this.variant === 'datetime') {
+      if (Number(hora) > 23 || Number(minuto) > 59 || Number(segundo) > 59) return false;
+      [this.hora, this.minuto, this.segundo] = [hora, minuto, segundo];
+    }
+    this.selectedDate = iso;
+    this.syncViewToSelection();
+    this.valueChange.emit(this.salida(iso));
+    return true;
+  }
+
+  /** Dígitos escritos → dd/mm/aaaa (o dd/mm/aaaa hh:mm:ss con `datetime`), sin separadores colgando. */
+  private mascara(digitos: string): string {
+    const fecha = [digitos.slice(0, 2), digitos.slice(2, 4), digitos.slice(4, 8)].filter(Boolean).join('/');
+    const hora = [digitos.slice(8, 10), digitos.slice(10, 12), digitos.slice(12, 14)].filter(Boolean).join(':');
+    return hora ? `${fecha} ${hora}` : fecha;
+  }
+
   closePicker(event?: Event): void {
     event?.stopPropagation();
     this.pickerOpen = false;
@@ -485,6 +571,7 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
   selectDate(value: string, event?: Event): void {
     event?.stopPropagation();
     this.selectedDate = value;
+    this.texto = this.displayValue;
     this.valueChange.emit(this.salida(value));
 
     if (this.variant === 'date') {
@@ -496,6 +583,7 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
     event?.stopPropagation();
     if (!this.selectedDate) {
       this.selectedDate = this.toDateValue(this.viewYear, this.viewMonth, 1);
+      this.texto = this.displayValue;
       this.valueChange.emit(this.salida(this.selectedDate));
     } else if (this.variant === 'datetime') {
       this.valueChange.emit(this.salida(this.selectedDate));
@@ -522,6 +610,7 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
     const digitos = texto.replace(/\D/g, '').slice(0, 2);
     const maximo = campo === 'hora' ? 23 : 59;
     this[campo] = digitos === '' ? '' : String(Math.min(maximo, Number(digitos)));
+    this.texto = this.displayValue;
     if (this.selectedDate) {
       this.valueChange.emit(this.salida(this.selectedDate));
     }
@@ -532,6 +621,7 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
     this.hora = this.pad(Number(this.hora) || 0);
     this.minuto = this.pad(Number(this.minuto) || 0);
     this.segundo = this.pad(Number(this.segundo) || 0);
+    this.texto = this.displayValue;
   }
 
   /** Lo que se emite: la fecha (aaaa-mm-dd) o, en `datetime`, fecha y hora (aaaa-mm-ddThh:mm:ss). */
@@ -546,6 +636,7 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
       [, this.hora, this.minuto, this.segundo] = hora;
     }
     this.selectedDate = value.slice(0, 10);
+    this.texto = this.displayValue;
     this.syncViewToSelection();
   }
 

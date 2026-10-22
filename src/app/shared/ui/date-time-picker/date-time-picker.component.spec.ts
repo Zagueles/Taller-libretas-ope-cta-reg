@@ -98,3 +98,65 @@ describe('DateTimePickerComponent — variante datetime', () => {
     expect(fixture.componentInstance.displayValue).toBe('15/03/2026 07:59:10');
   });
 });
+
+describe('DateTimePickerComponent — escribir la fecha', () => {
+  let fixture: ComponentFixture<DateTimePickerComponent>;
+  let emitidos: string[];
+  const campo = (): HTMLInputElement => fixture.nativeElement.querySelector('input[type="text"]')!;
+  const escribir = (texto: string): void => {
+    campo().value = texto;
+    campo().dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+  };
+  const salir = (): void => {
+    campo().dispatchEvent(new Event('blur'));
+    fixture.detectChanges();
+  };
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [DateTimePickerComponent] }).compileComponents();
+    fixture = TestBed.createComponent(DateTimePickerComponent);
+    emitidos = [];
+    fixture.componentInstance.valueChange.subscribe((v: string) => emitidos.push(v));
+    fixture.componentRef.setInput('label', 'Fecha');
+    fixture.componentRef.setInput('defaultToToday', false);
+    fixture.detectChanges();
+  });
+
+  it('pone la máscara dd/mm/aaaa mientras se escriben dígitos y emite al completar una fecha válida', () => {
+    escribir('1503');
+    expect(campo().value).toBe('15/03');
+    expect(emitidos).toEqual([]);
+    escribir('15032026');
+    expect(campo().value).toBe('15/03/2026');
+    expect(emitidos).toEqual(['2026-03-15']);
+  });
+
+  it('una fecha inexistente no se emite y al salir vuelve a la fecha elegida', () => {
+    fixture.componentRef.setInput('value', '2026-03-15');
+    fixture.detectChanges();
+    escribir('31022026');
+    expect(emitidos).toEqual([]);
+    salir();
+    expect(campo().value).toBe('15/03/2026');
+  });
+
+  it('respeta minDate y vaciar el campo borra la fecha cuando no hay fecha por defecto', () => {
+    fixture.componentRef.setInput('minDate', '2026-03-10');
+    fixture.componentRef.setInput('value', '2026-03-15');
+    fixture.detectChanges();
+    escribir('01032026');
+    expect(emitidos).toEqual([]);
+    escribir('');
+    salir();
+    expect(emitidos).toEqual(['']);
+  });
+
+  it('con datetime acepta la hora y emite aaaa-mm-ddThh:mm:ss', () => {
+    fixture.componentRef.setInput('variant', 'datetime');
+    fixture.detectChanges();
+    escribir('15032026134510');
+    expect(campo().value).toBe('15/03/2026 13:45:10');
+    expect(emitidos).toEqual(['2026-03-15T13:45:10']);
+  });
+});
