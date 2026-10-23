@@ -43,8 +43,7 @@ import { SolicitudeHeaderComponent, SolicitudeHeaderRole, SolicitudeHeaderState 
   template: `
     <section
       class="min-w-0"
-      [class.lg:pl-[364px]]="trayMenuOpen"
-      [class.lg:pl-[434px]]="floatingPanelOpen"
+      [class.lg:pl-[434px]]="trayMenuOpen || floatingPanelOpen"
     >
       <!--
         Cabecera fija en escritorio: los botones de acción (Grabar, Editar,

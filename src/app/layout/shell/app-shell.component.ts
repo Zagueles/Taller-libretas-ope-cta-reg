@@ -105,8 +105,7 @@ import { ADMIN_MENU_TREE } from '../../shared/utils/process-tree.util';
 
       <section
         class="min-w-0 transition-[padding] duration-200 lg:pl-16"
-        [class.lg:pl-[364px]]="trayMenuOpen"
-        [class.lg:pl-[434px]]="processMenuOpen || createDocumentOpen || adminMenuOpen"
+        [class.lg:pl-[434px]]="trayMenuOpen || processMenuOpen || createDocumentOpen || adminMenuOpen"
       >
         @if (trayContentOpen) {
           @if (selectedTrayItem === 'Notificaciones') {
