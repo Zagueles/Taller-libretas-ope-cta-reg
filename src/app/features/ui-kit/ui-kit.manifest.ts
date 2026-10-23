@@ -3928,6 +3928,20 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "descripcion": null
       },
       {
+        "nombre": "maxDate",
+        "tipo": "string",
+        "porDefecto": "''",
+        "requerida": false,
+        "descripcion": "Fecha máxima del período (aaaa-mm-dd), p. ej. hoy: ni «Desde» ni «Hasta» admiten días posteriores. Vacío, sin límite."
+      },
+      {
+        "nombre": "minDate",
+        "tipo": "string",
+        "porDefecto": "''",
+        "requerida": false,
+        "descripcion": "Fecha mínima del período (aaaa-mm-dd): el selector de «Desde» no admite días anteriores. Vacío, sin límite."
+      },
+      {
         "nombre": "selectedLabel",
         "tipo": "string",
         "porDefecto": "''",

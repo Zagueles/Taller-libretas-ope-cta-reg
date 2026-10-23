@@ -140,6 +140,10 @@ export type DocumentsRecordsConfig = {
    * personalizado): `documentFilter2Key` debe apuntar a una columna aaaa-mm-dd y `documentFilter2Options` no hace falta.
    */
   documentFilter2Type?: 'select' | 'dateRange';
+  /** Con `dateRange`: fecha mínima del período personalizado (aaaa-mm-dd); sin ella, sin límite. */
+  dateRangeMin?: string;
+  /** Con `dateRange`: el período personalizado no admite fechas posteriores a hoy. */
+  dateRangeNoFuture?: boolean;
   filterCampoOptions: DocumentsRecordsFilterOption[];
   filterValorOptions: DocumentsRecordsFilterOption[];
   fieldsMenuOptions: DocumentsRecordsMenuOption[];

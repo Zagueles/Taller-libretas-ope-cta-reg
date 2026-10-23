@@ -110,8 +110,8 @@ const fechaVisible = (iso: string): string => (iso ? iso.split('-').reverse().jo
               role="dialog"
               [attr.aria-label]="label + ': período personalizado'"
             >
-              <siaf-date-time-picker label="Desde" [fullWidth]="true" [defaultToToday]="false" [value]="desde()" (valueChange)="desde.set($event)" />
-              <siaf-date-time-picker label="Hasta" [fullWidth]="true" [defaultToToday]="false" [minDate]="desde()" [value]="hasta()" (valueChange)="hasta.set($event)" />
+              <siaf-date-time-picker label="Desde" [fullWidth]="true" [defaultToToday]="false" [minDate]="minDate" [maxDate]="maxDate" [value]="desde()" (valueChange)="cambiarDesde($event)" />
+              <siaf-date-time-picker label="Hasta" [fullWidth]="true" [defaultToToday]="false" [minDate]="minimoHasta()" [maxDate]="maxDate" [value]="hasta()" (valueChange)="hasta.set($event)" />
               <div class="flex items-center justify-end gap-siaf-xs">
                 <siaf-button variant="outline" size="sm" (click)="cerrar()">Cancelar</siaf-button>
                 <siaf-button variant="filled" size="sm" [disabled]="!desde() || !hasta()" (click)="aplicarPersonalizado()">Aplicar</siaf-button>
@@ -132,6 +132,11 @@ export class DateRangeFilterPillComponent {
   /** Lo que se ve en la píldora; vacío, sin filtro aplicado. */
   @Input() selectedLabel = '';
 
+  /** Fecha mínima del período (aaaa-mm-dd): el selector de «Desde» no admite días anteriores. Vacío, sin límite. */
+  @Input() minDate = '';
+  /** Fecha máxima del período (aaaa-mm-dd), p. ej. hoy: ni «Desde» ni «Hasta» admiten días posteriores. Vacío, sin límite. */
+  @Input() maxDate = '';
+
   @Output() applied = new EventEmitter<DateRangeFilterValue>();
   @Output() cleared = new EventEmitter<void>();
 
@@ -144,6 +149,17 @@ export class DateRangeFilterPillComponent {
   readonly panelAbierto = signal<'cerrado' | 'opciones' | 'personalizado'>('cerrado');
   readonly desde = signal('');
   readonly hasta = signal('');
+
+  /** «Hasta» no admite días anteriores a «Desde» ni al mínimo del período. */
+  minimoHasta(): string {
+    return this.desde() > this.minDate ? this.desde() : this.minDate;
+  }
+
+  /** Si «Hasta» queda anterior a la nueva «Desde», se vuelve a elegir. */
+  cambiarDesde(valor: string): void {
+    this.desde.set(valor);
+    if (this.hasta() && this.hasta() < valor) this.hasta.set('');
+  }
 
   abrirOpciones(): void {
     this.desde.set('');

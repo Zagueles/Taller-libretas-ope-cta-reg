@@ -1,4 +1,5 @@
 import { MessageBoxComponent } from '../../ui/message-box/message-box.component';
+import { fechaDeHoy } from '../../utils/fecha.util';
 import { TableSort, ordenarFilas, valorOrdenable } from '../../utils/table-sort.util';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, inject, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { Router } from '@angular/router';
@@ -283,6 +284,8 @@ type DocumentsRecordsRoleMode = 'creator' | 'approver' | 'readOnly';
                       <siaf-date-range-filter-pill
                         [label]="effectiveConfig.documentFilter2Label ?? 'Fecha'"
                         [selectedLabel]="selectedDocumentDateLabel"
+                        [minDate]="effectiveConfig.dateRangeMin ?? ''"
+                        [maxDate]="effectiveConfig.dateRangeNoFuture ? hoy : ''"
                         (applied)="onDocumentDateFilterChange($event)"
                         (cleared)="onDocumentDateFilterChange(null)"
                       />
@@ -544,6 +547,8 @@ export class DocumentsRecordsPageComponent implements OnChanges {
   selectedRecordFilter1 = '';
   selectedRecordFilter2 = '';
   /** Texto aplicado a la búsqueda (el que filtra). Se fija con Enter/lupa. */
+  /** Hoy (aaaa-mm-dd): el tope del período personalizado cuando `dateRangeNoFuture`. */
+  readonly hoy = fechaDeHoy();
   searchTerm = '';
   /** Texto vivo del input, aún sin aplicar. */
   searchInput = '';

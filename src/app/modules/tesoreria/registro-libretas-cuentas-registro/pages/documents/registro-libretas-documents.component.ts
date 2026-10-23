@@ -85,6 +85,9 @@ export class RegistroLibretasDocumentsComponent implements OnInit {
     documentFilter2Label: 'Fecha de registro',
     documentFilter2Key: 'dateIso',
     documentFilter2Type: 'dateRange',
+    // Misma regla que en Consultas y reportes (RF-07): no antes de 2020 ni después de hoy.
+    dateRangeMin: '2020-01-01',
+    dateRangeNoFuture: true,
     // Lo más reciente primero (RF-06 FP-04): por fecha de registro descendente y, a igual fecha, el número más alto.
     documentRows: [...this.documentos()].sort((a, b) => b.fecha.localeCompare(a.fecha) || b.numero.localeCompare(a.numero)).map(
       (d): DocumentsRecordsRow => ({
