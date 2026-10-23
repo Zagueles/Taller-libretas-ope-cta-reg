@@ -20,7 +20,7 @@ const CONFIG: QueryReportConfig = {
   ],
   rowKey: 'secuencia',
   tabs: [{ id: 'movimientos', label: 'Movimientos' }, { id: 'resumen', label: 'Resumen' }],
-  presetFilters: [{ key: 'operacion', label: 'Tipo de operación', options: [{ label: '3 - Devolución', value: '3 - Devolución' }] }],
+  presetFilters: [{ key: 'operacion', label: 'Tipo de operación', options: [{ label: '5 - Devolución', value: '5 - Devolución' }] }],
 };
 
 const beneficiarios = ['MINCETUR - JUEGOS Y APUESTAS', 'IPD', 'FONDO DE COMPENSACIÓN MUNICIPAL'];
@@ -30,7 +30,7 @@ const RESULTADO: QueryReportResult = {
     // Enero, febrero y marzo por turnos; la fecha no es columna de la tabla, solo la usan los gráficos.
     fecha: `10/0${(i % 3) + 1}/2026`,
     beneficiario: beneficiarios[i % 3],
-    operacion: i % 4 === 3 ? '3 - Devolución' : '1 - Saldos Iniciales',
+    operacion: i % 4 === 3 ? '5 - Devolución' : '3 - Saldos Iniciales',
     saldo: `${(i + 1) * 1000}.00`,
   })),
   summary: { label: 'Entidad', icon: 'account_balance_wallet', title: 'MINCETUR', fields: [{ label: 'Código', value: '000360' }] },
@@ -41,7 +41,7 @@ const CONFIG_CON_GRAFICAS: QueryReportConfig = {
   charts: {
     kpis: [
       { title: 'Total', column: 'saldo', prefix: 'S/ ' },
-      { title: 'Devoluciones', column: 'saldo', where: { column: 'operacion', value: '3 - Devolución' }, tone: 'warning', icon: 'arrow_right_alt', prefix: 'S/ ' },
+      { title: 'Devoluciones', column: 'saldo', where: { column: 'operacion', value: '5 - Devolución' }, tone: 'warning', icon: 'arrow_right_alt', prefix: 'S/ ' },
       { title: 'Movimientos', aggregate: 'count' },
       { title: 'IPD', column: 'saldo', where: { column: 'beneficiario', value: 'IPD' }, tone: 'danger', icon: 'article', prefix: 'S/ ' },
     ],
@@ -154,7 +154,7 @@ describe('QueryReportPageComponent', () => {
     expect(pagina.pagina()).toBe(1);
     expect(filasTabla()).toEqual(['000003', '000006', '000009', '000012']);
 
-    pagina.filtrar('operacion', '3 - Devolución');
+    pagina.filtrar('operacion', '5 - Devolución');
     fixture.detectChanges();
     expect(filasTabla()).toEqual(['000012']);
     expect(el().querySelector('[data-anuncio-filas]')?.textContent?.trim()).toBe('1 fila en el resultado');
@@ -163,7 +163,7 @@ describe('QueryReportPageComponent', () => {
   it('una consulta nueva limpia la búsqueda y los filtros', () => {
     consultar();
     pagina.buscar('ipd');
-    pagina.filtrar('operacion', '3 - Devolución');
+    pagina.filtrar('operacion', '5 - Devolución');
     consultar({ desde: '2026-07-01' });
     expect(pagina.busqueda()).toBe('');
     expect(pagina.filtros()).toEqual({});
@@ -291,7 +291,7 @@ describe('QueryReportPageComponent', () => {
       expect(el().querySelector('[data-nota-graficas]')?.textContent).toContain('Las gráficas usan las 4 filas que quedaron tras buscar o filtrar');
       expect(pagina.kpis().map((k) => k.amount)).toEqual(['S/ 26,000.00', 'S/ 8,000.00', '4', 'S/ 26,000.00']);
 
-      pagina.filtrar('operacion', '3 - Devolución');
+      pagina.filtrar('operacion', '5 - Devolución');
       fixture.detectChanges();
       expect(el().querySelector('[data-nota-graficas]')?.textContent).toContain('la única fila que quedó');
       // Con un solo mes no hay variación que dibujar: aviso en vez de ejes vacíos; el de barras sí tiene su mes.

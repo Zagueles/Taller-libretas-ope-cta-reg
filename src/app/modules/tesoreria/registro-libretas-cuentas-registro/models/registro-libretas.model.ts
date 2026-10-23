@@ -13,9 +13,9 @@ export interface OpcionCatalogo {
 }
 
 export const TIPOS_OPERACION: OpcionCatalogo[] = [
-  { value: '1', label: '1 - Saldos Iniciales' },
-  { value: '2', label: '2 - Reporte de Recaudación SUNAT' },
-  { value: '3', label: '3 - Devolución' },
+  { value: '1', label: '1 - Reporte de Recaudación SUNAT' },
+  { value: '3', label: '3 - Saldos Iniciales' },
+  { value: '5', label: '5 - Devolución' },
 ];
 
 export const CUENTAS_BANCARIAS_REGISTRO: OpcionCatalogo[] = [

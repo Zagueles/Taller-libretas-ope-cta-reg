@@ -42,7 +42,7 @@ describe('construirDetalleRegistro', () => {
   });
 
   it('el movimiento interno sale del tipo de operación y la descripción detallada lo nombra', () => {
-    const devolucion = libretas.movimientos.find((m) => m.tipoOperacionCodigo === '3')!;
+    const devolucion = libretas.movimientos.find((m) => m.tipoOperacionCodigo === '5')!;
     const d = construirDetalleRegistro(devolucion);
 
     expect(valor(d, 'Movimiento interno', 'Código')).toBe('DV0003');
@@ -57,8 +57,8 @@ describe('construirDetalleRegistro', () => {
   });
 
   it('el reporte de recaudación lleva la SUNAT como entidad administradora y los demás tipos no', () => {
-    const rr = construirDetalleRegistro({ ...enSoles, tipoOperacionCodigo: '2' });
-    const apertura = construirDetalleRegistro({ ...enSoles, tipoOperacionCodigo: '1' });
+    const rr = construirDetalleRegistro({ ...enSoles, tipoOperacionCodigo: '1' });
+    const apertura = construirDetalleRegistro({ ...enSoles, tipoOperacionCodigo: '3' });
     const campo = (d: ReturnType<typeof construirDetalleRegistro>, caption: string) => d.secciones.find((s) => s.titulo === 'Entidad administradora')!.campos.find((c) => c.caption === caption)!.value;
 
     expect(campo(rr, 'Sigla')).toBe('SUNAT');

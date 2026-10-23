@@ -124,7 +124,7 @@ export const REGISTRO_LIBRETAS_DOCUMENTS_CONFIG: DocumentsRecordsConfig = {
   recordFilter1Options: BENEFICIARIOS.map((b) => b.label.toUpperCase()),
   recordFilter2Label: 'Tipo de operación',
   recordFilter2Key: 'tipoOperacion',
-  recordFilter2Options: ['1 - Saldos Iniciales', '2 - Reporte de Recaudación SUNAT', '3 - Devolución'],
+  recordFilter2Options: ['1 - Reporte de Recaudación SUNAT', '3 - Saldos Iniciales', '5 - Devolución'],
   recordFilterCampoOptions: [
     { label: 'Beneficiario', value: 'beneficiario' },
     { label: 'Tipo de operación', value: 'tipoOperacion' },

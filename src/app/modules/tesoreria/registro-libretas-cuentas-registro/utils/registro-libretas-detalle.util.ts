@@ -15,9 +15,9 @@ const fechaVisible = (iso: string): string => iso.slice(0, 10).split('-').revers
 
 /** Movimiento interno por tipo de operación (código, descripción y sigla). */
 const MOVIMIENTO_INTERNO: Record<string, { codigo: string; descripcion: string; sigla: string }> = {
-  '1': { codigo: 'SI0001', descripcion: 'Saldos iniciales', sigla: 'SI' },
-  '2': { codigo: 'RR0002', descripcion: 'Reporte de recaudación SUNAT', sigla: 'RR' },
-  '3': { codigo: 'DV0003', descripcion: 'Devolución', sigla: 'DV' },
+  '1': { codigo: 'RR0002', descripcion: 'Reporte de recaudación SUNAT', sigla: 'RR' },
+  '3': { codigo: 'SI0001', descripcion: 'Saldos iniciales', sigla: 'SI' },
+  '5': { codigo: 'DV0003', descripcion: 'Devolución', sigla: 'DV' },
 };
 
 const SIN_DATO = '-';
@@ -107,8 +107,8 @@ export function construirDetalleRegistro(m: MovimientoLibretaRegistro, rechazado
       {
         titulo: 'Entidad administradora',
         campos: [
-          { caption: 'Código', value: m.tipoOperacionCodigo === '2' ? ENTIDAD_ADMINISTRADORA_SUNAT.codigo : SIN_DATO },
-          { caption: 'Sigla', value: m.tipoOperacionCodigo === '2' ? ENTIDAD_ADMINISTRADORA_SUNAT.sigla : SIN_DATO },
+          { caption: 'Código', value: m.tipoOperacionCodigo === '1' ? ENTIDAD_ADMINISTRADORA_SUNAT.codigo : SIN_DATO },
+          { caption: 'Sigla', value: m.tipoOperacionCodigo === '1' ? ENTIDAD_ADMINISTRADORA_SUNAT.sigla : SIN_DATO },
         ],
       },
       {

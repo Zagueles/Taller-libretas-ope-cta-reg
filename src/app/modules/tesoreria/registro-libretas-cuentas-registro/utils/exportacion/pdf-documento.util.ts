@@ -86,7 +86,7 @@ export async function generarPdfDocumento({ documento, movimientos }: DetalleDoc
     campos([
       { caption: 'Fecha registro', value: fechaRegistro },
       { caption: 'Número de operación', value: '12345678' },
-      { caption: 'Tipo de operación', value: '1 - Saldos iniciales' },
+      { caption: 'Tipo de operación', value: '3 - Saldos iniciales' },
     ]);
     if (indice === 0 && qr) y = Math.max(y, yQr + 22 + 3);
 

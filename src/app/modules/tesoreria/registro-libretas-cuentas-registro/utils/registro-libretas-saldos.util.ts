@@ -15,7 +15,7 @@ export interface SaldosLibretas {
 }
 
 /** Código del tipo de operación «Saldos iniciales» (movimiento interno «Saldo inicial»): su crédito forma parte del saldo inicial. */
-export const TIPO_OPERACION_SALDO_INICIAL = '1';
+export const TIPO_OPERACION_SALDO_INICIAL = '3';
 
 /** Tipo de cambio de una operación: un número único o el de compra (para créditos) y el de venta (para débitos), RN-032/033. */
 export type TipoCambioOperacion = number | { compra: number; venta: number };

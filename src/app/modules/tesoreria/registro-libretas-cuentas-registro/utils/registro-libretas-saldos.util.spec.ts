@@ -48,14 +48,14 @@ describe('registro-libretas-saldos', () => {
       ['mef-dgtp-cut', 'mef-dgtp'].forEach((cuenta) => {
         const movs = libretas.filter((m) => m.cuentaBancariaId === cuenta);
         const totales = saldosPorCuentaRegistro(movs);
-        const creditos = movs.filter((m) => m.tipoOperacionCodigo !== '1').reduce((t, m) => t + m.credito, 0);
+        const creditos = movs.filter((m) => m.tipoOperacionCodigo !== '3').reduce((t, m) => t + m.credito, 0);
         const debitos = movs.reduce((t, m) => t + m.debito, 0);
         expect(totales.saldoInicial + creditos - debitos).withContext(cuenta).toBe(totales.saldoFinal);
       });
     });
 
     it('RN-037: el registro de apertura (Saldos Iniciales) parte de saldo inicial 0.00 y entra como crédito', () => {
-      libretas.filter((m) => m.tipoOperacionCodigo === '1').forEach((m) => {
+      libretas.filter((m) => m.tipoOperacionCodigo === '3').forEach((m) => {
         expect(m.saldoInicial).withContext(`sec ${m.sec}`).toBe(0);
         expect(m.debito).toBe(0);
       });
@@ -81,8 +81,8 @@ describe('registro-libretas-saldos', () => {
 
   describe('crédito del movimiento interno «Saldo inicial»', () => {
     it('forma parte del saldo inicial total y no del abono del periodo; el saldo final no cambia', () => {
-      const apertura = { ...mov('000001', 'A', 0, 0, 1000), tipoOperacionCodigo: '1' } as MovimientoLibretaRegistro; // 0 → 1,000
-      const abono = { ...mov('000002', 'A', 1000, 0, 200), tipoOperacionCodigo: '2' } as MovimientoLibretaRegistro; // 1,000 → 1,200
+      const apertura = { ...mov('000001', 'A', 0, 0, 1000), tipoOperacionCodigo: '3' } as MovimientoLibretaRegistro; // 0 → 1,000
+      const abono = { ...mov('000002', 'A', 1000, 0, 200), tipoOperacionCodigo: '1' } as MovimientoLibretaRegistro; // 1,000 → 1,200
       expect(saldosPorCuentaRegistro([apertura, abono])).toEqual({ saldoInicial: 1000, saldoFinal: 1200, saldoInicialMN: 1000, saldoFinalMN: 1200 });
       // Sin la apertura en el resultado, el saldo inicial es el del primer registro.
       expect(saldosPorCuentaRegistro([abono]).saldoInicial).toBe(1000);

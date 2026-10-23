@@ -72,9 +72,9 @@ const IPD: Cuenta = ['000193', 'IPD', '111110193994 2.09 000000 000000 01'];
 const FONCOMUN: Cuenta = ['000120', 'FONDO DE COMPENSACIÓN MUNICIPAL', '111110009000 1.00 000000 000000 02'];
 const TESORO: Cuenta = ['000009', 'TESORO PÚBLICO', '111110009000 1.00 000000 000000 01'];
 
-const SALDOS = '1 - Saldos Iniciales';
-const SUNAT = '2 - Reporte de Recaudación SUNAT';
-const DEVOLUCION = '3 - Devolución';
+const SALDOS = '3 - Saldos Iniciales';
+const SUNAT = '1 - Reporte de Recaudación SUNAT';
+const DEVOLUCION = '5 - Devolución';
 
 const fila = (secuencia: string, fecha: string, [codigo, beneficiario, cuenta]: Cuenta, operacion: string, saldoFinal: string): ReportTableRow => ({
   secuencia,

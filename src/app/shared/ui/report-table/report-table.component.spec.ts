@@ -14,7 +14,7 @@ describe('ReportTableComponent', () => {
     { key: 'saldo', label: 'Saldo final', group: 'Importe', align: 'right', fixed: true, width: 150 },
   ];
   const filas: ReportTableRow[] = [
-    { secuencia: '000001', fecha: '28/06/2026', operacion: '1 - Saldos Iniciales', documento: '000001-2026', saldo: '10,000.00' },
+    { secuencia: '000001', fecha: '28/06/2026', operacion: '3 - Saldos Iniciales', documento: '000001-2026', saldo: '10,000.00' },
     { secuencia: '000002', fecha: '28/06/2026', operacion: '2 - Reporte SUNAT', documento: '', saldo: '19,000.00' },
   ];
 

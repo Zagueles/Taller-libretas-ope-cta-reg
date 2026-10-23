@@ -228,11 +228,11 @@ describe('mockBackendInterceptor', () => {
 
   describe('libretas de las cuentas de registro (/libretas)', () => {
     it('filtra los movimientos en el servidor con los parámetros de la URL', fakeAsync(() => {
-      const url = `${API}/libretas/movimientos?desde=2026-09-01&hasta=2026-09-30&cuentasBancarias=mef-dgtp&tiposOperacion=2,3`;
+      const url = `${API}/libretas/movimientos?desde=2026-09-01&hasta=2026-09-30&cuentasBancarias=mef-dgtp&tiposOperacion=1,5`;
       const { valor } = esperar(http.get<MovimientoLibretaRegistro[]>(url));
 
       expect(valor!.length).toBeGreaterThan(0);
-      expect(valor!.every((m) => m.cuentaBancariaId === 'mef-dgtp' && m.fecha.startsWith('2026-09') && ['2', '3'].includes(m.tipoOperacionCodigo))).toBeTrue();
+      expect(valor!.every((m) => m.cuentaBancariaId === 'mef-dgtp' && m.fecha.startsWith('2026-09') && ['1', '5'].includes(m.tipoOperacionCodigo))).toBeTrue();
 
       const todos = esperar(http.get<MovimientoLibretaRegistro[]>(`${API}/libretas/movimientos`));
       expect(todos.valor!.length).toBeGreaterThan(valor!.length);

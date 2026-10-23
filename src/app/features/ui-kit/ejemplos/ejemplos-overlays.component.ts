@@ -329,8 +329,8 @@ export class EjemplosOverlaysComponent {
   readonly sidePanelFiltros = signal(false);
   readonly eventoSidePanel = signal('');
   readonly operacionesFiltro: TextFieldOption[] = [
-    { label: '1 - Saldos Iniciales', value: '1' },
-    { label: '2 - Reporte de Recaudación SUNAT', value: '2' },
+    { label: '3 - Saldos Iniciales', value: '3' },
+    { label: '1 - Reporte de Recaudación SUNAT', value: '1' },
   ];
 
   abrirSidePanel(conFiltros: boolean): void {

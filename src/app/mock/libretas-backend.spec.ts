@@ -22,9 +22,9 @@ describe('libretas-backend', () => {
     });
 
     it('combina tipo de operación, entidad, unidad ejecutora y beneficiario (una lista vacía no filtra)', () => {
-      const devoluciones = filtrarMovimientos(libretas, { tiposOperacion: ['3'], entidades: [] });
+      const devoluciones = filtrarMovimientos(libretas, { tiposOperacion: ['5'], entidades: [] });
       expect(devoluciones.length).toBeGreaterThan(0);
-      expect(devoluciones.every((m) => m.tipoOperacionCodigo === '3')).toBeTrue();
+      expect(devoluciones.every((m) => m.tipoOperacionCodigo === '5')).toBeTrue();
 
       const ipd = filtrarMovimientos(libretas, { entidades: ['IPD'], beneficiarios: ['000193'] });
       expect(ipd.every((m) => m.entidad === 'IPD' && m.beneficiarioCodigo === '000193')).toBeTrue();
