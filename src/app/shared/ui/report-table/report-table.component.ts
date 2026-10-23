@@ -118,7 +118,7 @@ interface CeldaCabecera {
           <tr>
             @for (celda of filaSuperior; track $index; let ultimo = $last) {
               <th
-                class="h-10 px-siaf-md py-0 text-xs font-bold uppercase leading-none text-text"
+                class="h-10 px-siaf-md py-0 text-xs font-bold uppercase leading-4 text-text"
                 [class.text-center]="celda.align === 'center'"
                 [class.text-right]="celda.align === 'right'"
                 [class.border-r]="!ultimo && !celda.fixed"
@@ -140,7 +140,7 @@ interface CeldaCabecera {
             <tr>
               @for (columna of columnasAgrupadas; track columna.key; let i = $index) {
                 <th
-                  class="h-10 px-siaf-md py-0 text-xs font-bold uppercase leading-none text-text"
+                  class="h-10 px-siaf-md py-0 text-xs font-bold uppercase leading-4 text-text"
                   [class.text-right]="columna.align === 'right'"
                   [class.border-r]="finDeGrupo(i) && !columna.fixed"
                   [class.border-[var(--sys-color-divider-strong)]]="finDeGrupo(i) && !columna.fixed"

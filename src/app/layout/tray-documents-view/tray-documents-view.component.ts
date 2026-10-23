@@ -159,7 +159,7 @@ type AppliedCustomFilter = {
             <div class="siaf-table-scroll min-w-0">
               <table class="w-full table-fixed border-collapse text-left text-sm" [style.width.px]="anchoTabla" [style.min-width.px]="anchoTabla">
                 <thead>
-                  <tr class="h-10 bg-[var(--sys-color-bg-surfaces-surface-high)] text-xs font-bold uppercase leading-none text-text">
+                  <tr class="h-10 bg-[var(--sys-color-bg-surfaces-surface-high)] text-xs font-bold uppercase leading-4 text-text">
                     <th class="w-12 rounded-l-siaf-sm px-siaf-sm py-siaf-sm"></th>
                     <th [class]="ancho.documento + ' px-siaf-md py-siaf-sm'">Documento</th>
                     <th [class]="ancho.numero + ' px-siaf-md py-siaf-sm'">N&uacute;mero</th>

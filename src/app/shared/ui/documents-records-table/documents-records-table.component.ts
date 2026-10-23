@@ -126,7 +126,7 @@ function anchoDeClase(clase?: string): number {
         </colgroup>
         <!-- Sin borde propio en el thead: cada celda de la cabecera ya trae su línea inferior y el del thead sumaba 1 px a la última fila. -->
         <thead class="border-b-0">
-          <tr class="h-10 bg-surface-high text-xs font-bold uppercase leading-none text-text">
+          <tr class="h-10 bg-surface-high text-xs font-bold uppercase leading-4 text-text">
             @if (mostrarCasilla) {
               <th class="sticky left-0 z-[3] w-10 rounded-l-siaf-sm bg-surface-high px-siaf-sm py-0 " [ngClass]="sombraIzq" [attr.rowspan]="hayGrupos ? 2 : null"></th>
             }
@@ -156,7 +156,7 @@ function anchoDeClase(clase?: string): number {
             <th data-columna-accion [ngClass]="[hayColumnaFija ? '' : sombraDer, hayGrupos ? 'border-l border-[var(--sys-color-divider-strong)]' : '']" class="sticky right-0 w-14 rounded-r-siaf-sm bg-surface-high px-siaf-sm py-0" [attr.rowspan]="hayGrupos ? 2 : null"></th>
           </tr>
           @if (hayGrupos) {
-            <tr class="h-10 bg-surface-high text-xs font-bold uppercase leading-none text-text">
+            <tr class="h-10 bg-surface-high text-xs font-bold uppercase leading-4 text-text">
               @for (column of columnasConGrupo; track column.key; let i = $index) {
                 <th
                   class="truncate px-siaf-md py-0"

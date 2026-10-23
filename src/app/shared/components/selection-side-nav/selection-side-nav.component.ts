@@ -183,7 +183,7 @@ export type SelectionMode = 'single' | 'multiple';
             <div class="mt-siaf-md siaf-sidepanel-table-scroll">
               <table class="w-full border-collapse text-left text-sm" [ngClass]="tableMinWidthClass">
                 <thead>
-                  <tr class="h-10 bg-[var(--sys-color-bg-surfaces-surface-high)] text-xs font-bold uppercase leading-none text-text">
+                  <tr class="h-10 bg-[var(--sys-color-bg-surfaces-surface-high)] text-xs font-bold uppercase leading-4 text-text">
                     <th class="w-12 rounded-l-siaf-sm px-siaf-sm"></th>
                     @for (col of columns; track col.key; let last = $last) {
                       <th
