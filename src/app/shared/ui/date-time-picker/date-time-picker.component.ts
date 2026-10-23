@@ -16,7 +16,7 @@ type CalendarDay = {
 
 /**
  * Selector de fecha (y opcionalmente hora) con calendario propio, label flotante,
- * estados de error/éxito, `[minDate]` para deshabilitar días anteriores y `[maxDate]` para los posteriores (no se aceptan tampoco al escribirlos).
+ * estados de error/éxito, `[minDate]` para deshabilitar días anteriores y `[maxDate]` para los posteriores (no se aceptan tampoco al escribirlos; con `[maxDateError]`, la fecha posterior escrita y confirmada se conserva con ese mensaje de error).
  *
  * Es el control canónico de fecha del design system: úsalo en vez de un `input type="date"`
  * nativo para que el campo respete tokens, textos en español y el formato dd/mm/aaaa.
@@ -276,12 +276,12 @@ type CalendarDay = {
         }
       </span>
 
-      @if (hint && !error) {
+      @if (hint && !mensajeError) {
         <span class="text-xs" [class]="supportingClass">{{ hint }}</span>
       }
 
-      @if (error) {
-        <span class="text-xs text-[var(--sys-color-text-feedback-danger)]">{{ error }}</span>
+      @if (mensajeError) {
+        <span class="text-xs text-[var(--sys-color-text-feedback-danger)]">{{ mensajeError }}</span>
       }
     </label>
   `,
@@ -303,6 +303,10 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
   @Input() minDate = '';
   /** Fecha máxima seleccionable (ISO, YYYY-MM-DD): los días posteriores quedan deshabilitados y no se aceptan al escribirlos. */
   @Input() maxDate = '';
+  /** Con `maxDate`: texto de error cuando se escribe y confirma una fecha posterior; el campo la conserva en rojo hasta que se corrija. */
+  @Input() maxDateError = '';
+  /** Error por una fecha escrita fuera de `maxDate` (ver `maxDateError`). */
+  private errorRango = false;
 
   @Output() valueChange = new EventEmitter<string>();
 
@@ -406,8 +410,13 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
     return calendarDays;
   }
 
+  /** Error mostrado bajo el campo: el de `error` o, si se confirmó una fecha posterior a `maxDate`, `maxDateError`. */
+  get mensajeError(): string {
+    return this.error || (this.errorRango ? this.maxDateError : '');
+  }
+
   get effectiveState(): DatePickerState {
-    if (this.error) {
+    if (this.mensajeError) {
       return 'error';
     }
 
@@ -547,6 +556,7 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
     const digitos = campo.value.replace(/\D/g, '').slice(0, total);
     this.texto = this.mascara(digitos);
     campo.value = this.texto;
+    this.errorRango = false;
     if (digitos.length === total) this.aplicarTexto();
   }
 
@@ -558,7 +568,7 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
       this.valueChange.emit('');
       return;
     }
-    if (!this.aplicarTexto()) this.texto = this.displayValue;
+    if (!this.aplicarTexto() && !this.errorRango) this.texto = this.displayValue;
   }
 
   /** Aplica el texto del campo; devuelve si era una fecha (y hora) válida y permitida por `minDate`. */
@@ -569,6 +579,8 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
     const fecha = new Date(Number(anio), Number(mes) - 1, Number(dia));
     const existe = fecha.getFullYear() === Number(anio) && fecha.getMonth() === Number(mes) - 1 && fecha.getDate() === Number(dia);
     const iso = `${anio}-${mes}-${dia}`;
+    this.errorRango = Boolean(existe && this.maxDateError && this.maxDate && iso > this.maxDate && Number(anio) >= 1900);
+    if (this.errorRango) return false;
     if (!existe || Number(anio) < 1900 || (this.minDate && iso < this.minDate) || (this.maxDate && iso > this.maxDate)) return false;
     if (this.variant === 'datetime') {
       if (Number(hora) > 23 || Number(minuto) > 59 || Number(segundo) > 59) return false;
@@ -595,6 +607,7 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
   selectDate(value: string, event?: Event): void {
     event?.stopPropagation();
     this.selectedDate = value;
+    this.errorRango = false;
     this.texto = this.displayValue;
     this.valueChange.emit(this.salida(value));
 

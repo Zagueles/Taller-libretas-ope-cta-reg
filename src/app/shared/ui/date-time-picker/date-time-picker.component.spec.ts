@@ -196,6 +196,24 @@ describe('DateTimePickerComponent — fecha máxima', () => {
     expect(emitidos).toEqual(['2026-03-15']);
   });
 
+  it('con maxDateError, la fecha posterior escrita y confirmada se conserva con el mensaje y se limpia al corregirla', () => {
+    fixture.componentRef.setInput('maxDateError', 'Ingrese una fecha igual o anterior a la actual.');
+    fixture.detectChanges();
+    campo().value = '20062027';
+    campo().dispatchEvent(new Event('input'));
+    campo().dispatchEvent(new Event('blur'));
+    fixture.detectChanges();
+    expect(campo().value).toBe('20/06/2027');
+    expect(fixture.nativeElement.textContent).toContain('Ingrese una fecha igual o anterior a la actual.');
+    expect(campo().getAttribute('aria-invalid')).toBe('true');
+    expect(emitidos).toEqual([]);
+    campo().value = '10032026';
+    campo().dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).not.toContain('Ingrese una fecha igual o anterior');
+    expect(emitidos).toEqual(['2026-03-10']);
+  });
+
   it('con minDate y maxDate la grilla de años solo ofrece los años del rango y las flechas no salen de él', () => {
     fixture.componentRef.setInput('minDate', '2020-01-01');
     fixture.componentRef.setInput('maxDate', '2026-10-22');
