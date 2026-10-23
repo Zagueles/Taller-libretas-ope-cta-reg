@@ -109,4 +109,39 @@ describe('ReportTableComponent', () => {
     expect(aviso.colSpan).toBe(5);
     expect(aviso.textContent).toContain('Aún no se encontraron resultados');
   });
+
+  it('con sortable, los títulos son botones que emiten el siguiente orden y marcan aria-sort', () => {
+    montar(columnas, filas);
+    fixture.componentRef.setInput('sortable', true);
+    fixture.detectChanges();
+    const emitidos: unknown[] = [];
+    fixture.componentInstance.sortChange.subscribe((o) => emitidos.push(o));
+
+    const boton = (nombre: string): HTMLButtonElement =>
+      Array.from(el().querySelectorAll<HTMLButtonElement>('thead button')).find((b) => b.getAttribute('aria-label') === `Ordenar por ${nombre}`)!;
+    boton('Tipo de operación').click();
+    expect(emitidos).toEqual([{ key: 'operacion', direction: 'asc' }]);
+
+    fixture.componentRef.setInput('sort', { key: 'operacion', direction: 'asc' });
+    fixture.detectChanges();
+    expect(Array.from(el().querySelectorAll('thead th')).find((th) => th.textContent!.includes('Tipo de operación'))!.getAttribute('aria-sort')).toBe('ascending');
+    boton('Tipo de operación').click();
+    expect(emitidos[1]).toEqual({ key: 'operacion', direction: 'desc' });
+  });
+
+  it('sin sortable los títulos son texto y no hay aria-sort', () => {
+    montar(columnas, filas);
+    expect(el().querySelectorAll('thead button').length).toBe(0);
+    expect(el().querySelector('thead th[aria-sort]')).toBeNull();
+  });
+
+  it('el ancho de cada columna alcanza para su título completo (la flecha de orden va en el relleno de la celda y no suma)', () => {
+    montar([{ key: 'a', label: 'Saldo inicial', width: 90 }, { key: 'b', label: 'Código', width: 60 }], [{ a: '1', b: '2' }]);
+    // 9 px por letra + 32 de relleno: «Saldo inicial» (13 caracteres) 149 px y «Código» (6) 86 px.
+    const anchos = (): string[] => Array.from(el().querySelectorAll<HTMLElement>('col')).map((c) => c.style.width);
+    expect(anchos()).toEqual(['149px', '86px']);
+    fixture.componentRef.setInput('sortable', true);
+    fixture.detectChanges();
+    expect(anchos()).toEqual(['149px', '86px']);
+  });
 });

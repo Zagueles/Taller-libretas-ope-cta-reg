@@ -1,3 +1,4 @@
+import { ANCHO_LISTADO_DOCUMENTOS } from '../../../../shared/constants/anchos-listado-documentos';
 import type { CreateDocumentProcessOption } from '../../../../shared/components/create-document/create-document.component';
 import type { DocumentsRecordsColumn, DocumentsRecordsConfig } from '../../../../shared/types/documents-records.types';
 import { buildProcessBreadcrumbs } from '../../../../shared/utils/breadcrumbs.util';
@@ -24,10 +25,10 @@ const ESTADOS_DOCUMENTO = ['Elaborado', 'Verificado', 'Aprobado', 'Observado', '
 const documentColumns: DocumentsRecordsColumn[] = [
   { key: 'document', label: 'Documento', visibility: 'visible', group: 'default', widthClass: 'w-[300px]', sortable: true },
   { key: 'number', label: 'Número', visibility: 'visible', group: 'default', widthClass: 'w-[130px]', sortable: true },
-  { key: 'actionType', label: 'Tipo de acción', visibility: 'visible', group: 'default', widthClass: 'w-[140px]', sortable: true },
-  { key: 'status', label: 'Estado', visibility: 'visible', group: 'default', widthClass: 'w-[120px]', kind: 'flow-status', sortable: true },
+  { key: 'actionType', label: 'Tipo de acción', visibility: 'visible', group: 'default', widthClass: ANCHO_LISTADO_DOCUMENTOS.tipoAccion, sortable: true },
+  { key: 'status', label: 'Estado', visibility: 'visible', group: 'default', widthClass: ANCHO_LISTADO_DOCUMENTOS.estado, kind: 'flow-status', sortable: true },
   { key: 'system', label: 'Sistema', visibility: 'visible', group: 'default', widthClass: 'w-[130px]', sortable: true },
-  { key: 'date', label: 'Fecha de registro', visibility: 'visible', group: 'default', widthClass: 'w-[170px]', sortable: true, sortType: 'date' },
+  { key: 'date', label: 'Fecha de registro', visibility: 'visible', group: 'default', widthClass: ANCHO_LISTADO_DOCUMENTOS.fechaRegistro, sortable: true, sortType: 'date' },
   { key: 'entity', label: 'Entidad', visibility: 'visible', group: 'default', widthClass: 'w-[280px]', sortable: true },
 ];
 

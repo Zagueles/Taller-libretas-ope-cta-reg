@@ -152,6 +152,7 @@ export type SelectionMode = 'single' | 'multiple';
                   [showEditAction]="false"
                   [showDeleteAction]="false"
                   [showMenuAction]="false"
+                  [showTopPagination]="showTopPagination"
                   [page]="page"
                   [pageSize]="pageSize"
                   [totalItems]="totalItems"
@@ -163,7 +164,7 @@ export type SelectionMode = 'single' | 'multiple';
               </div>
             } @else if (paginated && showTopPagination) {
               <div class="mt-siaf-md">
-                <siaf-table-controls [showSelection]="false"
+                <siaf-table-controls [showSelection]="false" [showTopPagination]="true"
                   [page]="page"
                   [pageSize]="pageSize"
                   [totalItems]="totalItems"
@@ -182,7 +183,7 @@ export type SelectionMode = 'single' | 'multiple';
             <div class="mt-siaf-md siaf-sidepanel-table-scroll">
               <table class="w-full border-collapse text-left text-sm" [ngClass]="tableMinWidthClass">
                 <thead>
-                  <tr class="h-10 bg-[var(--sys-color-bg-surfaces-surface-high)] text-xs font-bold uppercase text-text">
+                  <tr class="h-10 bg-[var(--sys-color-bg-surfaces-surface-high)] text-xs font-bold uppercase leading-none text-text">
                     <th class="w-12 rounded-l-siaf-sm px-siaf-sm"></th>
                     @for (col of columns; track col.key; let last = $last) {
                       <th

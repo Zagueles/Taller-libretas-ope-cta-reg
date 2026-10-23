@@ -5,7 +5,6 @@ import { IconComponent } from '../../shared/ui/icon/icon.component';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 import { NotificacionesApiService, NotificacionResponse } from '../../core/api/notificaciones-api.service';
 import { NotificationsStateService } from '../../core/realtime/notifications-state.service';
-import { TableControlsComponent } from '../../shared/components/table-controls/table-controls.component';
 
 type FiltroLeidas = 'todas' | 'leidas' | 'no_leidas';
 
@@ -56,7 +55,7 @@ type FiltroLeidas = 'todas' | 'leidas' | 'no_leidas';
   selector: 'siaf-tray-notifications-view',
   standalone: true,
   imports: [
-    TableControlsComponent,IconComponent, PaginationComponent],
+    IconComponent, PaginationComponent],
   template: `
     <section class="min-h-[calc(100vh-56px)] bg-[var(--sys-color-bg-surfaces-surface-lowest)]">
       <section class="bg-surface">
@@ -130,15 +129,6 @@ type FiltroLeidas = 'todas' | 'leidas' | 'no_leidas';
                 </p>
               </div>
             } @else {
-              <siaf-table-controls [showSelection]="false"
-                [page]="page()"
-                [pageSize]="pageSize()"
-                [totalItems]="filtered().length"
-                [totalPages]="totalPages()"
-                (previous)="prevPage()"
-                (next)="nextPage()"
-              />
-
               <ul class="m-0 flex list-none flex-col gap-0 p-0">
                 @for (notif of pagedItems(); track notif.id) {
                   <li>

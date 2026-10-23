@@ -11,6 +11,7 @@ import { TableControlsComponent } from '../../shared/components/table-controls/t
 import { SolicitudesStateService, SolicitudDemo } from '../../core/state/solicitudes-state.service';
 import { SolicitudesFacadeService } from '../../core/state/solicitudes-facade.service';
 import { PermissionService } from '../../core/auth/permission.service';
+import { ANCHO_CASILLA_Y_ACCION, ANCHO_LISTADO_DOCUMENTOS, anchoEnPx } from '../../shared/constants/anchos-listado-documentos';
 import { TooltipDirective } from '../../shared/ui/tooltip/tooltip.directive';
 import { ESTADO, ESTADOS_RESPUESTA_APROBADOR } from '../../core/models/documento.model';
 
@@ -156,18 +157,18 @@ type AppliedCustomFilter = {
             />
 
             <div class="siaf-table-scroll min-w-0">
-              <table class="w-full min-w-[1216px] border-collapse text-left text-sm">
+              <table class="w-full table-fixed border-collapse text-left text-sm" [style.width.px]="anchoTabla" [style.min-width.px]="anchoTabla">
                 <thead>
-                  <tr class="h-10 bg-[var(--sys-color-bg-surfaces-surface-high)] text-xs font-bold uppercase text-text">
+                  <tr class="h-10 bg-[var(--sys-color-bg-surfaces-surface-high)] text-xs font-bold uppercase leading-none text-text">
                     <th class="w-12 rounded-l-siaf-sm px-siaf-sm py-siaf-sm"></th>
-                    <th class="w-[260px] px-siaf-md py-siaf-sm">Documento</th>
-                    <th class="w-[90px] px-siaf-md py-siaf-sm">N&uacute;mero</th>
-                    <th class="w-[140px] px-siaf-md py-siaf-sm">Tipo de acci&oacute;n</th>
-                    <th class="w-[120px] px-siaf-md py-siaf-sm">Estado</th>
-                    <th class="w-[200px] px-siaf-md py-siaf-sm">Sistema</th>
-                    <th class="w-[120px] px-siaf-md py-siaf-sm">Fecha de re...</th>
-                    <th class="w-[131px] px-siaf-md py-siaf-sm">ID Entidad</th>
-                    <th class="w-[286px] px-siaf-md py-siaf-sm">Entidad</th>
+                    <th [class]="ancho.documento + ' px-siaf-md py-siaf-sm'">Documento</th>
+                    <th [class]="ancho.numero + ' px-siaf-md py-siaf-sm'">N&uacute;mero</th>
+                    <th [class]="ancho.tipoAccion + ' px-siaf-md py-siaf-sm'">Tipo de acci&oacute;n</th>
+                    <th [class]="ancho.estado + ' px-siaf-md py-siaf-sm'">Estado</th>
+                    <th [class]="ancho.sistema + ' px-siaf-md py-siaf-sm'">Sistema</th>
+                    <th [class]="ancho.fechaRegistro + ' px-siaf-md py-siaf-sm'">Fecha de registro</th>
+                    <th [class]="ancho.idEntidad + ' px-siaf-md py-siaf-sm'">ID Entidad</th>
+                    <th [class]="ancho.entidad + ' px-siaf-md py-siaf-sm'">Entidad</th>
                     <th class="sticky right-0 w-14 rounded-r-siaf-sm bg-[var(--sys-color-bg-surfaces-surface-high)] px-siaf-sm py-siaf-sm"></th>
                   </tr>
                 </thead>
@@ -234,6 +235,11 @@ type AppliedCustomFilter = {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TrayDocumentsViewComponent implements OnInit, OnChanges {
+  /** Mismas medidas de columna que la pestaña «Documentos» de «Documentos y registros». */
+  readonly ancho = ANCHO_LISTADO_DOCUMENTOS;
+  /** Suma exacta de las columnas: con `table-fixed` la tabla mide eso y los anchos no se reparten según el contenido. */
+  readonly anchoTabla = Object.values(ANCHO_LISTADO_DOCUMENTOS).reduce((suma, clase) => suma + anchoEnPx(clase), 0) + ANCHO_CASILLA_Y_ACCION;
+
   private readonly solicitudesState = inject(SolicitudesStateService);
   private readonly solicitudesFacade = inject(SolicitudesFacadeService);
   private readonly permissionService = inject(PermissionService);

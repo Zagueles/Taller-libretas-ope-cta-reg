@@ -43,6 +43,7 @@ import { PageShellComponent } from '../page-shell/page-shell.component';
 import { PaginationComponent } from '../pagination/pagination.component';
 import { ParametroAplicado, ParametrosAplicadosComponent } from '../parametros-aplicados/parametros-aplicados.component';
 import { QueryParametersPanelComponent, tieneValor } from '../query-parameters-panel/query-parameters-panel.component';
+import { TableSort, ordenarFilas, tipoOrdenDeColumna, valorOrdenable } from '../../utils/table-sort.util';
 import { GraficoCalculado, calcularGrafico, calcularKpis } from './query-report-charts';
 import { cumpleCondicion } from './query-report-conditions';
 import { consolidarPorCuenta, totalizarSaldos } from '../../utils/saldos-agregados.util';
@@ -429,6 +430,9 @@ let siguienteId = 0;
                           [levels]="vista.niveles"
                           [aggregation]="configuracion().groupAggregation ?? null"
                           [footerInnermost]="true"
+                          [sortable]="true"
+                          [sort]="orden()"
+                          (sortChange)="cambiarOrden($event)"
                           [ariaLabel]="configuracion().tableLabel ?? configuracion().title"
                     [groupTooltips]="configuracion().columnsPanel?.groupLabels ?? {}"
                           (linkClicked)="linkClicked.emit($event)"
@@ -443,6 +447,9 @@ let siguienteId = 0;
                     [levels]="nivelesGrupo()"
                     [aggregation]="configuracion().groupAggregation ?? null"
                     [footerInnermost]="nivelesGrupo().length <= 2"
+                    [sortable]="true"
+                    [sort]="orden()"
+                    (sortChange)="cambiarOrden($event)"
                     [ariaLabel]="configuracion().tableLabel ?? configuracion().title"
                     [groupTooltips]="configuracion().columnsPanel?.groupLabels ?? {}"
                     (linkClicked)="linkClicked.emit($event)"
@@ -452,6 +459,9 @@ let siguienteId = 0;
                     [columns]="columnasMostradas()"
                     [rows]="filasPagina()"
                     [rowKey]="configuracion().rowKey"
+                    [sortable]="true"
+                    [sort]="orden()"
+                    (sortChange)="cambiarOrden($event)"
                     [ariaLabel]="configuracion().tableLabel ?? configuracion().title"
                     [groupTooltips]="configuracion().columnsPanel?.groupLabels ?? {}"
                     (linkClicked)="linkClicked.emit($event)"
@@ -811,10 +821,27 @@ export class QueryReportPageComponent {
 
   readonly totalPaginas = computed(() => Math.max(1, Math.ceil(this.filasFiltradas().length / this.tamanoPagina())));
 
+  /** Orden elegido en el título de una columna; `null` es el de llegada. Solo afecta a la tabla: los KPI y los gráficos usan `filasFiltradas`. */
+  readonly orden = signal<TableSort | null>(null);
+
+  /** Todas las filas del resultado ordenadas (no solo la página), para que el orden valga entre páginas. */
+  private readonly filasOrdenadas = computed<QueryReportRow[]>(() => {
+    const orden = this.orden();
+    const columna = orden ? this.configuracion().columns.find((c) => c.key === orden.key) : undefined;
+    if (!orden || !columna) return this.filasFiltradas();
+    const tipo = tipoOrdenDeColumna(columna);
+    return ordenarFilas(this.filasFiltradas(), orden, (fila, key) => valorOrdenable(fila[key], tipo));
+  });
+
+  cambiarOrden(orden: TableSort | null): void {
+    this.orden.set(orden);
+    this.pagina.set(1);
+  }
+
   readonly filasPagina = computed(() => {
     const pagina = Math.min(this.pagina(), this.totalPaginas());
     const inicio = (pagina - 1) * this.tamanoPagina();
-    return this.filasFiltradas().slice(inicio, inicio + this.tamanoPagina());
+    return this.filasOrdenadas().slice(inicio, inicio + this.tamanoPagina());
   });
 
   readonly anuncio = computed(() => {

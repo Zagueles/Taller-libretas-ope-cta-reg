@@ -59,3 +59,10 @@ export function valorOrdenable(valor: unknown, tipo: SortType = 'text'): string 
   }
   return String(valor);
 }
+
+/** Tipo de orden de una columna de reporte sin `sortType` explícito: importes (alineados a la derecha) como número, columnas de fecha como fecha, el resto como texto. */
+export function tipoOrdenDeColumna(columna: { key: string; align?: string; sortType?: SortType }): SortType {
+  if (columna.sortType) return columna.sortType;
+  if (columna.align === 'right') return 'number';
+  return /fecha/i.test(columna.key) ? 'date' : 'text';
+}

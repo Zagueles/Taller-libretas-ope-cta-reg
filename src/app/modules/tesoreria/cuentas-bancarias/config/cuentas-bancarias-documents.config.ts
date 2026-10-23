@@ -1,3 +1,4 @@
+import { ANCHO_LISTADO_DOCUMENTOS } from '../../../../shared/constants/anchos-listado-documentos';
 import { ESTADO } from '../../../../core/models/documento.model';
 import type {
   DocumentsRecordsColumn,
@@ -17,10 +18,10 @@ import { CREATE_DOCUMENT_OPTIONS, PROCESS_ID, PROCESS_ROUTE, REQUEST_ROUTE } fro
 const documentColumns: DocumentsRecordsColumn[] = [
   { key: 'document', label: 'Documento', visibility: 'visible', group: 'default', widthClass: 'w-[380px]', kind: 'document-link', sortable: true },
   { key: 'number', label: 'Número', visibility: 'visible', group: 'default', widthClass: 'w-[280px]', sortable: true },
-  { key: 'actionType', label: 'Tipo de acción', visibility: 'visible', group: 'default', widthClass: 'w-[160px]', sortable: true },
-  { key: 'status', label: 'Estado', visibility: 'visible', group: 'default', widthClass: 'w-[150px]', kind: 'flow-status', sortable: true },
+  { key: 'actionType', label: 'Tipo de acción', visibility: 'visible', group: 'default', widthClass: ANCHO_LISTADO_DOCUMENTOS.tipoAccion, sortable: true },
+  { key: 'status', label: 'Estado', visibility: 'visible', group: 'default', widthClass: ANCHO_LISTADO_DOCUMENTOS.estado, kind: 'flow-status', sortable: true },
   { key: 'system', label: 'Sistemas Nacionales', visibility: 'visible', group: 'default', widthClass: 'w-[240px]' },
-  { key: 'date', label: 'Fecha de registro', visibility: 'visible', group: 'default', widthClass: 'w-[170px]', sortable: true, sortType: 'date' },
+  { key: 'date', label: 'Fecha de registro', visibility: 'visible', group: 'default', widthClass: ANCHO_LISTADO_DOCUMENTOS.fechaRegistro, sortable: true, sortType: 'date' },
   { key: 'creator', label: 'Creador', visibility: 'visible', group: 'more', widthClass: 'w-[220px]', sortable: true },
   { key: 'subject', label: 'Asunto/Motivo', visibility: 'hidden', group: 'more', widthClass: 'w-[280px]', sortable: true },
   { key: 'requesterArea', label: 'Área solicitante', visibility: 'hidden', group: 'more', widthClass: 'w-[240px]' },

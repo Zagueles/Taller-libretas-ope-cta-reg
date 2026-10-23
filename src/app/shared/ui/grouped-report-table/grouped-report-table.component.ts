@@ -1,7 +1,9 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges, ViewChild } from '@angular/core';
 
 import { IconComponent } from '../icon/icon.component';
-import { ANCHO_COLUMNA_POR_DEFECTO, medirSombras, observarSombras, SOMBRA_DER } from '../tabla-scroll';
+import { ANCHO_COLUMNA_POR_DEFECTO, anchoDeColumna, medirSombras, observarSombras, SOMBRA_DER } from '../tabla-scroll';
+import { TableSort, ariaSortDe, ordenarFilas, siguienteOrden, tipoOrdenDeColumna, valorOrdenable } from '../../utils/table-sort.util';
 import { TooltipDirective } from '../tooltip/tooltip.directive';
 import type { QueryReportGroupAggregation } from '../../types/query-report.types';
 import type { ReportTableColumn, ReportTableRow } from '../report-table/report-table.component';
@@ -35,6 +37,8 @@ interface CeldaCabecera {
   /** Sin divisor a la derecha: la celda va pegada a la columna fija de su mismo grupo. */
   sinDivisor?: boolean;
   label: string;
+  /** Clave de la columna cuando la celda es una sola columna (la que se puede ordenar); los grupos no la llevan. */
+  key?: string;
   colspan: number;
   rowspan: 1 | 2;
   align: 'left' | 'right' | 'center';
@@ -86,9 +90,21 @@ let siguienteId = 0;
 @Component({
   selector: 'siaf-grouped-report-table',
   standalone: true,
-  imports: [IconComponent, TooltipDirective],
+  imports: [IconComponent, NgTemplateOutlet, TooltipDirective],
   host: { class: 'block min-w-0' },
   template: `
+      <!-- Título de una columna: texto, o botón que ordena (flecha en la columna ordenada) cuando la tabla es sortable. -->
+      <ng-template #titulo let-label="label" let-key="key" let-tooltip="tooltip">
+        @if (sortable && key) {
+          <button class="group -mr-4 inline-flex max-w-[calc(100%+1rem)] items-center bg-transparent p-0 font-[inherit] uppercase text-inherit" type="button" title="Ordenar" [attr.aria-label]="'Ordenar por ' + label" (click)="ordenar(key)">
+            <span class="truncate" [siafTooltip]="tooltip ?? null">{{ label }}</span>
+            <siaf-icon class="shrink-0 transition-opacity" [class]="claseFlecha(key)" [name]="sort?.key === key && sort?.direction === 'desc' ? 'arrow_downward' : 'arrow_upward'" [size]="16" />
+          </button>
+        } @else {
+          <span class="block truncate" [siafTooltip]="tooltip ?? null">{{ label }}</span>
+        }
+      </ng-template>
+
     <div
       #scroll
       class="siaf-table-scroll group/tabla rounded-siaf-sm outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sys-color-border-states-focus)]"
@@ -100,15 +116,16 @@ let siguienteId = 0;
       <!-- Bordes separados y ancho fijo por columna (como Documentos y registros): abrir o cerrar grupos no mueve los anchos. -->
       <table class="w-full min-w-full table-fixed border-separate border-spacing-0 text-left text-sm" [style.width.px]="anchoTabla" [attr.aria-label]="ariaLabel">
         <colgroup>
-          @for (columna of columnasVisibles; track columna.key) {
-            <col [style.width.px]="columna.width ?? anchoPorDefecto" />
+          @for (columna of columnasVisibles; track columna.key; let primera = $first) {
+            <col [style.width.px]="anchoColumna(columna) + (primera ? sangriaDetalle : 0)" />
           }
         </colgroup>
-        <thead>
+        <!-- Sin borde propio en el thead: cada celda de la cabecera ya trae su línea inferior y el del thead sumaba 1 px a la última fila. -->
+        <thead class="border-b-0">
           <tr>
             @for (celda of filaSuperior; track $index; let ultimo = $last) {
               <th
-                class="h-10 px-siaf-md py-siaf-sm text-xs font-bold uppercase leading-normal text-[var(--sys-color-text-neutral-high)]"
+                class="h-10 px-siaf-md py-0 text-xs font-bold uppercase leading-none text-text"
                 [class.text-center]="celda.align === 'center'"
                 [class.text-right]="celda.align === 'right'"
                 [class.border-r]="!ultimo && !celda.fixed && !celda.sinDivisor"
@@ -117,10 +134,11 @@ let siguienteId = 0;
                 [attr.colspan]="celda.colspan > 1 ? celda.colspan : null"
                 [attr.rowspan]="celda.rowspan > 1 ? celda.rowspan : null"
                 [attr.scope]="celda.rowspan === 2 ? 'col' : 'colgroup'"
+                [attr.aria-sort]="ariaSort(celda.key)"
                 [style.width.px]="celda.width"
                 [style.min-width.px]="celda.width"
               >
-                <span class="block truncate" [siafTooltip]="celda.tooltip ?? null">{{ celda.label }}</span>
+                <ng-container *ngTemplateOutlet="titulo; context: { label: celda.label, key: celda.key, tooltip: celda.tooltip }" />
               </th>
             }
           </tr>
@@ -128,16 +146,17 @@ let siguienteId = 0;
             <tr>
               @for (columna of columnasAgrupadas; track columna.key; let i = $index) {
                 <th
-                  class="h-10 px-siaf-md py-siaf-sm text-xs font-bold uppercase leading-normal text-[var(--sys-color-text-neutral-high)]"
+                  class="h-10 px-siaf-md py-0 text-xs font-bold uppercase leading-none text-text"
                   [class.text-right]="columna.align === 'right'"
                   [class.border-r]="finDeGrupo(i) && !columna.fixed"
                   [class.border-[var(--sys-color-divider-strong)]]="finDeGrupo(i) && !columna.fixed"
                   [class]="columna.fixed ? claseFijaCabeceraInferior : ''"
                   scope="col"
+                  [attr.aria-sort]="ariaSort(columna.key)"
                   [style.width.px]="columna.width ?? null"
                   [style.min-width.px]="columna.width ?? null"
                 >
-                  <span class="block truncate" [siafTooltip]="tooltipColumna(columna)">{{ columna.label }}</span>
+                  <ng-container *ngTemplateOutlet="titulo; context: { label: columna.label, key: columna.key, tooltip: tooltipColumna(columna) }" />
                 </th>
               }
             </tr>
@@ -183,7 +202,7 @@ let siguienteId = 0;
                 <tr class="bg-surface [&>td]:border-b [&>td]:border-[var(--sys-color-divider-default)]">
                   @for (columna of columnasVisibles; track columna.key; let primero = $first) {
                     <td
-                      class="h-12 px-siaf-md py-siaf-sm align-middle text-sm leading-normal tracking-[0.0249px] text-[var(--sys-color-text-neutral-medium)]"
+                      class="h-12 px-siaf-md py-siaf-sm align-middle text-sm text-text"
                       [class.text-right]="columna.align === 'right'"
                       [class.whitespace-nowrap]="columna.align === 'right'"
                       [class]="columna.fixed ? claseFija + ' z-[1] bg-surface' : ''"
@@ -263,6 +282,25 @@ export class GroupedReportTableComponent implements OnChanges, AfterViewInit, On
   readonly claseFijaCabeceraInferior = this.claseFijaCabecera;
   readonly anchoPorDefecto = ANCHO_COLUMNA_POR_DEFECTO;
 
+  /** Con `sortable`, cada título es un botón que ordena (asc → desc → sin orden); dentro de cada grupo, las filas de detalle se ordenan por esa columna (los grupos conservan su orden). */
+  @Input() sortable = false;
+  @Input() sort: TableSort | null = null;
+  @Output() sortChange = new EventEmitter<TableSort | null>();
+
+  ariaSort(key: string | undefined): 'ascending' | 'descending' | 'none' | null {
+    return this.sortable && key ? ariaSortDe(this.sort, key) : null;
+  }
+
+  /** La flecha de la columna ordenada se ve siempre; en las demás aparece tenue al pasar el cursor o enfocar el título. */
+  claseFlecha(key: string): string {
+    return this.sort?.key === key ? 'opacity-100' : 'opacity-0 group-hover:opacity-60 group-focus-visible:opacity-60';
+  }
+
+  ordenar(key: string): void {
+    this.sortChange.emit(siguienteOrden(this.sort, key));
+  }
+
+
   @ViewChild('scroll') private scroll?: ElementRef<HTMLElement>;
   private observador: ResizeObserver | null = null;
 
@@ -280,7 +318,20 @@ export class GroupedReportTableComponent implements OnChanges, AfterViewInit, On
 
   /** Suma de los anchos de las columnas visibles: con `table-fixed` la tabla mide exactamente eso. */
   get anchoTabla(): number {
-    return this.columnasVisibles.reduce((suma, c) => suma + (c.width ?? ANCHO_COLUMNA_POR_DEFECTO), 0);
+    return this.columnasVisibles.reduce((suma, c) => suma + this.anchoColumna(c), 0) + this.sangriaDetalle;
+  }
+
+  /** Ancho de la columna: el configurado, o el que necesita su título (con la flecha de orden) si es mayor. */
+  anchoColumna(c: ReportTableColumn): number {
+    return anchoDeColumna(c.label, c.width);
+  }
+
+  /**
+   * Las filas de detalle se sangran 20 px por cada nivel (más 20 px del propio detalle) en la primera columna: ese espacio
+   * se suma a su ancho para que su valor (la secuencia, por ejemplo) no se parta en varias líneas.
+   */
+  get sangriaDetalle(): number {
+    return this.columnasVisibles.length && this.levels.length ? (this.levels.length + 1) * 20 : 0;
   }
 
   columnasVisibles: ReportTableColumn[] = [];
@@ -325,13 +376,13 @@ export class GroupedReportTableComponent implements OnChanges, AfterViewInit, On
 
   get filaSuperior(): CeldaCabecera[] {
     if (!this.hayGrupos) {
-      return this.columnasVisibles.map((c) => ({ label: c.label, colspan: 1, rowspan: 1, align: c.align ?? 'left', width: c.width ?? null, fixed: !!c.fixed, tooltip: this.tooltipColumna(c) }));
+      return this.columnasVisibles.map((c) => ({ label: c.label, key: c.key, colspan: 1, rowspan: 1, align: c.align ?? 'left', width: c.width ?? null, fixed: !!c.fixed, tooltip: this.tooltipColumna(c) }));
     }
     const celdas: CeldaCabecera[] = [];
     for (let i = 0; i < this.columnasVisibles.length; i++) {
       const columna = this.columnasVisibles[i];
       if (!columna.group) {
-        celdas.push({ label: columna.label, colspan: 1, rowspan: 2, align: columna.align ?? 'left', width: columna.width ?? null, fixed: !!columna.fixed, tooltip: this.tooltipColumna(columna) });
+        celdas.push({ label: columna.label, key: columna.key, colspan: 1, rowspan: 2, align: columna.align ?? 'left', width: columna.width ?? null, fixed: !!columna.fixed, tooltip: this.tooltipColumna(columna) });
         continue;
       }
       let fin = i;
@@ -381,6 +432,15 @@ export class GroupedReportTableComponent implements OnChanges, AfterViewInit, On
     return indice === columnas.length - 1 || columnas[indice].group !== columnas[indice + 1].group;
   }
 
+  /** Las filas de detalle de un grupo, en el orden elegido (sin orden, el de llegada). */
+  private ordenadas(filas: readonly ReportTableRow[]): readonly ReportTableRow[] {
+    const orden = this.sort;
+    const columna = orden ? this.columns.find((c) => c.key === orden.key) : undefined;
+    if (!orden || !columna) return filas;
+    const tipo = tipoOrdenDeColumna(columna);
+    return ordenarFilas(filas, orden, (fila, key) => valorOrdenable(fila[key], tipo));
+  }
+
   alternar(id: string): void {
     if (this.colapsados.has(id)) this.colapsados.delete(id);
     else this.colapsados.add(id);
@@ -394,7 +454,7 @@ export class GroupedReportTableComponent implements OnChanges, AfterViewInit, On
   private construirNivel(filas: readonly ReportTableRow[], nivel: number, rutaPadre: string): Nodo[] {
     const nivelActual = this.levels[nivel];
     if (!nivelActual) {
-      return filas.map((fila, i) => ({ tipo: 'detalle', id: `${rutaPadre}-d${i}`, nivel, fila }));
+      return this.ordenadas(filas).map((fila, i) => ({ tipo: 'detalle', id: `${rutaPadre}-d${i}`, nivel, fila }));
     }
 
     const esUltimoNivel = nivel === this.levels.length - 1;

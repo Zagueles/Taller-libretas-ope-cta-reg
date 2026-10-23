@@ -370,3 +370,30 @@ describe('QueryReportPageComponent — aviso al agregar un favorito', () => {
     expect(pagina.avisoFavoritoAbierto()).toBeFalse();
   });
 });
+
+describe('QueryReportPageComponent — orden por columna', () => {
+  it('ordena todas las filas (no solo la página) y no altera los KPI ni los gráficos; pulsar otra vez invierte y la tercera quita el orden', async () => {
+    await TestBed.configureTestingModule({ imports: [QueryReportPageComponent], providers: [provideRouter([])] }).compileComponents();
+    const fixture = TestBed.createComponent(QueryReportPageComponent);
+    fixture.componentRef.setInput('config', { ...CONFIG, columns: [{ key: 'secuencia', label: 'Secuencia' }, { key: 'saldo', label: 'Saldo final', align: 'right' }] });
+    fixture.componentRef.setInput('result', {
+      rows: [
+        { secuencia: '000001', saldo: '900.00' },
+        { secuencia: '000002', saldo: '20,000.00' },
+        { secuencia: '000003', saldo: '150.00' },
+      ],
+    });
+    fixture.detectChanges();
+    const pagina = fixture.componentInstance;
+    const secuencias = (): string[] => pagina.filasPagina().map((f) => f['secuencia']);
+    expect(secuencias()).toEqual(['000001', '000002', '000003']);
+
+    pagina.cambiarOrden({ key: 'saldo', direction: 'asc' });
+    expect(secuencias()).toEqual(['000003', '000001', '000002']);
+    pagina.cambiarOrden({ key: 'saldo', direction: 'desc' });
+    expect(secuencias()).toEqual(['000002', '000001', '000003']);
+    expect(pagina.filasFiltradas().map((f) => f['secuencia'])).toEqual(['000001', '000002', '000003']);
+    pagina.cambiarOrden(null);
+    expect(secuencias()).toEqual(['000001', '000002', '000003']);
+  });
+});

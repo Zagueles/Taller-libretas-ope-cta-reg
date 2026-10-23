@@ -5,23 +5,23 @@ import { TooltipDirective } from '../../ui/tooltip/tooltip.directive';
 import { PaginationComponent } from '../pagination/pagination.component';
 
 /**
- * Barra superior estándar de las grillas: checkbox de seleccionar todo (con estado indeterminado), acciones sobre las
- * filas elegidas y, a la derecha, `siaf-pagination` en posición `Top`.
+ * Barra superior de las grillas con selección: checkbox de seleccionar todo (con estado indeterminado) y acciones sobre las
+ * filas elegidas. La paginación ya no va arriba (el estándar es la de abajo, `siaf-pagination` con `rowPage`): solo se
+ * muestra con `[showTopPagination]="true"`.
  *
  * Las acciones (editar, eliminar, exportar, más opciones y las que la página proyecta con el atributo `tableAction`)
  * solo aparecen con `selectedCount` mayor que 0, cada una encendida con `showEditAction`, `showDeleteAction`,
- * `showExportAction` o `showMenuAction`. Con `[showSelection]="false"` queda solo la paginación.
+ * `showExportAction` o `showMenuAction`. Con `[showSelection]="false"` y sin paginación superior, la barra no se pinta.
  *
  * @usar
- * - Arriba de toda grilla, siempre: bandeja, pestañas Documentos / Registros, panel lateral de selección y tablas de
- *   solicitudes, consultas, Admin y Apertura contable.
+ * - Arriba de toda grilla en la que se puedan elegir filas: bandeja, pestañas Documentos / Registros, panel lateral de
+ *   selección y tablas de solicitudes, consultas, Admin y Apertura contable. En una grilla de solo lectura no hace falta.
  * - En edición, con `[showSelection]="!isReadOnly"` y las acciones que correspondan (p. ej. `showEditAction` con
  *   `editDisabled` si hay más de una fila elegida); en consulta, con `[showSelection]="false"`.
  * - Para una acción extra sobre la selección: proyectarla con `tableAction` (Libros contables proyecta un
  *   `siaf-icon-dropdown-menu` «Descargar la selección»).
  * @evitar
- * - Armar la barra a mano con un checkbox y `siaf-pagination` en `Top`: esa paginación solo vive dentro de este
- *   componente.
+ * - Armar la barra a mano con un checkbox y `siaf-pagination` en `Top`: esa paginación ya no es parte del estándar.
  * - Para la paginación de abajo: `siaf-pagination` con `position="Bottom"` y `rowPage`.
  * - Para acciones que no dependen de la selección (crear, exportar todo): van en la cabecera de la sección con
  *   `siaf-button` o `siaf-icon-dropdown-menu`; aquí solo aparecen con filas elegidas.
@@ -49,6 +49,7 @@ import { PaginationComponent } from '../pagination/pagination.component';
   standalone: true,
   imports: [IconComponent, PaginationComponent, TooltipDirective],
   template: `
+    @if (showSelection || showTopPagination) {
     <div class="flex min-h-10 items-center gap-siaf-md">
       @if (showSelection) {
         <label class="inline-flex h-10 w-10 shrink-0 items-center px-siaf-sm">
@@ -116,6 +117,7 @@ import { PaginationComponent } from '../pagination/pagination.component';
       </div>
       }
     </div>
+    }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -135,8 +137,8 @@ export class TableControlsComponent {
   @Input() showSelection = true;
   @Input() editDisabled = false;
   @Input() hideTopPaginationOnMobile = false;
-  /** Oculta el contador y las flechas de la derecha cuando la tabla ya trae su paginación inferior. */
-  @Input() showTopPagination = true;
+  /** Muestra el contador y las flechas arriba a la derecha; por defecto no, porque el estándar es la paginación inferior. */
+  @Input() showTopPagination = false;
   @Input() selectAllLabel = 'Seleccionar filas';
   @Input() editLabel = 'Editar fila seleccionada';
   @Input() deleteLabel = 'Eliminar filas seleccionadas';

@@ -5610,12 +5610,6 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         ]
       },
       {
-        "token": "--sys-gap-base-xxs",
-        "via": [
-          "gap-siaf-xxs"
-        ]
-      },
-      {
         "token": "--sys-radius-md",
         "via": [
           "rounded-siaf-md"
@@ -6653,12 +6647,31 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "porDefecto": "[]",
         "requerida": false,
         "descripcion": null
+      },
+      {
+        "nombre": "sort",
+        "tipo": "TableSort | null",
+        "porDefecto": "null",
+        "requerida": false,
+        "descripcion": null
+      },
+      {
+        "nombre": "sortable",
+        "tipo": "boolean",
+        "porDefecto": "false",
+        "requerida": false,
+        "descripcion": "Con `sortable`, cada título es un botón que ordena (asc → desc → sin orden); dentro de cada grupo, las filas de detalle se ordenan por esa columna (los grupos conservan su orden)."
       }
     ],
     "eventos": [
       {
         "nombre": "linkClicked",
         "tipo": "{ row: ReportTableRow; column: ReportTableColumn; }",
+        "descripcion": null
+      },
+      {
+        "nombre": "sortChange",
+        "tipo": "TableSort | null",
         "descripcion": null
       }
     ],
@@ -6683,7 +6696,8 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       ],
       "atributos": [
         "aria-expanded",
-        "aria-label"
+        "aria-label",
+        "aria-sort"
       ]
     },
     "tokens": [
@@ -6732,6 +6746,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       {
         "token": "--sys-color-text-neutral-high",
         "via": [
+          "text-text",
           "var()"
         ]
       },
@@ -9448,7 +9463,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       }
     ],
     "usar": "- Debajo de toda grilla, con `position=\"Bottom\"` y `[rowPage]=\"true\"`: bandeja, pestañas Documentos / Registros,\n  panel lateral de selección, listados de Admin y tablas de solicitudes y consultas.\n- Con `rowsPerPageOptions` propias si la tabla usa otros tamaños (detalle anual de apertura contable, pedidos de\n  contabilización).",
-    "evitar": "- `position=\"Top\"` suelta sobre la tabla: la barra superior es siempre `siaf-table-controls`, que ya la incluye.\n- Forzar `navigation=\"Inactive\"` cuando todo cabe en una página: `Activate` (por defecto) ya deshabilita las flechas\n  en los bordes.\n- Para avanzar por las etapas de un flujo: `siaf-steps` o `siaf-button`.",
+    "evitar": "- `position=\"Top\"` sobre la tabla: ya no es parte del estándar; la paginación va abajo, con `rowPage`. Solo `siaf-table-controls` con `[showTopPagination]=\"true\"` la usa.\n- Forzar `navigation=\"Inactive\"` cuando todo cabe en una página: `Activate` (por defecto) ya deshabilita las flechas\n  en los bordes.\n- Para avanzar por las etapas de un flujo: `siaf-steps` o `siaf-button`.",
     "teclado": "- **Tab**: recorre el select de filas por página (con `rowPage`) y las flechas; una flecha deshabilitada queda fuera.\n- **Enter / Espacio**: en una flecha, cambian de página (emiten `previous` o `next`).\n- **Flechas arriba / abajo**: en el select nativo eligen otra cantidad de filas (emite `rowsPerPageChange`).",
     "accesibilidad": "- **1.3.1 Información y relaciones (A)**: es un `<nav aria-label=\"Paginación\">`; en la grilla estándar hay dos con el\n  mismo nombre (el de `siaf-table-controls` arriba y este abajo).\n- **4.1.2 Nombre, función y valor (A)**: las flechas son `<button>` con `aria-label` («Página anterior», «Página\n  siguiente») y `disabled` en los bordes; el select lleva `aria-label` «Filas por página».\n- **Pendiente · 4.1.3 Mensajes de estado (AA)**: el contador es un `<span>` sin `role=\"status\"` ni `aria-live`:\n  cambiar de página o de filas por página, o filtrar, no se anuncia.\n- **Pendiente · 2.4.3 Orden del foco (A)**: al llegar a la primera o la última página, la flecha enfocada pasa a\n  `disabled` y el componente no mueve el foco a otro control.\n- **1.4.3 Contraste mínimo (AA)**: contador en `text-neutral-low` (5.01:1 / 8.86:1) y valor del select en\n  `text-neutral-high` (16.29:1 / 16.53:1) sobre la superficie.\n- **Pendiente · 1.4.11 Contraste no textual (AA)**: el borde del select es `border-states-enabled` (2.44:1 /\n  2.59:1). El anillo de foco ya es el azul del kit (`border-states-focus`, 5.35:1 / 10.15:1).\n- **2.4.7 Foco visible (AA)**: el select y las flechas muestran un anillo de 2 px `border-states-focus` separado\n  2 px. El del select antes no se pintaba: con `outline-none`, Tailwind v4 dejaba el estilo del contorno en `none`.\n- **2.5.8 Tamaño del objetivo (AA)**: flechas de 40 px y select de 32 px de alto.",
     "figma": [],
@@ -11398,6 +11413,20 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "porDefecto": "[]",
         "requerida": false,
         "descripcion": "Filas de la página visible: cada clave de columna con su texto ya formateado."
+      },
+      {
+        "nombre": "sort",
+        "tipo": "TableSort | null",
+        "porDefecto": "null",
+        "requerida": false,
+        "descripcion": null
+      },
+      {
+        "nombre": "sortable",
+        "tipo": "boolean",
+        "porDefecto": "false",
+        "requerida": false,
+        "descripcion": "Con `sortable`, cada título es un botón que ordena (asc → desc → sin orden); el orden en sí lo aplica quien llena `rows`."
       }
     ],
     "eventos": [
@@ -11409,6 +11438,11 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       {
         "nombre": "rowClicked",
         "tipo": "ReportTableRow",
+        "descripcion": null
+      },
+      {
+        "nombre": "sortChange",
+        "tipo": "TableSort | null",
         "descripcion": null
       }
     ],
@@ -11428,7 +11462,8 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "status"
       ],
       "atributos": [
-        "aria-label"
+        "aria-label",
+        "aria-sort"
       ]
     },
     "tokens": [
@@ -11471,7 +11506,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       {
         "token": "--sys-color-text-neutral-high",
         "via": [
-          "var()"
+          "text-text"
         ]
       },
       {
@@ -11506,7 +11541,8 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       }
     ],
     "usa": [
-      "[siafTooltip]"
+      "[siafTooltip]",
+      "siaf-icon"
     ],
     "sinUso": false
   },
@@ -14742,7 +14778,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     "capa": "components",
     "importacion": "@siaf/shared/components/table-controls/table-controls.component",
     "archivo": "src/app/shared/components/table-controls/table-controls.component.ts",
-    "descripcion": "Barra superior estándar de las grillas: checkbox de seleccionar todo (con estado indeterminado), acciones sobre las\nfilas elegidas y, a la derecha, `siaf-pagination` en posición `Top`.\n\nLas acciones (editar, eliminar, exportar, más opciones y las que la página proyecta con el atributo `tableAction`)\nsolo aparecen con `selectedCount` mayor que 0, cada una encendida con `showEditAction`, `showDeleteAction`,\n`showExportAction` o `showMenuAction`. Con `[showSelection]=\"false\"` queda solo la paginación.",
+    "descripcion": "Barra superior de las grillas con selección: checkbox de seleccionar todo (con estado indeterminado) y acciones sobre las\nfilas elegidas. La paginación ya no va arriba (el estándar es la de abajo, `siaf-pagination` con `rowPage`): solo se\nmuestra con `[showTopPagination]=\"true\"`.\n\nLas acciones (editar, eliminar, exportar, más opciones y las que la página proyecta con el atributo `tableAction`)\nsolo aparecen con `selectedCount` mayor que 0, cada una encendida con `showEditAction`, `showDeleteAction`,\n`showExportAction` o `showMenuAction`. Con `[showSelection]=\"false\"` y sin paginación superior, la barra no se pinta.",
     "usaSesion": false,
     "proyectaContenido": true,
     "entradas": [
@@ -14875,9 +14911,9 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       {
         "nombre": "showTopPagination",
         "tipo": "boolean",
-        "porDefecto": "true",
+        "porDefecto": "false",
         "requerida": false,
-        "descripcion": "Oculta el contador y las flechas de la derecha cuando la tabla ya trae su paginación inferior."
+        "descripcion": "Muestra el contador y las flechas arriba a la derecha; por defecto no, porque el estándar es la paginación inferior."
       },
       {
         "nombre": "totalItems",
@@ -14931,8 +14967,8 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "descripcion": null
       }
     ],
-    "usar": "- Arriba de toda grilla, siempre: bandeja, pestañas Documentos / Registros, panel lateral de selección y tablas de\n  solicitudes, consultas, Admin y Apertura contable.\n- En edición, con `[showSelection]=\"!isReadOnly\"` y las acciones que correspondan (p. ej. `showEditAction` con\n  `editDisabled` si hay más de una fila elegida); en consulta, con `[showSelection]=\"false\"`.\n- Para una acción extra sobre la selección: proyectarla con `tableAction` (Libros contables proyecta un\n  `siaf-icon-dropdown-menu` «Descargar la selección»).",
-    "evitar": "- Armar la barra a mano con un checkbox y `siaf-pagination` en `Top`: esa paginación solo vive dentro de este\n  componente.\n- Para la paginación de abajo: `siaf-pagination` con `position=\"Bottom\"` y `rowPage`.\n- Para acciones que no dependen de la selección (crear, exportar todo): van en la cabecera de la sección con\n  `siaf-button` o `siaf-icon-dropdown-menu`; aquí solo aparecen con filas elegidas.",
+    "usar": "- Arriba de toda grilla en la que se puedan elegir filas: bandeja, pestañas Documentos / Registros, panel lateral de\n  selección y tablas de solicitudes, consultas, Admin y Apertura contable. En una grilla de solo lectura no hace falta.\n- En edición, con `[showSelection]=\"!isReadOnly\"` y las acciones que correspondan (p. ej. `showEditAction` con\n  `editDisabled` si hay más de una fila elegida); en consulta, con `[showSelection]=\"false\"`.\n- Para una acción extra sobre la selección: proyectarla con `tableAction` (Libros contables proyecta un\n  `siaf-icon-dropdown-menu` «Descargar la selección»).",
+    "evitar": "- Armar la barra a mano con un checkbox y `siaf-pagination` en `Top`: esa paginación ya no es parte del estándar.\n- Para la paginación de abajo: `siaf-pagination` con `position=\"Bottom\"` y `rowPage`.\n- Para acciones que no dependen de la selección (crear, exportar todo): van en la cabecera de la sección con\n  `siaf-button` o `siaf-icon-dropdown-menu`; aquí solo aparecen con filas elegidas.",
     "teclado": "- **Tab**: recorre el checkbox de seleccionar todo, las acciones visibles y las flechas de la paginación.\n- **Espacio**: marca o desmarca el checkbox (nativo) y emite `selectionChange`.\n- **Enter / Espacio**: ejecutan la acción enfocada. Las flechas siguen `siaf-pagination` y las acciones proyectadas,\n  su componente.",
     "accesibilidad": "- **4.1.2 Nombre, función y valor (A)**: checkbox nativo con `aria-label` (`selectAllLabel`, «Seleccionar filas» por\n  defecto) y estado mixto con `indeterminate`; las acciones son `<button>` con `aria-label` (`editLabel`,\n  `deleteLabel`, `exportLabel` y `menuLabel`, este «Mas opciones» sin tilde) y `editDisabled` usa `disabled`.\n- **Pendiente · 4.1.3 Mensajes de estado (AA)**: el contador de la paginación superior no se anuncia al cambiar de\n  página o filtrar (lo hereda de `siaf-pagination`), y tampoco hay aviso de cuántas filas quedan elegidas.\n- **Pendiente · 2.4.3 Orden del foco (A)**: las acciones solo existen con filas elegidas: si una deja la selección\n  en 0 (p. ej. Eliminar), su botón enfocado desaparece y el foco no pasa a otro control.\n- **1.4.11 Contraste no textual (AA)**: borde del checkbox en `icon-states-enabled` (8.70:1 / 12.87:1; marcado, en\n  `icon-states-active`, 8.79:1 / 10.15:1) e íconos de acción en `text-neutral-low` (5.01:1 / 8.86:1).\n- **2.4.7 Foco visible (AA)**: sin estilo propio: el checkbox y los botones muestran el anillo nativo del navegador;\n  las flechas, el de `siaf-pagination`.\n- **2.5.8 Tamaño del objetivo (AA)**: el `<label>` del checkbox y cada acción miden 40 × 40 px.",
     "figma": [],
@@ -16351,8 +16387,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     ],
     "usa": [
       "siaf-icon",
-      "siaf-pagination",
-      "siaf-table-controls"
+      "siaf-pagination"
     ],
     "sinUso": false
   },

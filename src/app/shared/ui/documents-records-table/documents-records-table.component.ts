@@ -97,7 +97,7 @@ function anchoDeClase(clase?: string): number {
       <!-- Título de una columna: texto, o botón que ordena si la columna es sortable (flecha en la columna ordenada). -->
       <ng-template #titulo let-column>
         @if (column.sortable) {
-          <button class="group inline-flex max-w-full items-center gap-siaf-xxs bg-transparent p-0 font-[inherit] uppercase text-inherit" type="button" title="Ordenar" [attr.aria-label]="'Ordenar por ' + (column.panelLabel || column.label)" (click)="ordenar(column.key)">
+          <button class="group -mr-4 inline-flex max-w-[calc(100%+1rem)] items-center bg-transparent p-0 font-[inherit] uppercase text-inherit" type="button" title="Ordenar" [attr.aria-label]="'Ordenar por ' + (column.panelLabel || column.label)" (click)="ordenar(column.key)">
             <span class="truncate">{{ column.label }}</span>
             <siaf-icon
               class="shrink-0 transition-opacity"
@@ -124,15 +124,16 @@ function anchoDeClase(clase?: string): number {
           }
           <col class="w-14" />
         </colgroup>
-        <thead>
-          <tr class="bg-surface-high text-[10px] font-bold uppercase text-text">
+        <!-- Sin borde propio en el thead: cada celda de la cabecera ya trae su línea inferior y el del thead sumaba 1 px a la última fila. -->
+        <thead class="border-b-0">
+          <tr class="h-10 bg-surface-high text-xs font-bold uppercase leading-none text-text">
             @if (mostrarCasilla) {
-              <th class="sticky left-0 z-[3] w-10 rounded-l-siaf-sm bg-surface-high px-siaf-sm py-siaf-sm " [ngClass]="sombraIzq" [attr.rowspan]="hayGrupos ? 2 : null"></th>
+              <th class="sticky left-0 z-[3] w-10 rounded-l-siaf-sm bg-surface-high px-siaf-sm py-0 " [ngClass]="sombraIzq" [attr.rowspan]="hayGrupos ? 2 : null"></th>
             }
             @if (hayGrupos) {
               @for (celda of filaSuperior; track $index; let primera = $first) {
                 <th
-                  class="truncate px-siaf-md py-siaf-sm"
+                  class="truncate px-siaf-md py-0"
                   siafTooltip
                   [attr.colspan]="celda.colspan > 1 ? celda.colspan : null"
                   [attr.rowspan]="celda.rowspan > 1 ? celda.rowspan : null"
@@ -149,16 +150,16 @@ function anchoDeClase(clase?: string): number {
             } @else {
               @for (column of columns; track column.key) {
                 <!-- MFD RF-01: al superponer el mouse se muestra el texto completo de la columna -->
-                <th class="truncate px-siaf-md py-siaf-sm" siafTooltip [attr.aria-sort]="column.sortable ? ariaSort(column.key) : null" [ngClass]="[column.widthClass || 'w-[180px]', column.align === 'right' ? 'text-right' : column.align === 'center' ? 'text-center' : 'text-left']"><ng-container *ngTemplateOutlet="titulo; context: { $implicit: column }" /></th>
+                <th class="truncate px-siaf-md py-0" siafTooltip [attr.aria-sort]="column.sortable ? ariaSort(column.key) : null" [ngClass]="[column.widthClass || 'w-[180px]', column.align === 'right' ? 'text-right' : column.align === 'center' ? 'text-center' : 'text-left']"><ng-container *ngTemplateOutlet="titulo; context: { $implicit: column }" /></th>
               }
             }
-            <th data-columna-accion [ngClass]="[hayColumnaFija ? '' : sombraDer, hayGrupos ? 'border-l border-[var(--sys-color-divider-strong)]' : '']" class="sticky right-0 w-14 rounded-r-siaf-sm bg-surface-high px-siaf-sm py-siaf-sm" [attr.rowspan]="hayGrupos ? 2 : null"></th>
+            <th data-columna-accion [ngClass]="[hayColumnaFija ? '' : sombraDer, hayGrupos ? 'border-l border-[var(--sys-color-divider-strong)]' : '']" class="sticky right-0 w-14 rounded-r-siaf-sm bg-surface-high px-siaf-sm py-0" [attr.rowspan]="hayGrupos ? 2 : null"></th>
           </tr>
           @if (hayGrupos) {
-            <tr class="bg-surface-high text-[10px] font-bold uppercase text-text">
+            <tr class="h-10 bg-surface-high text-xs font-bold uppercase leading-none text-text">
               @for (column of columnasConGrupo; track column.key; let i = $index) {
                 <th
-                  class="truncate px-siaf-md py-siaf-sm"
+                  class="truncate px-siaf-md py-0"
                   siafTooltip
                   [attr.aria-sort]="column.sortable ? ariaSort(column.key) : null"
                   [ngClass]="[i === 0 && mostrarCasilla && columns[0]?.headerGroup ? 'border-l border-[var(--sys-color-divider-strong)]' : '', column.fixed ? claseFijaCabecera : '', column.widthClass || 'w-[180px]', column.align === 'right' ? 'text-right' : 'text-left', finDeGrupo(i) && !column.fixed && i < columnasConGrupo.length - 1 ? 'border-r border-[var(--sys-color-divider-strong)]' : '']"

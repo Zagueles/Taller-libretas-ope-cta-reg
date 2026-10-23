@@ -19,7 +19,7 @@ export type PaginationPosition = 'Top' | 'Bottom';
  * - Con `rowsPerPageOptions` propias si la tabla usa otros tamaños (detalle anual de apertura contable, pedidos de
  *   contabilización).
  * @evitar
- * - `position="Top"` suelta sobre la tabla: la barra superior es siempre `siaf-table-controls`, que ya la incluye.
+ * - `position="Top"` sobre la tabla: ya no es parte del estándar; la paginación va abajo, con `rowPage`. Solo `siaf-table-controls` con `[showTopPagination]="true"` la usa.
  * - Forzar `navigation="Inactive"` cuando todo cabe en una página: `Activate` (por defecto) ya deshabilita las flechas
  *   en los bordes.
  * - Para avanzar por las etapas de un flujo: `siaf-steps` o `siaf-button`.

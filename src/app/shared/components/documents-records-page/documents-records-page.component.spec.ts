@@ -66,17 +66,19 @@ describe('DocumentsRecordsPageComponent', () => {
   afterEach(() => TestBed.inject(HttpTestingController).verify());
 
   describe('paginadores de la pestaña Documentos', () => {
-    it('en modo servidor, arriba y abajo muestran el total del backend, no las filas de la página', () => {
+    it('en modo servidor, la paginación (solo abajo) muestra el total del backend, no las filas de la página', () => {
       // La bandeja trae la primera página (10 filas) de 12 documentos.
       configurar({ ...BANDEJA_CONFIG_DE_MUESTRA, documentRows: filas(10), serverQuery: { total: 12 } });
 
-      expect(contadores()).toEqual(['1-10 de 12', '1-10 de 12']);
+      // La paginación superior ya no es parte del estándar: solo queda el contador de abajo.
+      expect(contadores()).toEqual(['1-10 de 12']);
     });
 
-    it('sin serverQuery, arriba y abajo cuentan las filas cargadas', () => {
+    it('sin serverQuery, la paginación (solo abajo) cuenta las filas cargadas', () => {
       configurar({ ...BANDEJA_CONFIG_DE_MUESTRA, documentRows: filas(12) });
 
-      expect(contadores()).toEqual(['1-10 de 12', '1-10 de 12']);
+      // La paginación superior ya no es parte del estándar: solo queda el contador de abajo.
+      expect(contadores()).toEqual(['1-10 de 12']);
     });
   });
 

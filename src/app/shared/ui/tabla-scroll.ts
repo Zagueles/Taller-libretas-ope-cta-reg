@@ -10,6 +10,16 @@ export const SOMBRA_DER =
 /** Ancho en px de una columna sin `width`: el mismo que usa la tabla de documentos y registros. */
 export const ANCHO_COLUMNA_POR_DEFECTO = 180;
 
+/**
+ * Ancho que necesita la cabecera de una columna para leerse completa: el texto en mayúsculas (≈ 9 px por letra, en negrita de
+ * 12 px) y el relleno de la celda (32 px). La flecha de orden no suma: va en el relleno derecho de la celda. El ancho de una
+ * columna nunca baja de eso.
+ */
+export function anchoDeColumna(etiqueta: string, anchoConfigurado: number | undefined): number {
+  const minimo = etiqueta.length * 9 + 32;
+  return Math.max(anchoConfigurado ?? ANCHO_COLUMNA_POR_DEFECTO, minimo);
+}
+
 /** Marca en el contenedor si queda contenido por desplazar a cada lado (`data-sombra-izq` / `data-sombra-der`). */
 export function medirSombras(contenedor: HTMLElement): void {
   contenedor.dataset['sombraIzq'] = String(contenedor.scrollLeft > 1);
