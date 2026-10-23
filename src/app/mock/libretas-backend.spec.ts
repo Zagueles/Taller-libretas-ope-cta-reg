@@ -33,6 +33,12 @@ describe('libretas-backend', () => {
   });
 
   describe('saldosCuentasBancarias', () => {
+    it('los totales de la cuenta bancaria cuadran: saldo inicial + créditos (sin la apertura) − débitos = saldo final', () => {
+      saldosCuentasBancarias(libretas).forEach((x) => {
+        expect(Math.round((x.saldoInicial + x.totalCreditos - x.totalDebitos) * 100) / 100).withContext(x.cuentaBancariaId).toBe(x.saldoFinal);
+      });
+    });
+
     it('son el total de todas las libretas de la cuenta, sin importar el período de la consulta', () => {
       const saldos = saldosCuentasBancarias(libretas);
       expect(saldos.map((x) => x.cuentaBancariaId).sort()).toEqual(['mef-dgtp', 'mef-dgtp-cut']);

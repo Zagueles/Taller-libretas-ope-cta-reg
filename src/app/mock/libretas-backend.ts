@@ -8,7 +8,7 @@ import type {
   MovimientoLibretaRegistro,
   SaldosCuentaBancaria,
 } from '../modules/tesoreria/registro-libretas-cuentas-registro/models/registro-libretas.model';
-import { saldosPorCuentaRegistro } from '../modules/tesoreria/registro-libretas-cuentas-registro/utils/registro-libretas-saldos.util';
+import { saldosPorCuentaRegistro, TIPO_OPERACION_SALDO_INICIAL } from '../modules/tesoreria/registro-libretas-cuentas-registro/utils/registro-libretas-saldos.util';
 import { DOCUMENTOS_NO_PROCESADOS, DocumentoNoProcesado, MOVIMIENTOS_LIBRETA_REGISTRO, MOVIMIENTOS_RECHAZADOS } from './libretas-seed';
 
 /**
@@ -106,7 +106,11 @@ export function cuentasRegistro(libretas: DatosLibretas): CuentaRegistroCatalogo
 export function saldosCuentasBancarias(libretas: DatosLibretas): SaldosCuentaBancaria[] {
   const ids = [...new Set(libretas.movimientos.map((m) => m.cuentaBancariaId))];
   return ids.map((cuentaBancariaId) => {
-    const { saldoInicial, saldoFinal } = saldosPorCuentaRegistro(libretas.movimientos.filter((m) => m.cuentaBancariaId === cuentaBancariaId));
-    return { cuentaBancariaId, saldoInicial, saldoFinal };
+    const movimientos = libretas.movimientos.filter((m) => m.cuentaBancariaId === cuentaBancariaId);
+    const { saldoInicial, saldoFinal } = saldosPorCuentaRegistro(movimientos);
+    const redondear = (valor: number): number => Math.round(valor * 100) / 100;
+    const totalCreditos = redondear(movimientos.filter((m) => m.tipoOperacionCodigo !== TIPO_OPERACION_SALDO_INICIAL).reduce((suma, m) => suma + m.credito, 0));
+    const totalDebitos = redondear(movimientos.reduce((suma, m) => suma + m.debito, 0));
+    return { cuentaBancariaId, saldoInicial, saldoFinal, totalCreditos, totalDebitos };
   });
 }

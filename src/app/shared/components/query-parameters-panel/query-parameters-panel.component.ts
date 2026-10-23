@@ -93,6 +93,7 @@ let siguienteId = 0;
                       [label]="campo.label"
                       [required]="!!campo.required"
                       [defaultToToday]="false"
+                      [minDate]="minimo(campo)"
                       [maxDate]="campo.noFuture ? hoy : ''"
                       [fullWidth]="true"
                       [value]="texto(campo.key)"
@@ -144,6 +145,12 @@ let siguienteId = 0;
 export class QueryParametersPanelComponent implements OnChanges {
   /** Hoy (aaaa-mm-dd), el tope de los campos de fecha con `noFuture`. */
   readonly hoy = fechaDeHoy();
+
+  /** Fecha mínima del campo: la suya y, si depende de otro campo de fecha, la que este tenga si es posterior. */
+  minimo(campo: QueryReportParameterField): string {
+    const otra = campo.minDateFrom ? this.texto(campo.minDateFrom) : '';
+    return [campo.minDate ?? '', otra].reduce((mayor, f) => (f > mayor ? f : mayor), '');
+  }
   @Input() open = false;
   @Input() title = 'Parámetros de consulta';
   @Input() fields: readonly QueryReportParameterField[] = [];
@@ -193,6 +200,10 @@ export class QueryParametersPanelComponent implements OnChanges {
 
   cambiar(clave: string, valor: string | number | string[]): void {
     this.borrador.update((actual) => ({ ...actual, [clave]: Array.isArray(valor) ? valor : String(valor) }));
+    // Una fecha que depende de esta (hasta ≥ desde) y quedó anterior deja de valer: se vuelve a elegir.
+    this.fields.filter((c) => c.minDateFrom === clave).forEach((c) => {
+      if (this.texto(c.key) && this.texto(c.key) < this.minimo(c)) this.borrador.update((actual) => ({ ...actual, [c.key]: '' }));
+    });
   }
 
   limpiar(): void {

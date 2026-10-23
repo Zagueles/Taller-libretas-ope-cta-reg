@@ -161,4 +161,8 @@ export interface SaldosCuentaBancaria {
   cuentaBancariaId: string;
   saldoInicial: number;
   saldoFinal: number;
+  /** Créditos de toda la cuenta sin la apertura (que ya forma parte del saldo inicial): saldo inicial + créditos − débitos = saldo final. */
+  totalCreditos: number;
+  /** Débitos de toda la cuenta. */
+  totalDebitos: number;
 }

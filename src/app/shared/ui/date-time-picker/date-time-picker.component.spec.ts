@@ -63,8 +63,8 @@ describe('DateTimePickerComponent — elegir mes y año', () => {
     pulsar(cabecera('mes'));
     expect(opciones().slice(0, 3).map((o) => o.disabled)).toEqual([true, true, false]);
 
-    pulsar(calendario().querySelector<HTMLButtonElement>('[aria-label="Año anterior"]')!);
-    expect(opciones().every((o) => o.disabled)).toBeTrue();
+    // La flecha de año anterior no lleva a un año completo fuera del rango: queda deshabilitada.
+    expect(calendario().querySelector<HTMLButtonElement>('[aria-label="Año anterior"]')!.disabled).toBeTrue();
   });
 
   it('elegir un día sigue funcionando después de cambiar de mes', () => {
@@ -194,5 +194,22 @@ describe('DateTimePickerComponent — fecha máxima', () => {
     campo().value = '15032026';
     campo().dispatchEvent(new Event('input'));
     expect(emitidos).toEqual(['2026-03-15']);
+  });
+
+  it('con minDate y maxDate la grilla de años solo ofrece los años del rango y las flechas no salen de él', () => {
+    fixture.componentRef.setInput('minDate', '2020-01-01');
+    fixture.componentRef.setInput('maxDate', '2026-10-22');
+    fixture.componentRef.setInput('value', '2026-03-15');
+    fixture.detectChanges();
+    fixture.nativeElement.querySelector('button[aria-haspopup="dialog"]').click();
+    fixture.detectChanges();
+    const cab = (c: string): HTMLButtonElement => fixture.nativeElement.querySelector(`[data-cabecera="${c}"]`);
+    cab('anio').click();
+    fixture.detectChanges();
+    const anios = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('[role="option"]')).map((o) => o.textContent!.trim());
+    expect(anios).toEqual(['2022', '2023', '2024', '2025', '2026']);
+    const flecha = (nombre: string): HTMLButtonElement => fixture.nativeElement.querySelector(`button[aria-label="${nombre}"]`);
+    expect(flecha('Años siguientes').disabled).toBeTrue();
+    expect(flecha('Años anteriores').disabled).toBeFalse();
   });
 });

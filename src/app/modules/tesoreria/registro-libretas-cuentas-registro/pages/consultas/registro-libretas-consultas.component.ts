@@ -65,6 +65,9 @@ function detallesDeCuentasRegistro(cuentas: CuentaRegistroCatalogo[]): { cuentaR
   };
 }
 
+/** RF-07: la fecha desde no puede ser anterior a 2020 (configurable en el Catálogo de parámetros). */
+const FECHA_MINIMA_CONSULTA = '2020-01-01';
+
 const TITULO = 'Consultas y reportes de operaciones en las libretas de las cuentas de registro';
 
 const formatoMonto = new Intl.NumberFormat('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -140,8 +143,8 @@ export class RegistroLibretasConsultasComponent {
     title: TITULO,
     breadcrumbs: buildProcessBreadcrumbs(CONSULTAS_PROCESS_ID, CONSULTAS_ROUTE, TITULO),
     parameterFields: [
-      { key: 'desde', label: 'Fecha desde', type: 'date', required: true, icon: 'calendar_today', rangeEnd: 'hasta', rangeLabel: 'Fecha', noFuture: true },
-      { key: 'hasta', label: 'Fecha hasta', type: 'date', required: true, icon: 'event', noFuture: true },
+      { key: 'desde', label: 'Fecha desde', type: 'date', required: true, icon: 'calendar_today', rangeEnd: 'hasta', rangeLabel: 'Fecha', noFuture: true, minDate: FECHA_MINIMA_CONSULTA },
+      { key: 'hasta', label: 'Fecha hasta', type: 'date', required: true, icon: 'event', noFuture: true, minDate: FECHA_MINIMA_CONSULTA, minDateFrom: 'desde' },
       { key: 'tipoOperacion', label: 'Tipo de operación', type: 'select-multiple', icon: 'calculate', options: TIPOS_OPERACION },
       { key: 'cuentaBancaria', label: 'Cuenta bancaria', type: 'select-multiple', required: true, icon: 'account_balance_wallet', options: CUENTAS_BANCARIAS_REGISTRO },
       { key: 'entidad', label: 'Entidad', type: 'select-multiple', icon: 'account_balance', options: ENTIDADES },
@@ -211,12 +214,14 @@ export class RegistroLibretasConsultasComponent {
       charts: [
         {
           title: 'Evolución del saldo por período',
-          description: 'Saldo final de la cuenta, por hora de acreditación',
+          description: 'Saldo de la cuenta bancaria (suma del último saldo de cada cuenta de registro consultada), por hora de acreditación',
           type: 'line',
           groupBy: 'fecha',
           byHour: true,
           column: 'saldoFinal',
           aggregate: 'last',
+          combineBy: 'numeroCuentaRegistro',
+          combineFrom: 'saldoInicial',
           seriesName: 'Saldo final',
         },
         {
@@ -266,7 +271,8 @@ export class RegistroLibretasConsultasComponent {
   mostrarPestana(cuentaId: string): void {
     const filas = this.filasPorCuenta.get(cuentaId) ?? [];
     const cuenta = CUENTAS_BANCARIAS_INFO.find((c) => c.id === cuentaId);
-    const saldosCuenta = this.saldosCuentas.get(cuentaId) ?? saldosPorCuentaRegistro(filas);
+    const delServidor = this.saldosCuentas.get(cuentaId);
+    const saldosCuenta = delServidor ?? saldosPorCuentaRegistro(filas);
 
     // Tipo de cambio e importe en moneda nacional solo interesan en la cuenta en dólares: en soles no hay nada que
     // convertir. Se muestran solos al entrar a esa pestaña, sin que el usuario tenga que ir a «Columnas visibles».
@@ -295,6 +301,10 @@ export class RegistroLibretasConsultasComponent {
             ],
           }
         : null,
+      // Los KPI son de toda la cuenta bancaria, sin importar parámetros ni filtros; los gráficos sí siguen lo consultado.
+      kpiValues: delServidor
+        ? { credito: delServidor.totalCreditos, debito: delServidor.totalDebitos, saldoInicial: delServidor.saldoInicial, saldoFinal: delServidor.saldoFinal }
+        : undefined,
     });
   }
 

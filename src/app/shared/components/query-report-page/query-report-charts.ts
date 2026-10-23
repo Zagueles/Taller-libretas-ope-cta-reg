@@ -59,12 +59,13 @@ function agregar(filas: readonly QueryReportRow[], columna: string | undefined, 
   return filas.reduce((suma, fila) => suma + numeroDe(fila[columna]), 0);
 }
 
-export function calcularKpis(filas: readonly QueryReportRow[], kpis: readonly QueryReportKpi[]): KpiCalculado[] {
+export function calcularKpis(filas: readonly QueryReportRow[], kpis: readonly QueryReportKpi[], valoresFijos?: Record<string, number>): KpiCalculado[] {
   return kpis.map((kpi) => {
     const agregado = kpi.aggregate ?? 'sum';
-    const valor = agregar(filas.filter((f) => cumple(f, kpi.where)), kpi.column, agregado);
+    const fijo = kpi.column ? valoresFijos?.[kpi.column] : undefined;
+    const valor = fijo ?? agregar(filas.filter((f) => cumple(f, kpi.where)), kpi.column, agregado);
     // «first»/«last» son un saldo puntual, no una parte de un total: la barra queda llena.
-    const progreso = agregado === 'first' || agregado === 'last' ? 100 : (() => {
+    const progreso = fijo !== undefined || agregado === 'first' || agregado === 'last' ? 100 : (() => {
       const total = agregar(filas, kpi.column, agregado);
       return total > 0 ? Math.round((valor / total) * 100) : 0;
     })();
@@ -97,6 +98,26 @@ function categoriaDe(fila: QueryReportRow, grafico: QueryReportChart): { clave: 
 
 const redondear = (valor: number): number => Math.round(valor * 10) / 10;
 
+/**
+ * Valor combinado de los grupos (p. ej. el saldo de la cuenta bancaria sumando sus cuentas de registro) en cada categoría:
+ * suma, de cada grupo, el último valor que tuvo hasta esa categoría; mientras un grupo no tiene filas aporta su valor inicial.
+ */
+function combinarGrupos(filasPorCategoria: readonly (readonly QueryReportRow[])[], grupoDe: string, columna: string, inicial?: string): number[] {
+  const ultimo = new Map<string, number>();
+  if (inicial) {
+    for (const filas of filasPorCategoria) {
+      for (const fila of filas) {
+        const grupo = fila[grupoDe] ?? '';
+        if (!ultimo.has(grupo)) ultimo.set(grupo, numeroDe(fila[inicial]));
+      }
+    }
+  }
+  return filasPorCategoria.map((filas) => {
+    for (const fila of filas) ultimo.set(fila[grupoDe] ?? '', numeroDe(fila[columna]));
+    return [...ultimo.values()].reduce((suma, v) => suma + v, 0);
+  });
+}
+
 export function calcularGrafico(filas: readonly QueryReportRow[], grafico: QueryReportChart): GraficoCalculado {
   const grupos = new Map<string, { etiqueta: string; anio: string; filas: QueryReportRow[] }>();
   for (const fila of filas) {
@@ -121,6 +142,7 @@ export function calcularGrafico(filas: readonly QueryReportRow[], grafico: Query
     return grupo.etiqueta;
   });
   let valores = claves.map((c) => agregar(grupos.get(c)!.filas, grafico.column, grafico.aggregate ?? 'sum'));
+  if (grafico.combineBy && grafico.column) valores = combinarGrupos(claves.map((c) => grupos.get(c)!.filas), grafico.combineBy, grafico.column, grafico.combineFrom);
 
   const base = valores[0] ?? 0;
   if (grafico.transform === 'index') {

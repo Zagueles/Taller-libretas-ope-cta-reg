@@ -92,4 +92,19 @@ describe('QueryParametersPanelComponent', () => {
     expect(panel.lista('entidades')).toEqual(['mincetur']);
     expect(boton('Aplicar consulta').disabled).toBeFalse();
   });
+
+  it('fecha desde no anterior a 2020 y fecha hasta no anterior a desde (y se limpia si queda anterior)', () => {
+    const rango: QueryReportParameterField[] = [
+      { key: 'desde', label: 'Fecha desde', type: 'date', required: true, icon: 'calendar_today', minDate: '2020-01-01' },
+      { key: 'hasta', label: 'Fecha hasta', type: 'date', required: true, icon: 'event', minDate: '2020-01-01', minDateFrom: 'desde' },
+    ];
+    expect(panel.minimo(rango[0])).toBe('2020-01-01');
+    expect(panel.minimo(rango[1])).toBe('2020-01-01');
+    fixture.componentRef.setInput('fields', rango);
+    fixture.detectChanges();
+    panel.cambiar('hasta', '2026-03-10');
+    panel.cambiar('desde', '2026-03-20');
+    expect(panel.minimo(rango[1])).toBe('2026-03-20');
+    expect(panel.texto('hasta')).toBe('');
+  });
 });

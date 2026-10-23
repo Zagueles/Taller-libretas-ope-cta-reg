@@ -822,7 +822,7 @@ export class QueryReportPageComponent {
     return total === 1 ? '1 fila en el resultado' : `${total} filas en el resultado`;
   });
 
-  readonly kpis = computed(() => calcularKpis(this.filasFiltradas(), this.configuracion().charts?.kpis ?? []));
+  readonly kpis = computed(() => calcularKpis(this.filasFiltradas(), this.configuracion().charts?.kpis ?? [], this.resultado()?.kpiValues));
 
   readonly graficos = computed<GraficoEnVista[]>(() => {
     const calculados = (this.configuracion().charts?.charts ?? []).map((grafico) => calcularGrafico(this.filasFiltradas(), grafico));

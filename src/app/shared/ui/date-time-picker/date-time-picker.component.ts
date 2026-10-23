@@ -140,11 +140,11 @@ type CalendarDay = {
           >
             <header class="flex w-full items-center justify-between py-siaf-xs">
               <div class="flex w-11 items-center gap-siaf-xxs">
-                <button class="inline-flex size-5 items-center justify-center rounded-siaf-sm hover:bg-surface-muted" type="button" [attr.aria-label]="vista === 'anios' ? 'Años anteriores' : 'Año anterior'" (click)="moveYear(vista === 'anios' ? -12 : -1, $event)">
+                <button class="inline-flex size-5 items-center justify-center rounded-siaf-sm hover:bg-surface-muted disabled:cursor-not-allowed disabled:text-[var(--sys-color-text-neutral-disabled)] disabled:hover:bg-transparent" type="button" [disabled]="irAnteriorDeshabilitado('anio')" [attr.aria-label]="vista === 'anios' ? 'Años anteriores' : 'Año anterior'" (click)="moveYear(vista === 'anios' ? -12 : -1, $event)">
                   <siaf-icon name="keyboard_double_arrow_left" [size]="20" />
                 </button>
                 @if (vista === 'dias') {
-                  <button class="inline-flex size-5 items-center justify-center rounded-siaf-sm hover:bg-surface-muted" type="button" aria-label="Mes anterior" (click)="moveMonth(-1, $event)">
+                  <button class="inline-flex size-5 items-center justify-center rounded-siaf-sm hover:bg-surface-muted disabled:cursor-not-allowed disabled:text-[var(--sys-color-text-neutral-disabled)] disabled:hover:bg-transparent" type="button" [disabled]="irAnteriorDeshabilitado('mes')" aria-label="Mes anterior" (click)="moveMonth(-1, $event)">
                     <siaf-icon name="keyboard_arrow_left" [size]="20" />
                   </button>
                 }
@@ -184,11 +184,11 @@ type CalendarDay = {
 
               <div class="flex w-11 items-center justify-end gap-siaf-xxs">
                 @if (vista === 'dias') {
-                  <button class="inline-flex size-5 items-center justify-center rounded-siaf-sm hover:bg-surface-muted" type="button" aria-label="Mes siguiente" (click)="moveMonth(1, $event)">
+                  <button class="inline-flex size-5 items-center justify-center rounded-siaf-sm hover:bg-surface-muted disabled:cursor-not-allowed disabled:text-[var(--sys-color-text-neutral-disabled)] disabled:hover:bg-transparent" type="button" [disabled]="irSiguienteDeshabilitado('mes')" aria-label="Mes siguiente" (click)="moveMonth(1, $event)">
                     <siaf-icon name="keyboard_arrow_right" [size]="20" />
                   </button>
                 }
-                <button class="inline-flex size-5 items-center justify-center rounded-siaf-sm hover:bg-surface-muted" type="button" [attr.aria-label]="vista === 'anios' ? 'Años siguientes' : 'Año siguiente'" (click)="moveYear(vista === 'anios' ? 12 : 1, $event)">
+                <button class="inline-flex size-5 items-center justify-center rounded-siaf-sm hover:bg-surface-muted disabled:cursor-not-allowed disabled:text-[var(--sys-color-text-neutral-disabled)] disabled:hover:bg-transparent" type="button" [disabled]="irSiguienteDeshabilitado('anio')" [attr.aria-label]="vista === 'anios' ? 'Años siguientes' : 'Año siguiente'" (click)="moveYear(vista === 'anios' ? 12 : 1, $event)">
                   <siaf-icon name="keyboard_double_arrow_right" [size]="20" />
                 </button>
               </div>
@@ -467,8 +467,29 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
 
   /** Doce años con el que se está viendo en la segunda fila: 2026 → 2022…2033. */
   get rangoAnios(): number[] {
-    const inicio = this.viewYear - 4;
-    return Array.from({ length: 12 }, (_, i) => inicio + i);
+    // Con `minDate` o `maxDate` la grilla no ofrece años fuera del rango (ni siquiera deshabilitados).
+    const minimo = this.minDate ? Number(this.minDate.slice(0, 4)) : -Infinity;
+    const maximo = this.maxDate ? Number(this.maxDate.slice(0, 4)) : Infinity;
+    const inicio = Math.max(this.viewYear - 4, minimo);
+    const fin = Math.min(inicio + 11, maximo);
+    return Array.from({ length: Math.max(fin - inicio + 1, 0) }, (_, i) => inicio + i);
+  }
+
+  /** Las flechas de la cabecera no llevan fuera del rango permitido por `minDate` y `maxDate`. */
+  irAnteriorDeshabilitado(que: 'anio' | 'mes'): boolean {
+    if (!this.minDate) return false;
+    const minAnio = Number(this.minDate.slice(0, 4));
+    if (this.vista === 'anios') return this.rangoAnios[0] <= minAnio;
+    if (que === 'anio') return this.viewYear - 1 < minAnio;
+    return this.toDateValue(this.viewYear, this.viewMonth, 0) < this.minDate;
+  }
+
+  irSiguienteDeshabilitado(que: 'anio' | 'mes'): boolean {
+    if (!this.maxDate) return false;
+    const maxAnio = Number(this.maxDate.slice(0, 4));
+    if (this.vista === 'anios') return this.rangoAnios[this.rangoAnios.length - 1] >= maxAnio;
+    if (que === 'anio') return this.viewYear + 1 > maxAnio;
+    return this.toDateValue(this.viewYear, this.viewMonth + 1, 1) > this.maxDate;
   }
 
   get anioActual(): number {
@@ -506,6 +527,7 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
   elegirAnio(anio: number, event?: Event): void {
     event?.stopPropagation();
     this.viewYear = anio;
+    this.ajustarVista();
     this.vista = 'dias';
   }
 
@@ -604,6 +626,19 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
   moveYear(offset: number, event?: Event): void {
     event?.stopPropagation();
     this.viewYear += offset;
+    this.ajustarVista();
+  }
+
+  /** Lleva el mes y el año a la vista al rango permitido por `minDate` y `maxDate` (p. ej. al saltar de año). */
+  private ajustarVista(): void {
+    const actual = this.viewYear * 12 + this.viewMonth;
+    const minimo = this.minDate ? Number(this.minDate.slice(0, 4)) * 12 + Number(this.minDate.slice(5, 7)) - 1 : -Infinity;
+    const maximo = this.maxDate ? Number(this.maxDate.slice(0, 4)) * 12 + Number(this.maxDate.slice(5, 7)) - 1 : Infinity;
+    const ajustado = Math.min(Math.max(actual, minimo), maximo);
+    if (ajustado !== actual) {
+      this.viewYear = Math.floor(ajustado / 12);
+      this.viewMonth = ajustado % 12;
+    }
   }
 
   /** Una hora, minuto o segundo: solo dígitos y dentro de su rango; mientras se escribe se respeta el texto y, si ya hay fecha, se vuelve a emitir. */

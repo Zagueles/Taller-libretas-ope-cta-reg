@@ -109,3 +109,24 @@ describe('query-report-charts', () => {
     });
   });
 });
+
+describe('KPI fijos y evolución combinada de los grupos', () => {
+  it('un KPI con valor fijo no depende de las filas', () => {
+    const [kpi] = calcularKpis([{ credito: '10.00' }], [{ title: 'Total créditos', column: 'credito', prefix: 'S/ ' }], { credito: 5000 });
+    expect(kpi.amount).toBe('S/ 5,000.00');
+    expect(kpi.progress).toBe(100);
+    const [sinFijo] = calcularKpis([{ credito: '10.00' }], [{ title: 'Total créditos', column: 'credito' }]);
+    expect(sinFijo.amount).toBe('10.00');
+  });
+
+  it('combineBy suma el último saldo de cada cuenta de registro, con su saldo inicial antes de su primera fila', () => {
+    const filas: QueryReportRow[] = [
+      { fecha: '28/06/2026 09:00:00', cr: 'A', saldoInicial: '0.00', saldoFinal: '100.00' },
+      { fecha: '28/06/2026 10:00:00', cr: 'B', saldoInicial: '50.00', saldoFinal: '70.00' },
+      { fecha: '28/06/2026 11:00:00', cr: 'A', saldoInicial: '100.00', saldoFinal: '150.00' },
+    ];
+    const grafico = calcularGrafico(filas, { title: 'Saldo', type: 'line', groupBy: 'fecha', byHour: true, column: 'saldoFinal', aggregate: 'last', combineBy: 'cr', combineFrom: 'saldoInicial' });
+    // 09:00 → A 100 + B (saldo previo) 50; 10:00 → A 100 + B 70; 11:00 → A 150 + B 70.
+    expect(grafico.values).toEqual([150, 170, 220]);
+  });
+});

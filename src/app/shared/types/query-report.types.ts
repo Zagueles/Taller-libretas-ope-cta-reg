@@ -24,6 +24,10 @@ export interface QueryReportParameterField {
   rangeLabel?: string;
   /** En un campo `date`: bloquea las fechas posteriores a hoy (el selector no las admite). */
   noFuture?: boolean;
+  /** En un campo `date`: fecha mínima (aaaa-mm-dd); el selector no admite días anteriores. */
+  minDate?: string;
+  /** En un campo `date`: clave de otro campo de fecha que fija además el mínimo (p. ej. «hasta» no antes de «desde»). */
+  minDateFrom?: string;
 }
 
 /** Valores aplicados: la fecha (aaaa-mm-dd, como la entrega `siaf-date-time-picker`), el valor elegido o la lista. */
@@ -49,6 +53,11 @@ export interface QueryReportSummary {
 export interface QueryReportResult {
   rows: ReportTableRow[];
   summary?: QueryReportSummary | null;
+  /**
+   * Valores de los KPI que no dependen de los parámetros ni de los filtros (p. ej. los de toda la cuenta bancaria), por la
+   * `column` del KPI. Un KPI con valor aquí lo muestra tal cual en vez de calcularlo con las filas del resultado.
+   */
+  kpiValues?: Record<string, number>;
 }
 
 export type QueryReportColumn = ReportTableColumn;
@@ -107,6 +116,13 @@ export interface QueryReportChart {
   /** Con `diverging`, qué significa cada lado; por defecto «Disminución» y «Aumento». */
   negativeLabel?: string;
   positiveLabel?: string;
+  /**
+   * Con `aggregate: 'last'`: en vez del último valor de cada categoría, suma el último valor de cada grupo de esta columna
+   * (p. ej. cada cuenta de registro) acumulado hasta esa categoría: la evolución del saldo combinando los grupos.
+   */
+  combineBy?: string;
+  /** Con `combineBy`: columna con el valor de cada grupo antes de su primera fila (el saldo inicial). */
+  combineFrom?: string;
   /** `narrow` va en la columna angosta (336 px) a la derecha del `wide` anterior, como en el Figma. */
   width?: 'wide' | 'narrow';
 }
