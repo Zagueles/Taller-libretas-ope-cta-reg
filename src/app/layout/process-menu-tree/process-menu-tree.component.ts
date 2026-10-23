@@ -18,7 +18,8 @@ export { DEFAULT_PROCESS_TREE, findProcessPathById } from '../../shared/utils/pr
  * re-exporta el tipo y las utilidades). Es el único menú en árbol: el shell también lo usa para "Ajustes" con
  * `ADMIN_MENU_TREE` y otros textos, así que un árbol nuevo es solo otro arreglo de nodos. El campo de búsqueda
  * funciona como paleta de comandos: filtra la navegación en vivo, sin ir al servidor, y expande las ramas
- * con coincidencias. Los nodos `comingSoon` solo expanden — nunca emiten `nodeSelected`.
+ * con coincidencias, resalta en negrita el texto buscado (sin distinguir tildes ni mayúsculas) y, sin coincidencias, muestra
+ * «Sin resultados» con el texto buscado. Los nodos `comingSoon` solo expanden — nunca emiten `nodeSelected`.
  *
  * @usar
  * - Para el panel Procesos del armazón: `siaf-app-shell` lo abre desde el rail y navega a la `moduleRoute` o
@@ -57,8 +58,8 @@ export { DEFAULT_PROCESS_TREE, findProcessPathById } from '../../shared/utils/pr
  * - **2.4.7 Foco visible (AA)**: cada nodo muestra un contorno azul de 2 px con `focus-visible`.
  * - **Pendiente · 4.1.2 Nombre, función y valor (A)**: los nodos con hijos publican `aria-expanded`, pero el elegido no
  *   publica `aria-current`.
- * - **Pendiente · 4.1.3 Mensajes de estado (AA)**: al filtrar no se anuncia cuántos nodos quedan y, sin coincidencias,
- *   el árbol queda vacío y sin mensaje.
+ * - **Pendiente · 4.1.3 Mensajes de estado (AA)**: al filtrar no se anuncia cuántos nodos quedan. Sin coincidencias se
+ *   muestra «Sin resultados» (`role="status"`) con el texto buscado.
  */
 @Component({
   selector: 'siaf-process-menu-tree',
@@ -99,9 +100,20 @@ export { DEFAULT_PROCESS_TREE, findProcessPathById } from '../../shared/utils/pr
             {{ subtitle }}
           </h3>
 
-          <div class="flex w-full flex-col gap-siaf-xxs">
-            <ng-container *ngTemplateOutlet="treeTemplate; context: { $implicit: filteredNodes, level: 0 }" />
-          </div>
+          @if (query.trim() && filteredNodes.length === 0) {
+            <!-- Sin coincidencias (Figma 20687:3137): ícono de búsqueda tachada, «Sin resultados» y el texto buscado. -->
+            <div class="flex h-[200px] w-full flex-col items-center justify-center gap-siaf-md text-center" role="status" data-sin-resultados>
+              <siaf-icon class="text-[var(--sys-color-text-neutral-medium)]" name="search_off" [size]="48" />
+              <p class="m-0 flex flex-col gap-siaf-md text-sm text-[var(--sys-color-text-neutral-medium)]">
+                <strong class="font-bold tracking-[-0.02px] text-[var(--sys-color-text-neutral-medium)]">Sin resultados</strong>
+                <span class="tracking-[0.0249px]">No hay coincidencias para "{{ query.trim() }}"</span>
+              </p>
+            </div>
+          } @else {
+            <div class="flex w-full flex-col gap-siaf-xxs">
+              <ng-container *ngTemplateOutlet="treeTemplate; context: { $implicit: filteredNodes, level: 0 }" />
+            </div>
+          }
         </section>
       </div>
     </aside>
@@ -153,7 +165,7 @@ export { DEFAULT_PROCESS_TREE, findProcessPathById } from '../../shared/utils/pr
               [class.text-[var(--sys-color-text-neutral-activated)]]="isNodeHighlighted(node)"
               [class.text-[var(--sys-color-text-neutral-medium)]]="!isNodeHighlighted(node)"
             >
-              {{ node.label }}
+              @for (parte of partes(node.label); track $index) {@if (parte.resaltada) {<strong class="font-bold tracking-[-0.02px]" data-coincidencia>{{ parte.texto }}</strong>} @else {{{ parte.texto }}}}
             </span>
           </button>
 
@@ -240,6 +252,24 @@ export class ProcessMenuTreeComponent implements OnChanges, OnInit {
   /** Solo el último nivel elegido queda resaltado (fondo, texto e ícono en azul y negrita): nunca sus ancestros. */
   isNodeHighlighted(node: ProcessMenuNode): boolean {
     return this.selectedId === node.id;
+  }
+
+  /** El texto de un nodo partido en tramos: lo que coincide con la búsqueda (sin tildes ni mayúsculas) va en negrita. */
+  partes(label: string): { texto: string; resaltada: boolean }[] {
+    const buscado = this.normalize(this.query);
+    if (!buscado) return [{ texto: label, resaltada: false }];
+    // `normalize` conserva el largo del texto (quita solo las marcas de tilde), así que los índices valen para `label`.
+    const base = this.normalize(label.normalize('NFC'));
+    const original = label.normalize('NFC');
+    const tramos: { texto: string; resaltada: boolean }[] = [];
+    let desde = 0;
+    for (let i = base.indexOf(buscado); i !== -1; i = base.indexOf(buscado, desde)) {
+      if (i > desde) tramos.push({ texto: original.slice(desde, i), resaltada: false });
+      tramos.push({ texto: original.slice(i, i + buscado.length), resaltada: true });
+      desde = i + buscado.length;
+    }
+    if (desde < original.length) tramos.push({ texto: original.slice(desde), resaltada: false });
+    return tramos.length ? tramos : [{ texto: label, resaltada: false }];
   }
 
   onQuery(value: string): void {
