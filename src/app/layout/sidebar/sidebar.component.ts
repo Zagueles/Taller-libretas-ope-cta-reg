@@ -105,7 +105,7 @@ const RAIL_ITEMS: RailItem[] = [
                   @if (isActive(item.id)) {
                     <span class="absolute inset-0 rounded-siaf-md bg-brand-primary/10"></span>
                   }
-                  <siaf-icon class="relative" [name]="item.icon" [size]="24" />
+                  <siaf-icon class="relative" [name]="item.icon" [variant]="isActive(item.id) ? 'filled' : 'outlined'" [size]="24" />
                 </span>
                 <span class="font-['Inter'] text-[10px] font-medium leading-normal text-[var(--sys-color-text-neutral-medium)]">{{ item.label }}</span>
               </button>
@@ -134,7 +134,7 @@ const RAIL_ITEMS: RailItem[] = [
               @if (isActive('Ajustes')) {
                 <span class="absolute inset-0 rounded-siaf-md bg-brand-primary/10"></span>
               }
-              <siaf-icon class="relative" name="settings" [size]="24" />
+              <siaf-icon class="relative" name="settings" [variant]="isActive('Ajustes') ? 'filled' : 'outlined'" [size]="24" />
             </span>
             <span class="font-['Inter'] text-[10px] font-medium leading-normal text-[var(--sys-color-text-neutral-medium)]">Ajustes</span>
           </button>
