@@ -39,9 +39,15 @@ type CalendarDay = {
  *   acepta ese mismo formato en `value`.
  * - Para mostrar una fecha que no se edita: en modo lectura va `readonly-field`, no el selector `[disabled]`.
  * @teclado
- * - **Escribir**: el campo acepta dígitos con la máscara dd/mm/aaaa (y hh:mm:ss en `datetime`); la fecha se elige al
- *   completarla si es válida y respeta `minDate`; al salir del campo o con Enter, una fecha inválida vuelve a la elegida.
+ * - **Escribir**: al enfocar, el campo muestra la plantilla dd/mm/aaaa (y hh:mm:ss en `datetime`) y se llena por secciones:
+ *   cada dígito ocupa su lugar y, al completar una sección, pasa a la siguiente (un 5 en el mes se vuelve 05). Con clic, flechas
+ *   izquierda/derecha o Tab se elige una sección (día, mes o año) y lo que se teclee la reemplaza; Retroceso/Supr la vacía
+ *   o quita su último dígito, y «/» cierra la sección. La fecha se elige al completarla si es válida y respeta `minDate`;
+ *   una fecha completa que no existe (00/00/0000, 31/02) o fuera de rango se queda en rojo con su mensaje, y al salir del campo una incompleta vuelve a la elegida.
  *   Con `defaultToToday` en `false`, vaciar el campo borra la fecha.
+ * - **Recientes**: con `recentKey`, al enfocar el campo vacío aparece, como el tooltip nativo del navegador (globo oscuro con una X por fecha para quitarla), la lista de las últimas 5 fechas elegidas en él
+ *   (se guardan en `localStorage`, respetan `minDate` y `maxDate`); se elige con clic o con flecha abajo/arriba y Enter, y Escape
+ *   o empezar a escribir la cierra.
  * - **Tab**: enfoca el campo y luego el botón del calendario (Alt + flecha abajo también lo abre). Al abrir el calendario el foco entra en el día elegido (o en hoy); desde ahí recorre
  *   las flechas de la cabecera, el mes, el año y cada día habilitado, y salir con Tab cierra el calendario.
  * - **Enter / Espacio**: en el botón abren o cierran el calendario (Enter en el campo confirma lo escrito); dentro, activan la flecha o eligen el día, mes o
@@ -55,7 +61,7 @@ type CalendarDay = {
  * - **Pendiente · 3.3.1 Identificación de errores (A)**: el texto de `error` se ve bajo el campo, pero no se asocia con
  *   `aria-describedby` ni se anuncia al aparecer; con `state="error"` y sin `error`, el aviso es solo el borde rojo.
  * - **3.3.2 Etiquetas o instrucciones (A)**: el campo de texto publica `aria-required` y `aria-invalid`; el obligatorio se
- *   ve además con el asterisco rojo y el formato dd/mm/aaaa aparece como texto guía al enfocar.
+ *   ve además con el asterisco rojo y el formato dd/mm/aaaa queda como plantilla en el campo al enfocar y se va llenando por secciones.
  * - **4.1.2 Nombre, función y valor (A)**: el botón del calendario publica `aria-haspopup="dialog"` y `aria-expanded`; el calendario
  *   es `role="dialog"` con `aria-label`, y las grillas de meses y años, `role="listbox"` con `aria-selected`.
  * - **Pendiente · 4.1.2 Nombre, función y valor (A)**: cada día se lee solo como número («05») y el día elegido no
@@ -107,9 +113,11 @@ type CalendarDay = {
             [attr.aria-label]="labelText"
             [attr.aria-required]="required"
             [attr.aria-invalid]="effectiveState === 'error'"
-            (focus)="enfocado = true"
+            (focus)="alEnfocar($any($event.target))"
+            (click)="elegirSeccionBajoCursor($any($event.target))"
+            (keydown)="teclear($event)"
             (input)="escribir($any($event.target))"
-            (blur)="enfocado = false; confirmarTexto()"
+            (blur)="enfocado = false; mostrarRecientes = false; confirmarTexto()"
             (keydown.enter)="confirmarTexto($event)"
             (keydown.alt.arrowdown)="abrirCalendario($event)"
           />
@@ -125,6 +133,43 @@ type CalendarDay = {
             <siaf-icon name="calendar_today" [size]="20" />
           </button>
         </span>
+
+        @if (recientesVisibles.length && mostrarRecientes && !pickerOpen) {
+          <!-- Sugerencias como el tooltip nativo del navegador: globo oscuro con punta hacia el campo y una X para quitar cada fecha. -->
+          <div class="absolute left-3 top-[calc(100%+10px)] z-40 min-w-[200px] max-w-full">
+            <span class="absolute -top-1 left-6 size-3 rotate-45 bg-[var(--sys-color-bg-snackbar,var(--sys-color-bg-feedback-dark-default))]" aria-hidden="true"></span>
+            <ul
+              class="relative m-0 flex list-none flex-col gap-siaf-xxs rounded-siaf-md bg-[var(--sys-color-bg-snackbar,var(--sys-color-bg-feedback-dark-default))] p-siaf-xs text-[var(--sys-color-text-brand-white)] shadow-siaf-elevation-2"
+              role="listbox"
+              aria-label="Fechas recientes"
+              data-recientes
+            >
+              @for (fecha of recientesVisibles; track fecha; let i = $index) {
+                <li class="flex items-center rounded-siaf-sm" role="option" [attr.aria-selected]="i === recienteActiva" [class.bg-white/15]="i === recienteActiva">
+                  <button
+                    class="min-w-0 flex-1 rounded-siaf-sm px-siaf-sm py-siaf-xs text-left text-base font-medium outline-none hover:bg-white/10"
+                    type="button"
+                    tabindex="-1"
+                    data-reciente
+                    (mousedown)="$event.preventDefault()"
+                    (click)="elegirReciente(fecha)"
+                  >{{ formatearFecha(fecha) }}</button>
+                  <button
+                    class="mr-siaf-xxs inline-flex size-7 shrink-0 items-center justify-center rounded-full outline-none hover:bg-white/10"
+                    type="button"
+                    tabindex="-1"
+                    [attr.aria-label]="'Quitar ' + formatearFecha(fecha) + ' de recientes'"
+                    data-quitar-reciente
+                    (mousedown)="$event.preventDefault()"
+                    (click)="quitarReciente(fecha)"
+                  >
+                    <siaf-icon name="close" [size]="18" />
+                  </button>
+                </li>
+              }
+            </ul>
+          </div>
+        }
 
         @if (pickerOpen) {
           <button class="fixed inset-0 z-30 cursor-default bg-transparent" type="button" data-capa-cierre tabindex="-1" aria-hidden="true" (mousedown)="$event.preventDefault()" (click)="closePicker()"></button>
@@ -307,6 +352,12 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
   @Input() maxDateError = '';
   /** Con `minDate`: texto de error cuando se escribe y confirma una fecha anterior; se conserva igual que con `maxDateError`. */
   @Input() minDateError = '';
+  /** Clave para recordar las últimas fechas elegidas en este campo (`localStorage`): al enfocar el campo vacío se ofrecen como «Recientes». Vacío, sin sugerencias. */
+  @Input() recentKey = '';
+  /** Recientes guardados (aaaa-mm-dd, la más nueva primero) y estado de la lista que se ofrece bajo el campo. */
+  private recientes: string[] = [];
+  mostrarRecientes = false;
+  recienteActiva = -1;
   /** Mensaje por una fecha escrita fuera de `minDate` o `maxDate` (ver `minDateError` y `maxDateError`); vacío si no hay. */
   private errorRango = '';
 
@@ -330,6 +381,7 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
   readonly monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
   ngOnInit(): void {
+    this.leerRecientes();
     this.setSelectedDate(this.value || (this.defaultToToday ? this.todayValue : ''));
   }
 
@@ -552,19 +604,245 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
     if (!this.pickerOpen) this.togglePicker();
   }
 
-  /** Escribe en el campo: solo dígitos con la máscara; al completarse una fecha válida se elige y se emite. */
+  /** Plantilla del campo: sus letras (dd, mm, aaaa, hh, mm, ss) son las posiciones aún sin escribir. */
+  private get plantilla(): string {
+    return this.variant === 'datetime' ? 'dd/mm/aaaa hh:mm:ss' : 'dd/mm/aaaa';
+  }
+
+  /** Secciones del campo (día, mes, año y, con `datetime`, hora, minuto y segundo) con su posición en el texto. */
+  private get secciones(): { ini: number; fin: number; ph: string; tope: number }[] {
+    const fecha = [
+      { ini: 0, fin: 2, ph: 'dd', tope: 3 },
+      { ini: 3, fin: 5, ph: 'mm', tope: 1 },
+      { ini: 6, fin: 10, ph: 'aaaa', tope: 9 },
+    ];
+    return this.variant === 'datetime'
+      ? [...fecha, { ini: 11, fin: 13, ph: 'hh', tope: 2 }, { ini: 14, fin: 16, ph: 'mm', tope: 5 }, { ini: 17, fin: 19, ph: 'ss', tope: 5 }]
+      : fecha;
+  }
+
+  /** Sección en edición y si lo que se teclee reemplaza la sección entera (recién elegida) o continúa lo ya escrito. */
+  private seccionActiva = 0;
+  private reemplazaSeccion = true;
+
+  private get claveRecientes(): string {
+    return `taller-siaf-rp:fechas-recientes:${this.recentKey}`;
+  }
+
+  private leerRecientes(): void {
+    this.recientes = [];
+    if (!this.recentKey) return;
+    try {
+      const guardado = JSON.parse(localStorage.getItem(this.claveRecientes) ?? '[]') as unknown;
+      if (Array.isArray(guardado)) this.recientes = guardado.filter((f): f is string => typeof f === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(f)).slice(0, 5);
+    } catch {
+      // Sin almacenamiento disponible: no hay recientes.
+    }
+  }
+
+  /** Recuerda una fecha elegida: la más nueva primero, sin repetirse y hasta 5. */
+  private registrarReciente(iso: string): void {
+    if (!this.recentKey || !iso) return;
+    this.recientes = [iso, ...this.recientes.filter((f) => f !== iso)].slice(0, 5);
+    try {
+      localStorage.setItem(this.claveRecientes, JSON.stringify(this.recientes));
+    } catch {
+      // Sin almacenamiento disponible: se recuerdan solo mientras dura la pantalla.
+    }
+  }
+
+  /** Recientes que respetan `minDate` y `maxDate`. */
+  get recientesVisibles(): string[] {
+    return this.recientes.filter((f) => (!this.minDate || f >= this.minDate) && (!this.maxDate || f <= this.maxDate));
+  }
+
+  formatearFecha(iso: string): string {
+    return iso.split('-').reverse().join('/');
+  }
+
+  /** Quita una fecha de los recientes (la X de la sugerencia). */
+  quitarReciente(iso: string): void {
+    this.recientes = this.recientes.filter((f) => f !== iso);
+    this.recienteActiva = -1;
+    try {
+      localStorage.setItem(this.claveRecientes, JSON.stringify(this.recientes));
+    } catch {
+      // Sin almacenamiento disponible: se quita solo mientras dura la pantalla.
+    }
+  }
+
+  /** Elige una fecha reciente de la lista: igual que escribirla completa. */
+  elegirReciente(iso: string): void {
+    this.mostrarRecientes = false;
+    this.recienteActiva = -1;
+    this.errorRango = '';
+    this.selectedDate = iso;
+    this.texto = this.displayValue;
+    this.syncViewToSelection();
+    this.registrarReciente(iso);
+    this.valueChange.emit(this.salida(iso));
+  }
+
+  /** Al enfocar, el campo muestra la plantilla dd/mm/aaaa y deja elegida una sección. */
+  alEnfocar(campo: HTMLInputElement): void {
+    this.enfocado = true;
+    const vacio = this.texto === '';
+    this.mostrarRecientes = !/\d/.test(this.texto);
+    this.recienteActiva = -1;
+    if (vacio) {
+      this.texto = this.plantilla;
+      campo.value = this.texto;
+    }
+    setTimeout(() => {
+      if (document.activeElement !== campo) return;
+      const todo = campo.selectionStart === 0 && campo.selectionEnd === campo.value.length;
+      this.elegirSeccion(campo, vacio || todo ? 0 : this.seccionEnPosicion(campo.selectionStart ?? 0));
+    });
+  }
+
+  /** Al hacer clic se elige la sección (día, mes o año…) bajo el cursor para corregirla sola. */
+  elegirSeccionBajoCursor(campo: HTMLInputElement): void {
+    if (this.texto === '') {
+      this.texto = this.plantilla;
+      campo.value = this.texto;
+    }
+    this.elegirSeccion(campo, this.seccionEnPosicion(campo.selectionStart ?? 0));
+  }
+
+  private seccionEnPosicion(posicion: number): number {
+    const indice = this.secciones.findIndex((sec) => posicion <= sec.fin);
+    return indice < 0 ? this.secciones.length - 1 : indice;
+  }
+
+  private elegirSeccion(campo: HTMLInputElement, indice: number): void {
+    const sec = this.secciones[indice];
+    this.seccionActiva = indice;
+    this.reemplazaSeccion = true;
+    campo.setSelectionRange(sec.ini, sec.fin);
+  }
+
+  private ponerSeccion(campo: HTMLInputElement, indice: number, valor: string): void {
+    const sec = this.secciones[indice];
+    this.texto = this.texto.slice(0, sec.ini) + valor + this.texto.slice(sec.fin);
+    campo.value = this.texto;
+    this.errorRango = '';
+  }
+
+  /** Teclado del campo: dígitos por sección, flechas y Tab entre secciones, Retroceso/Supr para corregir, «/» para pasar a la siguiente. */
+  teclear(event: KeyboardEvent): void {
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    const campo = event.target as HTMLInputElement;
+    const ultima = this.secciones.length - 1;
+    const lista = this.mostrarRecientes ? this.recientesVisibles : [];
+    if (lista.length && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+      event.preventDefault();
+      this.recienteActiva = Math.max(-1, Math.min(lista.length - 1, this.recienteActiva + (event.key === 'ArrowDown' ? 1 : -1)));
+    } else if (lista.length && event.key === 'Enter' && this.recienteActiva >= 0) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      this.elegirReciente(lista[this.recienteActiva]);
+    } else if (this.mostrarRecientes && event.key === 'Escape') {
+      this.mostrarRecientes = false;
+    } else if (/^\d$/.test(event.key)) {
+      this.mostrarRecientes = false;
+      event.preventDefault();
+      this.escribirDigito(event.key, campo);
+    } else if (event.key === 'Backspace' || event.key === 'Delete') {
+      event.preventDefault();
+      this.borrar(campo);
+    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+      event.preventDefault();
+      const destino = this.seccionActiva + (event.key === 'ArrowLeft' ? -1 : 1);
+      if (destino >= 0 && destino <= ultima) this.elegirSeccion(campo, destino);
+    } else if (event.key === 'Tab') {
+      const destino = this.seccionActiva + (event.shiftKey ? -1 : 1);
+      if (this.texto !== '' && destino >= 0 && destino <= ultima) {
+        event.preventDefault();
+        this.elegirSeccion(campo, destino);
+      }
+    } else if (['/', '-', '.', ':'].includes(event.key)) {
+      event.preventDefault();
+      this.completarSeccionYAvanzar(campo);
+    } else if (event.key.length === 1) {
+      event.preventDefault();
+    }
+  }
+
+  /** Escribe un dígito en la sección activa: la completa y salta a la siguiente; un primer dígito que no cabe (p. ej. 5 en el mes) antepone 0. */
+  private escribirDigito(digito: string, campo: HTMLInputElement): void {
+    if (this.texto === '') this.texto = this.plantilla;
+    const indice = this.seccionActiva;
+    const sec = this.secciones[indice];
+    let actual = this.texto.slice(sec.ini, sec.fin);
+    if (this.reemplazaSeccion || !/\D/.test(actual)) actual = sec.ph;
+    const pos = actual.search(/\D/);
+    let nuevo = actual.slice(0, pos) + digito + actual.slice(pos + 1);
+    if (pos === 0 && sec.ph.length === 2 && Number(digito) > sec.tope) nuevo = `0${digito}`;
+    this.reemplazaSeccion = false;
+    this.ponerSeccion(campo, indice, nuevo);
+    if (/\D/.test(nuevo)) {
+      const cursor = sec.ini + nuevo.search(/\D/);
+      campo.setSelectionRange(cursor, cursor);
+      return;
+    }
+    if (indice < this.secciones.length - 1) this.elegirSeccion(campo, indice + 1);
+    else campo.setSelectionRange(sec.ini, sec.fin);
+    if (!/[a-z]/.test(this.texto)) this.aplicarTexto();
+  }
+
+  /** «/» (o «-», «.», «:») cierra la sección activa —anteponiendo 0 a un solo dígito— y pasa a la siguiente. */
+  private completarSeccionYAvanzar(campo: HTMLInputElement): void {
+    const indice = this.seccionActiva;
+    const sec = this.secciones[indice];
+    const actual = this.texto.slice(sec.ini, sec.fin);
+    const digitos = actual.replace(/\D/g, '');
+    if (digitos === '' || this.reemplazaSeccion) return;
+    if (sec.ph.length === 2 && digitos.length === 1) this.ponerSeccion(campo, indice, `0${digitos}`);
+    if (indice < this.secciones.length - 1) this.elegirSeccion(campo, indice + 1);
+  }
+
+  /** Retroceso/Supr: con la sección elegida entera la vacía; si no, quita su último dígito (y, sin dígitos, pasa a la sección anterior). */
+  private borrar(campo: HTMLInputElement): void {
+    if (this.texto === '') return;
+    const indice = this.seccionActiva;
+    const sec = this.secciones[indice];
+    const actual = this.texto.slice(sec.ini, sec.fin);
+    if (this.reemplazaSeccion) {
+      this.ponerSeccion(campo, indice, sec.ph);
+      campo.setSelectionRange(sec.ini, sec.fin);
+      return;
+    }
+    const ultimo = [...actual].map((c) => /\d/.test(c)).lastIndexOf(true);
+    if (ultimo < 0) {
+      if (indice > 0) this.elegirSeccion(campo, indice - 1);
+      return;
+    }
+    this.ponerSeccion(campo, indice, actual.slice(0, ultimo) + sec.ph[ultimo] + actual.slice(ultimo + 1));
+    campo.setSelectionRange(sec.ini + ultimo, sec.ini + ultimo);
+  }
+
+  /** Pega o escribe sin teclado (móvil, autocompletar): los dígitos llenan las secciones en orden; al completarse una fecha válida se elige y se emite. */
   escribir(campo: HTMLInputElement): void {
     const total = this.variant === 'datetime' ? 14 : 8;
     const digitos = campo.value.replace(/\D/g, '').slice(0, total);
-    this.texto = this.mascara(digitos);
+    let restantes = digitos;
+    this.texto = digitos === '' && !this.enfocado ? '' : this.secciones.reduce((texto, sec) => {
+      const tomados = restantes.slice(0, sec.ph.length);
+      restantes = restantes.slice(tomados.length);
+      return texto.slice(0, sec.ini) + tomados + sec.ph.slice(tomados.length) + texto.slice(sec.fin);
+    }, this.plantilla);
     campo.value = this.texto;
     this.errorRango = '';
-    if (digitos.length === total) this.aplicarTexto();
+    this.mostrarRecientes = false;
+    const faltante = this.texto.search(/[a-z]/);
+    if (faltante >= 0) campo.setSelectionRange(faltante, faltante);
+    else this.aplicarTexto();
   }
 
   /** Al salir del campo o con Enter: aplica lo escrito si es una fecha válida; si no, vuelve a la fecha elegida. */
   confirmarTexto(event?: Event): void {
     event?.preventDefault();
+    if (!/\d/.test(this.texto)) this.texto = '';
     if (this.texto === '' && this.selectedDate && !this.defaultToToday) {
       this.selectedDate = '';
       this.valueChange.emit('');
@@ -581,28 +859,20 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
     const fecha = new Date(Number(anio), Number(mes) - 1, Number(dia));
     const existe = fecha.getFullYear() === Number(anio) && fecha.getMonth() === Number(mes) - 1 && fecha.getDate() === Number(dia);
     const iso = `${anio}-${mes}-${dia}`;
-    this.errorRango = '';
-    if (existe && Number(anio) >= 1900) {
-      if (this.maxDateError && this.maxDate && iso > this.maxDate) this.errorRango = this.maxDateError;
-      else if (this.minDateError && this.minDate && iso < this.minDate) this.errorRango = this.minDateError;
-    }
-    if (this.errorRango) return false;
-    if (!existe || Number(anio) < 1900 || (this.minDate && iso < this.minDate) || (this.maxDate && iso > this.maxDate)) return false;
-    if (this.variant === 'datetime') {
-      if (Number(hora) > 23 || Number(minuto) > 59 || Number(segundo) > 59) return false;
-      [this.hora, this.minuto, this.segundo] = [hora, minuto, segundo];
-    }
+    const horaValida = this.variant !== 'datetime' || (Number(hora) <= 23 && Number(minuto) <= 59 && Number(segundo) <= 59);
+    const antes = Boolean(this.minDate && iso < this.minDate);
+    const despues = Boolean(this.maxDate && iso > this.maxDate);
+    if (!existe || !horaValida || (Number(anio) < 1900 && !(antes && this.minDateError))) this.errorRango = 'Ingrese una fecha válida.';
+    else if (despues && this.maxDateError) this.errorRango = this.maxDateError;
+    else if (antes && this.minDateError) this.errorRango = this.minDateError;
+    else this.errorRango = '';
+    if (this.errorRango || antes || despues) return false;
+    if (this.variant === 'datetime') [this.hora, this.minuto, this.segundo] = [hora, minuto, segundo];
     this.selectedDate = iso;
     this.syncViewToSelection();
+    this.registrarReciente(iso);
     this.valueChange.emit(this.salida(iso));
     return true;
-  }
-
-  /** Dígitos escritos → dd/mm/aaaa (o dd/mm/aaaa hh:mm:ss con `datetime`), sin separadores colgando. */
-  private mascara(digitos: string): string {
-    const fecha = [digitos.slice(0, 2), digitos.slice(2, 4), digitos.slice(4, 8)].filter(Boolean).join('/');
-    const hora = [digitos.slice(8, 10), digitos.slice(10, 12), digitos.slice(12, 14)].filter(Boolean).join(':');
-    return hora ? `${fecha} ${hora}` : fecha;
   }
 
   closePicker(event?: Event): void {
@@ -615,6 +885,7 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
     this.selectedDate = value;
     this.errorRango = '';
     this.texto = this.displayValue;
+    this.registrarReciente(value);
     this.valueChange.emit(this.salida(value));
 
     if (this.variant === 'date') {
@@ -629,6 +900,7 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
       this.texto = this.displayValue;
       this.valueChange.emit(this.salida(this.selectedDate));
     } else if (this.variant === 'datetime') {
+      this.registrarReciente(this.selectedDate);
       this.valueChange.emit(this.salida(this.selectedDate));
     }
 

@@ -123,20 +123,182 @@ describe('DateTimePickerComponent — escribir la fecha', () => {
     fixture.detectChanges();
   });
 
+  describe('por secciones con el teclado', () => {
+    const tecla = (key: string, opciones: KeyboardEventInit = {}): void => {
+      campo().dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...opciones }));
+      fixture.detectChanges();
+    };
+    const teclear = (digitos: string): void => [...digitos].forEach((d) => tecla(d));
+    const enfocar = (): void => {
+      campo().focus();
+      campo().dispatchEvent(new Event('focus'));
+      fixture.detectChanges();
+    };
+
+    it('al enfocar muestra la plantilla dd/mm/aaaa y al salir sin escribir queda vacío', () => {
+      enfocar();
+      expect(campo().value).toBe('dd/mm/aaaa');
+      salir();
+      expect(campo().value).toBe('');
+    });
+
+    it('conserva la plantilla mientras se escribe y pasa a la siguiente sección al completar una', () => {
+      enfocar();
+      teclear('15');
+      expect(campo().value).toBe('15/mm/aaaa');
+      teclear('0');
+      expect(campo().value).toBe('15/0m/aaaa');
+      teclear('3');
+      expect(campo().value).toBe('15/03/aaaa');
+      teclear('2026');
+      expect(campo().value).toBe('15/03/2026');
+      expect(emitidos).toEqual(['2026-03-15']);
+    });
+
+    it('un primer dígito que no cabe en el mes o el día antepone 0', () => {
+      enfocar();
+      teclear('5');
+      expect(campo().value).toBe('05/mm/aaaa');
+      teclear('7');
+      expect(campo().value).toBe('05/07/aaaa');
+    });
+
+    it('se corrige una sección elegida con las flechas sin tocar las demás', () => {
+      enfocar();
+      teclear('15032026');
+      tecla('ArrowLeft');
+      teclear('11');
+      expect(campo().value).toBe('15/11/2026');
+      expect(emitidos).toEqual(['2026-03-15', '2026-11-15']);
+    });
+
+    it('Retroceso quita el último dígito de la sección y, sin dígitos, pasa a la anterior y la vacía', () => {
+      enfocar();
+      teclear('150');
+      tecla('Backspace');
+      expect(campo().value).toBe('15/mm/aaaa');
+      tecla('Backspace');
+      expect(campo().value).toBe('15/mm/aaaa');
+      tecla('Backspace');
+      expect(campo().value).toBe('dd/mm/aaaa');
+    });
+
+    it('«/» cierra una sección de un solo dígito anteponiendo 0 y pasa a la siguiente', () => {
+      enfocar();
+      teclear('7');
+      tecla('/');
+      teclear('4');
+      expect(campo().value).toBe('07/04/aaaa');
+    });
+
+    it('una fecha completa que no existe se queda en rojo con «Ingrese una fecha válida.»', () => {
+      enfocar();
+      teclear('00000000');
+      expect(campo().value).toBe('00/00/0000');
+      expect(fixture.nativeElement.textContent).toContain('Ingrese una fecha válida.');
+      expect(campo().getAttribute('aria-invalid')).toBe('true');
+      expect(emitidos).toEqual([]);
+      salir();
+      expect(campo().value).toBe('00/00/0000');
+      enfocar();
+      teclear('3102');
+      teclear('2026');
+      expect(fixture.nativeElement.textContent).toContain('Ingrese una fecha válida.');
+    });
+
+    it('un año muy antiguo con minDateError muestra ese error y sin él, «fecha válida»', () => {
+      fixture.componentRef.setInput('minDate', '2020-01-01');
+      fixture.componentRef.setInput('minDateError', 'Ingrese una fecha igual o posterior al 01/01/2020.');
+      fixture.detectChanges();
+      enfocar();
+      teclear('10101000');
+      expect(fixture.nativeElement.textContent).toContain('igual o posterior al 01/01/2020');
+      fixture.componentRef.setInput('minDateError', '');
+      fixture.componentRef.setInput('minDate', '');
+      fixture.detectChanges();
+      enfocar();
+      teclear('10101000');
+      expect(fixture.nativeElement.textContent).toContain('Ingrese una fecha válida.');
+    });
+
+    describe('recientes', () => {
+      const CLAVE = 'taller-siaf-rp:fechas-recientes:prueba';
+      const lista = (): string[] => Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('[data-reciente]')).map((b) => b.textContent!.trim());
+
+      beforeEach(() => {
+        localStorage.setItem(CLAVE, JSON.stringify(['2026-03-15', '2026-03-10', '2026-02-01']));
+        fixture.componentRef.setInput('recentKey', 'prueba');
+        fixture.componentInstance.ngOnInit();
+        fixture.detectChanges();
+      });
+      afterEach(() => localStorage.removeItem(CLAVE));
+
+      it('al enfocar el campo vacío ofrece las últimas fechas y elegirla la emite', () => {
+        enfocar();
+        expect(lista()).toEqual(['15/03/2026', '10/03/2026', '01/02/2026']);
+        (fixture.nativeElement.querySelectorAll('[data-reciente]')[1] as HTMLButtonElement).click();
+        fixture.detectChanges();
+        expect(emitidos).toEqual(['2026-03-10']);
+        expect(campo().value).toBe('10/03/2026');
+        expect(lista()).toEqual([]);
+      });
+
+      it('la X quita una fecha de los recientes y del almacenamiento', () => {
+        enfocar();
+        (fixture.nativeElement.querySelectorAll('[data-quitar-reciente]')[0] as HTMLButtonElement).click();
+        fixture.detectChanges();
+        expect(lista()).toEqual(['10/03/2026', '01/02/2026']);
+        expect(JSON.parse(localStorage.getItem(CLAVE)!)).toEqual(['2026-03-10', '2026-02-01']);
+      });
+
+      it('se navega con flecha abajo y Enter, y empezar a escribir cierra la lista', () => {
+        enfocar();
+        tecla('ArrowDown');
+        tecla('ArrowDown');
+        tecla('Enter');
+        expect(emitidos).toEqual(['2026-03-10']);
+        campo().value = '';
+        enfocar();
+        tecla('1');
+        expect(lista()).toEqual([]);
+      });
+
+      it('solo ofrece las que respetan minDate y maxDate, y recuerda las nuevas sin repetir', () => {
+        fixture.componentRef.setInput('minDate', '2026-03-01');
+        fixture.componentRef.setInput('maxDate', '2026-03-31');
+        enfocar();
+        expect(lista()).toEqual(['15/03/2026', '10/03/2026']);
+        teclear('20032026');
+        expect(JSON.parse(localStorage.getItem(CLAVE)!)).toEqual(['2026-03-20', '2026-03-15', '2026-03-10', '2026-02-01']);
+      });
+    });
+
+    it('ignora letras y símbolos', () => {
+      enfocar();
+      tecla('a');
+      tecla('x');
+      expect(campo().value).toBe('dd/mm/aaaa');
+    });
+  });
+
   it('pone la máscara dd/mm/aaaa mientras se escriben dígitos y emite al completar una fecha válida', () => {
     escribir('1503');
-    expect(campo().value).toBe('15/03');
+    expect(campo().value).toBe('15/03/aaaa');
     expect(emitidos).toEqual([]);
     escribir('15032026');
     expect(campo().value).toBe('15/03/2026');
     expect(emitidos).toEqual(['2026-03-15']);
   });
 
-  it('una fecha inexistente no se emite y al salir vuelve a la fecha elegida', () => {
+  it('una fecha inexistente no se emite y se queda en rojo con su mensaje; una incompleta vuelve a la elegida al salir', () => {
     fixture.componentRef.setInput('value', '2026-03-15');
     fixture.detectChanges();
     escribir('31022026');
     expect(emitidos).toEqual([]);
+    salir();
+    expect(campo().value).toBe('31/02/2026');
+    expect(fixture.nativeElement.textContent).toContain('Ingrese una fecha válida.');
+    escribir('1503');
     salir();
     expect(campo().value).toBe('15/03/2026');
   });

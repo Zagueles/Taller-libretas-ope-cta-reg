@@ -110,8 +110,8 @@ const fechaVisible = (iso: string): string => (iso ? iso.split('-').reverse().jo
               role="dialog"
               [attr.aria-label]="label + ': período personalizado'"
             >
-              <siaf-date-time-picker label="Desde" [fullWidth]="true" [defaultToToday]="false" [minDate]="minDate" [maxDate]="maxDate" [minDateError]="errorMinimo(minDate)" [maxDateError]="errorMaximo()" [value]="desde()" (valueChange)="cambiarDesde($event)" />
-              <siaf-date-time-picker label="Hasta" [fullWidth]="true" [defaultToToday]="false" [minDate]="minimoHasta()" [maxDate]="maxDate" [minDateError]="errorMinimo(minimoHasta())" [maxDateError]="errorMaximo()" [value]="hasta()" (valueChange)="hasta.set($event)" />
+              <siaf-date-time-picker label="Desde" [fullWidth]="true" [defaultToToday]="false" [minDate]="minDate" [maxDate]="maxDate" [minDateError]="errorMinimo(minDate)" recentKey="periodo-desde" [maxDateError]="errorMaximo()" [value]="desde()" (valueChange)="cambiarDesde($event)" />
+              <siaf-date-time-picker label="Hasta" [fullWidth]="true" [defaultToToday]="false" [minDate]="minimoHasta()" [maxDate]="maxDate" [minDateError]="errorMinimo(minimoHasta())" recentKey="periodo-hasta" [maxDateError]="errorMaximo()" [value]="hasta()" (valueChange)="hasta.set($event)" />
               <div class="flex items-center justify-end gap-siaf-xs">
                 <siaf-button variant="outline" size="sm" (click)="cerrar()">Cancelar</siaf-button>
                 <siaf-button variant="filled" size="sm" [disabled]="!desde() || !hasta()" (click)="aplicarPersonalizado()">Aplicar</siaf-button>

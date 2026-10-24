@@ -97,6 +97,7 @@ let siguienteId = 0;
                       [maxDate]="campo.noFuture ? hoy : ''"
                       [maxDateError]="campo.noFuture ? 'Ingrese una fecha igual o anterior a la actual.' : ''"
                       [minDateError]="errorMinimo(campo)"
+                      [recentKey]="'parametros-' + campo.key"
                       [fullWidth]="true"
                       [value]="texto(campo.key)"
                       (valueChange)="cambiar(campo.key, $event)"
