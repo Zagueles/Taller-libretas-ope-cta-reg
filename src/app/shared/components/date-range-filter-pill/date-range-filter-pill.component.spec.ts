@@ -31,6 +31,14 @@ describe('DateRangeFilterPillComponent — límites del período personalizado',
     expect(pill.hasta()).toBe('2026-04-01');
   });
 
+  it('los mensajes de error nombran el mínimo del período, la fecha «Desde» elegida y el tope de hoy', () => {
+    expect(pill.errorMinimo(pill.minimoHasta())).toBe('Ingrese una fecha igual o posterior al 01/01/2020.');
+    pill.cambiarDesde('2026-03-20');
+    expect(pill.errorMinimo(pill.minimoHasta())).toBe('Ingrese una fecha igual o posterior a la fecha desde.');
+    expect(pill.errorMinimo(pill.minDate)).toBe('Ingrese una fecha igual o posterior al 01/01/2020.');
+    expect(pill.errorMaximo()).toBe('Ingrese una fecha igual o anterior a la actual.');
+  });
+
   it('sin límites configurados, «Hasta» solo depende de «Desde»', () => {
     fixture.componentRef.setInput('minDate', '');
     fixture.componentRef.setInput('maxDate', '');

@@ -110,8 +110,8 @@ const fechaVisible = (iso: string): string => (iso ? iso.split('-').reverse().jo
               role="dialog"
               [attr.aria-label]="label + ': período personalizado'"
             >
-              <siaf-date-time-picker label="Desde" [fullWidth]="true" [defaultToToday]="false" [minDate]="minDate" [maxDate]="maxDate" [value]="desde()" (valueChange)="cambiarDesde($event)" />
-              <siaf-date-time-picker label="Hasta" [fullWidth]="true" [defaultToToday]="false" [minDate]="minimoHasta()" [maxDate]="maxDate" [value]="hasta()" (valueChange)="hasta.set($event)" />
+              <siaf-date-time-picker label="Desde" [fullWidth]="true" [defaultToToday]="false" [minDate]="minDate" [maxDate]="maxDate" [minDateError]="errorMinimo(minDate)" [maxDateError]="errorMaximo()" [value]="desde()" (valueChange)="cambiarDesde($event)" />
+              <siaf-date-time-picker label="Hasta" [fullWidth]="true" [defaultToToday]="false" [minDate]="minimoHasta()" [maxDate]="maxDate" [minDateError]="errorMinimo(minimoHasta())" [maxDateError]="errorMaximo()" [value]="hasta()" (valueChange)="hasta.set($event)" />
               <div class="flex items-center justify-end gap-siaf-xs">
                 <siaf-button variant="outline" size="sm" (click)="cerrar()">Cancelar</siaf-button>
                 <siaf-button variant="filled" size="sm" [disabled]="!desde() || !hasta()" (click)="aplicarPersonalizado()">Aplicar</siaf-button>
@@ -149,6 +149,18 @@ export class DateRangeFilterPillComponent {
   readonly panelAbierto = signal<'cerrado' | 'opciones' | 'personalizado'>('cerrado');
   readonly desde = signal('');
   readonly hasta = signal('');
+
+  /** Error de una fecha escrita anterior al mínimo del selector: el del período o, en «Hasta», la fecha «Desde» elegida. */
+  errorMinimo(minimo: string): string {
+    if (!minimo) return '';
+    if (minimo === this.minDate) return `Ingrese una fecha igual o posterior al ${minimo.split('-').reverse().join('/')}.`;
+    return 'Ingrese una fecha igual o posterior a la fecha desde.';
+  }
+
+  /** Error de una fecha escrita posterior al máximo del período (hoy). */
+  errorMaximo(): string {
+    return this.maxDate ? 'Ingrese una fecha igual o anterior a la actual.' : '';
+  }
 
   /** «Hasta» no admite días anteriores a «Desde» ni al mínimo del período. */
   minimoHasta(): string {
