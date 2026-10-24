@@ -4051,7 +4051,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     "capa": "ui",
     "importacion": "@siaf/ui/date-time-picker/date-time-picker.component",
     "archivo": "src/app/shared/ui/date-time-picker/date-time-picker.component.ts",
-    "descripcion": "Selector de fecha (y opcionalmente hora) con calendario propio, label flotante,\nestados de error/éxito, `[minDate]` para deshabilitar días anteriores y `[maxDate]` para los posteriores (no se aceptan tampoco al escribirlos; con `[maxDateError]`, la fecha posterior escrita y confirmada se conserva con ese mensaje de error).\n\nEs el control canónico de fecha del design system: úsalo en vez de un `input type=\"date\"`\nnativo para que el campo respete tokens, textos en español y el formato dd/mm/aaaa.\n\nEn la cabecera del calendario, el mes y el año son botones: el mes abre los 12 meses y el año una\ngrilla de 12 años (las flechas dobles pasan de página). Al elegir, vuelve a los días de ese mes o año.\nCon `minDate`, los meses y años que terminan antes quedan deshabilitados; con `maxDate`, los que empiezan después.",
+    "descripcion": "Selector de fecha (y opcionalmente hora) con calendario propio, label flotante,\nestados de error/éxito, `[minDate]` para deshabilitar días anteriores y `[maxDate]` para los posteriores (no se aceptan tampoco al escribirlos; con `[maxDateError]` y `[minDateError]`, la fecha fuera de rango escrita y confirmada se conserva con ese mensaje de error).\n\nEs el control canónico de fecha del design system: úsalo en vez de un `input type=\"date\"`\nnativo para que el campo respete tokens, textos en español y el formato dd/mm/aaaa.\n\nEn la cabecera del calendario, el mes y el año son botones: el mes abre los 12 meses y el año una\ngrilla de 12 años (las flechas dobles pasan de página). Al elegir, vuelve a los días de ese mes o año.\nCon `minDate`, los meses y años que terminan antes quedan deshabilitados; con `maxDate`, los que empiezan después.",
     "usaSesion": false,
     "proyectaContenido": false,
     "entradas": [
@@ -4117,6 +4117,13 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "porDefecto": "''",
         "requerida": false,
         "descripcion": "Fecha mínima seleccionable en formato ISO (YYYY-MM-DD). Los días anteriores quedan deshabilitados."
+      },
+      {
+        "nombre": "minDateError",
+        "tipo": "string",
+        "porDefecto": "''",
+        "requerida": false,
+        "descripcion": "Con `minDate`: texto de error cuando se escribe y confirma una fecha anterior; se conserva igual que con `maxDateError`."
       },
       {
         "nombre": "placeholder",

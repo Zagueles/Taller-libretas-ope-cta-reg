@@ -96,6 +96,7 @@ let siguienteId = 0;
                       [minDate]="minimo(campo)"
                       [maxDate]="campo.noFuture ? hoy : ''"
                       [maxDateError]="campo.noFuture ? 'Ingrese una fecha igual o anterior a la actual.' : ''"
+                      [minDateError]="errorMinimo(campo)"
                       [fullWidth]="true"
                       [value]="texto(campo.key)"
                       (valueChange)="cambiar(campo.key, $event)"
@@ -152,6 +153,14 @@ export class QueryParametersPanelComponent implements OnChanges {
     const otra = campo.minDateFrom ? this.texto(campo.minDateFrom) : '';
     return [campo.minDate ?? '', otra].reduce((mayor, f) => (f > mayor ? f : mayor), '');
   }
+  /** Error de una fecha escrita anterior al mínimo del campo: el suyo (p. ej. 2020) o el de la fecha «desde» de la que depende. */
+  errorMinimo(campo: QueryReportParameterField): string {
+    const minimo = this.minimo(campo);
+    if (!minimo) return '';
+    if (minimo === campo.minDate) return `Ingrese una fecha igual o posterior al ${minimo.split('-').reverse().join('/')}.`;
+    return 'Ingrese una fecha igual o posterior a la fecha desde.';
+  }
+
   @Input() open = false;
   @Input() title = 'Parámetros de consulta';
   @Input() fields: readonly QueryReportParameterField[] = [];
