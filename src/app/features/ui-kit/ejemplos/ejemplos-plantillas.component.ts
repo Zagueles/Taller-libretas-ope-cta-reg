@@ -70,7 +70,7 @@ export class EjemplosPlantillasComponent {
   }
 
   exportar(evento: QueryReportExportEvent): void {
-    const formato = { excel: 'Excel', csv: 'CSV', pdf: 'PDF' }[evento.format];
+    const formato = { excel: 'Excel', csv: 'CSV', pdf: 'PDF', graficas: 'PDF de gráficas' }[evento.format];
     this.evento.set(`Emitió «exported» en ${formato} con ${evento.rows.length} filas: la pantalla genera el archivo.`);
   }
 }

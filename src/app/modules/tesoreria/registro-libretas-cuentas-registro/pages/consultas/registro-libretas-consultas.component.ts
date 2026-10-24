@@ -36,6 +36,8 @@ import { COLUMNAS_MONEDA_EXTRANJERA, COLUMNAS_REGISTRO_LIBRETAS } from '../../co
 import { filaMovimiento } from '../../utils/registro-libretas-fila.util';
 import { claveMovimiento, importesMN, saldosMNPorMovimiento, saldosPorCuentaRegistro, tipoCambioDeMovimiento, TIPO_OPERACION_SALDO_INICIAL } from '../../utils/registro-libretas-saldos.util';
 import { exportarConsultaExcel } from '../../utils/exportacion/excel-consulta.util';
+import { descargar } from '../../utils/exportacion/formato-exportacion.util';
+import { generarPdfGraficas } from '../../utils/exportacion/pdf-graficas.util';
 
 /** Beneficiario y Cuenta de registro van asociados: elegir cualquiera como nivel oculta los dos grupos de cabecera. */
 const GRUPOS_ASOCIADOS = ['Beneficiario', 'Cuenta de registro'];
@@ -197,8 +199,8 @@ export class RegistroLibretasConsultasComponent {
     rowKey: 'id',
     resultTitle: 'Resultado de reporte',
     tableLabel: TITULO,
-    // Este reporte solo se exporta a Excel: CSV y PDF no distinguen los grupos de columnas de la tabla.
-    exportFormats: ['excel'],
+    // La tabla solo se exporta a Excel: CSV y PDF no distinguen los grupos de columnas. «PDF de gráficas» solo sale en la vista de gráficas.
+    exportFormats: ['excel', 'graficas'],
     presetFilters: [
       { key: 'numeroCuentaRegistro', label: 'Cuenta de registro', options: [] },
       { key: 'entidad', label: 'Entidad', options: ENTIDADES },
@@ -268,7 +270,11 @@ export class RegistroLibretasConsultasComponent {
     });
   }
 
+  /** Cuenta bancaria de la pestaña que se está viendo: el PDF de gráficas exporta esa. */
+  private cuentaActivaId = '';
+
   mostrarPestana(cuentaId: string): void {
+    this.cuentaActivaId = cuentaId;
     const filas = this.filasPorCuenta.get(cuentaId) ?? [];
     const cuenta = CUENTAS_BANCARIAS_INFO.find((c) => c.id === cuentaId);
     const delServidor = this.saldosCuentas.get(cuentaId);
@@ -313,10 +319,14 @@ export class RegistroLibretasConsultasComponent {
     guardarFavoritos(PROCESS_ROUTE, lista);
   }
 
-  /** Esta pantalla solo exporta a Excel (`exportFormats: ['excel']`): la plantilla «Resumen» + «Resultado N», una
+  /** La tabla solo exporta a Excel (`exportFormats: ['excel', 'graficas']`): la plantilla «Resumen» + «Resultado N», una
    *  pestaña por cada cuenta bancaria consultada, con todas sus filas (no solo las de la pestaña activa) tras las
    *  condiciones y filtros de la pantalla. Con un agrupado o agregado aplicado, cada pestaña sale con esa estructura. */
   async exportar(evento: QueryReportExportEvent): Promise<void> {
+    if (evento.format === 'graficas') {
+      await this.exportarGraficas(evento);
+      return;
+    }
     const todas = [...this.filasPorCuenta.values()].flat();
     const permitidas = new Set(evento.filterRows(todas.map((m) => this.aFila(m))).map((fila) => fila['id']));
     const cuentas = [...this.filasPorCuenta.entries()]
@@ -342,6 +352,32 @@ export class RegistroLibretasConsultasComponent {
     try {
       const minimoVisible = new Promise((resuelve) => setTimeout(resuelve, 1200));
       await Promise.all([exportarConsultaExcel(evento.parameters, cuentas, agrupacion, documento), minimoVisible]);
+    } finally {
+      this.preparandoExportacion.set(false);
+    }
+  }
+
+  /** «PDF de gráficas»: las gráficas de la vista, con los parámetros aplicados y las tarjetas KPI, en un PDF. */
+  private async exportarGraficas(evento: QueryReportExportEvent): Promise<void> {
+    this.preparandoExportacion.set(true);
+    try {
+      const minimoVisible = new Promise((resuelve) => setTimeout(resuelve, 1200));
+      // Cada pestaña es una cuenta bancaria (soles o dólares): el PDF lleva una hoja por pestaña, con su cuenta y su moneda.
+      const paginas = (evento.tabs ?? []).map((tab) => {
+        const cuenta = CUENTAS_BANCARIAS_INFO.find((c) => c.id === tab.id);
+        const moneda = cuenta ? (cuenta.moneda === 'USD' ? 'Dólares' : 'Soles') : '';
+        const parametros = (evento.appliedParameters ?? []).map((p) =>
+          cuenta && p.label === 'Cuenta bancaria' ? { label: p.label, value: `${cuenta.numeroCuenta} - ${cuenta.nombre}` } : p,
+        );
+        return {
+          etiqueta: moneda,
+          parametros: cuenta ? [...parametros, { label: 'Moneda', value: `${moneda} (${cuenta.moneda})` }] : parametros,
+          kpis: tab.kpis,
+          graficas: tab.charts,
+        };
+      });
+      const [{ blob, nombre }] = await Promise.all([generarPdfGraficas({ titulo: TITULO, paginas }), minimoVisible]);
+      descargar(blob, nombre);
     } finally {
       this.preparandoExportacion.set(false);
     }

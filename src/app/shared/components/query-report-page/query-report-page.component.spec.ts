@@ -305,6 +305,38 @@ describe('QueryReportPageComponent', () => {
       expect(el().querySelector('[data-vista-graficas] siaf-empty-state')?.textContent).toContain('No hay filas para graficar');
     });
 
+    it('en la vista de gráficas «Exportar» ofrece solo el PDF de las gráficas y emite las gráficas, los KPI y los parámetros', async () => {
+      fixture.componentRef.setInput('config', { ...CONFIG_CON_GRAFICAS, exportFormats: ['pdf', 'graficas'] });
+      fixture.detectChanges();
+      const opciones = (): string[] => Array.from(el().querySelectorAll<HTMLElement>('[data-exportar] [role="menuitem"]')).map((o) => o.textContent!.trim().replace(/^[a-z_]+\s+/, ''));
+      const exportados: QueryReportExportEvent[] = [];
+      pagina.exported.subscribe((e) => exportados.push(e));
+
+      botonExportar().click();
+      fixture.detectChanges();
+      expect(opciones()).toEqual(['PDF']);
+      el().querySelectorAll<HTMLElement>('[data-exportar] [role="menuitem"]')[0].click();
+      expect(exportados.map((e) => e.format)).toEqual(['pdf']);
+      exportados.length = 0;
+
+      await abrirGraficas();
+      botonExportar().click();
+      fixture.detectChanges();
+      expect(opciones()).withContext('en la vista de gráficas solo queda el PDF de las gráficas').toEqual(['PDF']);
+      expect(el().querySelector('[data-exportar] [role="menuitem"]')!.textContent).toContain('picture_as_pdf');
+      el().querySelectorAll<HTMLElement>('[data-exportar] [role="menuitem"]')[0].click();
+      // Recorre las pestañas para capturar las gráficas de cada una: tarda un poco.
+      for (let i = 0; i < 80 && !exportados.length; i++) await new Promise((resolver) => setTimeout(resolver, 100));
+
+      expect(exportados.length).toBe(1);
+      expect(exportados[0].format).toBe('graficas');
+      expect(exportados[0].tabs!.map((t) => t.id)).withContext('una hoja por pestaña').toEqual((CONFIG_CON_GRAFICAS.tabs ?? [{ id: '' }]).map((t) => t.id));
+      expect(pagina.pestana()).withContext('vuelve a la pestaña que estaba').toBe(CONFIG_CON_GRAFICAS.tabs?.[0].id ?? '');
+      expect(exportados[0].tabs![0].kpis.map((k) => k.title)).toEqual(['Total', 'Devoluciones', 'Movimientos', 'IPD']);
+      expect(Array.isArray(exportados[0].tabs![0].charts)).toBeTrue();
+      expect(Array.isArray(exportados[0].appliedParameters)).toBeTrue();
+    });
+
     it('«Exportar» sigue disponible en la vista de gráficas con las mismas filas', async () => {
       const exportados: QueryReportExportEvent[] = [];
       pagina.exported.subscribe((e) => exportados.push(e));

@@ -132,7 +132,7 @@ export interface QueryReportChartsConfig {
   charts: QueryReportChart[];
 }
 
-export type QueryReportExportFormat = 'excel' | 'csv' | 'pdf';
+export type QueryReportExportFormat = 'excel' | 'csv' | 'pdf' | 'graficas';
 
 /** Campo disponible para una condición o un nivel de agrupación de «Filtros avanzados»: una columna de la fila. */
 export interface QueryReportFilterField {
@@ -212,7 +212,7 @@ export interface QueryReportConfig {
    * Agrupado/Agregado no calculan totales por grupo.
    */
   groupAggregation?: QueryReportGroupAggregation;
-  /** Formatos que ofrece «Exportar»; por defecto los tres (Excel, CSV, PDF). */
+  /** Formatos que ofrece «Exportar»; por defecto los tres (Excel, CSV, PDF). `graficas` (el «PDF» de las gráficas) es opt-in: en la vista de gráficas reemplaza al resto del menú. */
   exportFormats?: QueryReportExportFormat[];
 }
 

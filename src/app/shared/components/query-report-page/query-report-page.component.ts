@@ -1,5 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, computed, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Output, computed, inject, signal } from '@angular/core';
 
 import type {
   QueryReportAdvancedFilters,
@@ -65,10 +65,35 @@ const OPERADOR_SIMBOLO: Record<QueryReportCondition['operator'], string> = {
   notEmpty: 'No está vacío',
 };
 
+/** Una gráfica de la vista, ya dibujada como imagen, para el formato `graficas` de «Exportar». */
+export interface QueryReportExportChart {
+  title: string;
+  description: string;
+  /** JPEG en data URL, sobre fondo blanco, con la proporción con que se ve la gráfica. */
+  image: string;
+  /** Ancho / alto de la imagen. */
+  ratio: number;
+  /** Tipo de la gráfica: la dona lleva su leyenda a un costado y las demás encima. */
+  type: QueryReportChartType;
+  /** La leyenda de la gráfica en pantalla (nombre y color de cada serie o parte), que no va dentro del lienzo. */
+  legend: { label: string; color: string }[];
+}
+
+/** Lo que se ve en la vista de gráficas de una pestaña, para el formato `graficas` de «Exportar». */
+export interface QueryReportExportTab {
+  id: string;
+  label: string;
+  charts: QueryReportExportChart[];
+  kpis: { title: string; amount: string }[];
+}
+
 /** Lo que recibe la pantalla al elegir un formato en «Exportar»: los parámetros y las filas que quedaron tras buscar y filtrar. */
 export interface QueryReportExportEvent {
   format: QueryReportExportFormat;
   parameters: QueryReportParameters;
+  /** Solo con el formato `graficas`: las gráficas y tarjetas KPI de cada pestaña (de una en una, en el orden de las pestañas) y los parámetros aplicados, para armar el PDF. */
+  tabs?: QueryReportExportTab[];
+  appliedParameters?: { label: string; value: string }[];
   rows: QueryReportRow[];
   /** Condiciones, tipo de resultado y niveles aplicados en «Filtros avanzados» (sin niveles, la tabla es detallada). */
   advanced: QueryReportAdvancedFilters;
@@ -121,7 +146,7 @@ let siguienteId = 0;
  * (nodo 22715:21316) y la vista de gráficas (nodo 22402:16766): tarjetas KPI y gráficos calculados con las mismas filas
  * que muestra la tabla, es decir, después de buscar y filtrar; un gráfico que se queda sin datos muestra un aviso en vez
  * de ejes vacíos. Esa vista se carga con `@defer` al abrirla, así Chart.js
- * no pesa en la pantalla hasta que alguien la usa. «Exportar» abre el menú Excel, CSV y PDF y emite `exported` con el
+ * no pesa en la pantalla hasta que alguien la usa. «Exportar» abre el menú Excel, CSV y PDF (en la vista de gráficas, si la configuración lo pide con `graficas`, ofrece solo «PDF», el de las gráficas) y emite `exported` con el
  * formato.
  *
  * No llama a la API: la pantalla consulta y entrega `result` (con `loading` mientras tanto).
@@ -596,6 +621,8 @@ let siguienteId = 0;
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class QueryReportPageComponent {
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+
   @Input({ required: true }) set config(valor: QueryReportConfig) {
     this.configuracion.set(valor);
     if (!this.pestana() && valor.tabs?.length) this.pestana.set(valor.tabs[0].id);
@@ -685,10 +712,16 @@ export class QueryReportPageComponent {
     excel: { label: 'Excel', icon: 'table_view' },
     csv: { label: 'CSV', icon: 'table_chart' },
     pdf: { label: 'PDF', icon: 'picture_as_pdf' },
+    graficas: { label: 'PDF', icon: 'picture_as_pdf' },
   };
 
+  /** En la vista de gráficas con `graficas` entre los formatos, «Exportar» ofrece solo «PDF» (el de las gráficas) y no los de la tabla. */
+  private readonly soloGraficas = computed(() => this.vistaActiva() === 'graficas' && (this.configuracion().exportFormats ?? []).includes('graficas'));
+
   readonly opcionesExportacion = computed<IconDropdownMenuItem[]>(() =>
-    (this.configuracion().exportFormats ?? FORMATOS_EXPORTACION).map((formato) => ({ value: formato, ...this.ICONOS_EXPORTACION[formato] })),
+    (this.configuracion().exportFormats ?? FORMATOS_EXPORTACION)
+      .filter((formato) => (formato === 'graficas') === this.soloGraficas())
+      .map((formato) => ({ value: formato, ...this.ICONOS_EXPORTACION[formato] })),
   );
 
   /** Sin `charts` en la configuración no hay selector y siempre se ve la tabla. */
@@ -1143,7 +1176,7 @@ export class QueryReportPageComponent {
   }
 
   exportar(formato: string): void {
-    const format = FORMATOS_EXPORTACION.find((f) => f === formato);
+    const format = [...FORMATOS_EXPORTACION, 'graficas' as const].find((f) => f === formato);
     if (!format) return;
     const avanzados = this.avanzados();
     const niveles = avanzados.levels;
@@ -1159,7 +1192,7 @@ export class QueryReportPageComponent {
           .columns.filter((c) => ocultas.has(c.key) || (c.group && gruposOcultos.includes(c.group) && !c.ungroupWhenGroupHidden))
           .map((c) => c.key)
       : [];
-    this.exported.emit({
+    const evento: QueryReportExportEvent = {
       format,
       parameters: this.parametros() ?? {},
       rows: this.filasFiltradas(),
@@ -1169,6 +1202,87 @@ export class QueryReportPageComponent {
       hiddenGroups: gruposOcultos,
       visibleColumns: [...this.columnasActivas()],
       filterRows: (filas) => this.aplicarFiltros(filas),
+    };
+    if (format !== 'graficas') {
+      this.exported.emit(evento);
+      return;
+    }
+    // El PDF de gráficas lleva una hoja por pestaña: se recorren las pestañas para capturar las gráficas de cada una.
+    void this.capturarPestanas().then((tabs) =>
+      this.exported.emit({ ...evento, tabs, appliedParameters: this.parametrosAplicados().map((p) => ({ label: p.label, value: p.value })) }),
+    );
+  }
+
+  /** Las gráficas y KPI de cada pestaña: se pasa por cada una (la pantalla entrega su resultado) y se vuelve a la que estaba. */
+  private async capturarPestanas(): Promise<QueryReportExportTab[]> {
+    const pestanas = this.configuracion().tabs ?? [];
+    const kpis = (): { title: string; amount: string }[] => this.kpis().map((kpi) => ({ title: kpi.title, amount: String(kpi.amount) }));
+    if (!pestanas.length) return [{ id: '', label: '', charts: await this.imagenesDeGraficas(), kpis: kpis() }];
+    const original = this.pestana();
+    const resultado: QueryReportExportTab[] = [];
+    try {
+      for (const pestana of pestanas) {
+        if (pestana.id !== this.pestana()) {
+          this.cambiarPestana(pestana.id);
+          await this.esperarGraficas();
+        }
+        resultado.push({ id: pestana.id, label: pestana.label, charts: await this.imagenesDeGraficas(), kpis: kpis() });
+      }
+    } finally {
+      if (this.pestana() !== original) this.cambiarPestana(original);
+    }
+    return resultado;
+  }
+
+  /** Espera a que la vista dibuje los gráficos de la pestaña recién elegida. */
+  private async esperarGraficas(): Promise<void> {
+    await new Promise((resolver) => setTimeout(resolver, 250));
+    for (let intento = 0; intento < 30; intento++) {
+      const esperadas = this.graficos().filter((g) => g.dibujo !== 'vacio').length;
+      const listas = Array.from(this.host.nativeElement.querySelectorAll<HTMLCanvasElement>('[data-grafico] canvas')).filter((c) => c.width > 0 && c.height > 0).length;
+      if (listas >= esperadas) break;
+      await new Promise((resolver) => setTimeout(resolver, 100));
+    }
+    await new Promise((resolver) => setTimeout(resolver, 150));
+  }
+
+  /**
+   * Las gráficas dibujadas en la vista (Chart.js), como JPEG sobre fondo blanco, en el orden de `graficos()` y con la misma
+   * proporción que se ven (el PDF no las estira). La dona se recorta alrededor de su anillo, sin el aire de los lados.
+   */
+  private async imagenesDeGraficas(): Promise<QueryReportExportChart[]> {
+    const secciones = Array.from(this.host.nativeElement.querySelectorAll<HTMLElement>('[data-grafico]'));
+    const resultado: QueryReportExportChart[] = [];
+    this.graficos().forEach((grafico, i) => {
+      const lienzo = secciones[i]?.querySelector('canvas');
+      if (!lienzo || !lienzo.width || !lienzo.height) return;
+      const pixeles = lienzo.clientWidth ? lienzo.width / lienzo.clientWidth : 1;
+      const recorte = grafico.type === 'donut' ? Math.min(lienzo.height, lienzo.width, Math.round(190 * pixeles)) : null;
+      const [origenX, origenY, origenW, origenH] = recorte
+        ? [(lienzo.width - recorte) / 2, (lienzo.height - recorte) / 2, recorte, recorte]
+        : [0, 0, lienzo.width, lienzo.height];
+      const escala = Math.min(1, 1600 / origenW);
+      const fondo = document.createElement('canvas');
+      fondo.width = Math.round(origenW * escala);
+      fondo.height = Math.round(origenH * escala);
+      const contexto = fondo.getContext('2d');
+      if (!contexto) return;
+      contexto.fillStyle = '#ffffff';
+      contexto.fillRect(0, 0, fondo.width, fondo.height);
+      contexto.drawImage(lienzo, origenX, origenY, origenW, origenH, 0, 0, fondo.width, fondo.height);
+      const leyenda = Array.from(secciones[i].querySelectorAll<HTMLElement>('siaf-chart-legend li')).map((li) => ({
+        label: li.textContent?.trim() ?? '',
+        color: getComputedStyle(li.querySelector('span') ?? li).backgroundColor,
+      }));
+      resultado.push({
+        title: grafico.title,
+        description: grafico.description ?? '',
+        image: fondo.toDataURL('image/jpeg', 0.92),
+        ratio: fondo.width / fondo.height,
+        type: grafico.type,
+        legend: leyenda.filter((item) => item.label),
+      });
     });
+    return resultado;
   }
 }
