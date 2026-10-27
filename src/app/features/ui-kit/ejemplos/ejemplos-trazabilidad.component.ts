@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, Input, inject, signal } from '@angu
 import { CurrentUserService } from '../../../core/auth/current-user.service';
 import { AccountHistoryPanelComponent } from '../../../shared/components/account-history-panel/account-history-panel.component';
 import { AsientoHistoryPanelComponent } from '../../../shared/components/asiento-history-panel/asiento-history-panel.component';
+import { ConciliacionHistoryPanelComponent } from '../../../shared/components/conciliacion-history-panel/conciliacion-history-panel.component';
 import { DetailHistoryEntry, DetailHistoryTabsComponent } from '../../../shared/components/detail-history-tabs/detail-history-tabs.component';
 import { DocumentHistoryPanelComponent, DocumentHistorySummary } from '../../../shared/components/document-history-panel/document-history-panel.component';
 import { TimelineComponent, TimelineItem } from '../../../shared/components/timeline/timeline.component';
@@ -13,6 +14,7 @@ import {
   HISTORIAL_DOCUMENTO_DE_MUESTRA,
   PROVEEDORES_HISTORIAL_DE_MUESTRA,
   REGISTRO_ASIENTO_DE_MUESTRA,
+  REGISTRO_CONCILIACION_DE_MUESTRA,
   REGISTRO_CUENTA_DE_MUESTRA,
   sembrarSesionDeMuestra,
 } from './datos-de-muestra';
@@ -27,7 +29,7 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: PROVEEDORES_HISTORIAL_DE_MUESTRA,
   imports: [
-    AccountHistoryPanelComponent, ActionTrackerComponent, AsientoHistoryPanelComponent, ButtonComponent, DetailHistoryTabsComponent,
+    AccountHistoryPanelComponent, ActionTrackerComponent, AsientoHistoryPanelComponent, ButtonComponent, ConciliacionHistoryPanelComponent, DetailHistoryTabsComponent,
     DocumentHistoryPanelComponent, StepsComponent, TimelineComponent,
   ],
   template: `
@@ -49,6 +51,10 @@ import {
       @case ('siaf-asiento-history-panel') {
         <siaf-button data-ui-kit-abrir variant="secondary" icon="history" (click)="panel.set('asiento')">Ver historial del asiento</siaf-button>
         <siaf-asiento-history-panel [open]="panel() === 'asiento'" [record]="registroAsiento" (closed)="panel.set(null)" />
+      }
+      @case ('siaf-conciliacion-history-panel') {
+        <siaf-button data-ui-kit-abrir variant="secondary" icon="history" (click)="panel.set('conciliacion')">Ver historial del registro de conciliación</siaf-button>
+        <siaf-conciliacion-history-panel [open]="panel() === 'conciliacion'" [record]="registroConciliacion" (closed)="panel.set(null)" />
       }
       @case ('siaf-timeline') {
         <div class="flex flex-col gap-3 rounded-siaf-md bg-[var(--sys-color-bg-surfaces-surface-lowest)] p-3">
@@ -102,7 +108,7 @@ import {
 export class EjemplosTrazabilidadComponent {
   static readonly selectores = [
     'siaf-action-tracker', 'siaf-detail-history-tabs', 'siaf-document-history-panel', 'siaf-account-history-panel',
-    'siaf-asiento-history-panel', 'siaf-timeline', 'siaf-steps',
+    'siaf-asiento-history-panel', 'siaf-conciliacion-history-panel', 'siaf-timeline', 'siaf-steps',
   ];
   @Input({ required: true }) selector!: string;
 
@@ -110,9 +116,10 @@ export class EjemplosTrazabilidadComponent {
     sembrarSesionDeMuestra(inject(CurrentUserService));
   }
 
-  readonly panel = signal<'documento' | 'cuenta' | 'asiento' | null>(null);
+  readonly panel = signal<'documento' | 'cuenta' | 'asiento' | 'conciliacion' | null>(null);
   readonly registroCuenta = REGISTRO_CUENTA_DE_MUESTRA;
   readonly registroAsiento = REGISTRO_ASIENTO_DE_MUESTRA;
+  readonly registroConciliacion = REGISTRO_CONCILIACION_DE_MUESTRA;
   readonly resumenDocumento: DocumentHistorySummary = {
     solicitudId: 'doc-scc-1',
     document: 'Solicitud de cuenta contable',

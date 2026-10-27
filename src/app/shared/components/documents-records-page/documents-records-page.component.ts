@@ -20,6 +20,7 @@ import { TableControlsComponent } from '../../components/table-controls/table-co
 import type { DocumentsQuery, DocumentsRecordsColumn, DocumentsRecordsConfig, DocumentsRecordsDownloadEvent, DocumentsRecordsRow, DocumentsRecordsTab } from '../../types/documents-records.types';
 import { AccountHistoryPanelComponent } from '../account-history-panel/account-history-panel.component';
 import { AsientoHistoryPanelComponent } from '../asiento-history-panel/asiento-history-panel.component';
+import { ConciliacionHistoryPanelComponent } from '../conciliacion-history-panel/conciliacion-history-panel.component';
 import { ButtonComponent } from '../../ui/button/button.component';
 import type { CascadingMenuGroup } from '../../ui/cascading-menu/cascading-menu.component';
 import type { TextFieldOption } from '../../ui/text-field/text-field.component';
@@ -104,7 +105,7 @@ type DocumentsRecordsRoleMode = 'creator' | 'approver' | 'readOnly';
   selector: 'siaf-documents-records-page',
   standalone: true,
   imports: [ReportColumnsPanelComponent, FocoDirective, 
-    AccountHistoryPanelComponent, AsientoHistoryPanelComponent, BreadcrumbComponent, ButtonComponent, ColumnVisibilityPanelComponent,
+    AccountHistoryPanelComponent, AsientoHistoryPanelComponent, BreadcrumbComponent, ConciliacionHistoryPanelComponent, ButtonComponent, ColumnVisibilityPanelComponent,
     CreateDocumentComponent, CustomFilterComponent, DateRangeFilterPillComponent, DocumentHistoryPanelComponent,
     DocumentsRecordsTableComponent, FilterPillComponent, IconComponent, IconDropdownMenuComponent,
     MessageBoxComponent, ModalComponent, PaginationComponent, RecordsSearchToolbarComponent, RecordsTabsComponent,
@@ -114,6 +115,12 @@ type DocumentsRecordsRoleMode = 'creator' | 'approver' | 'readOnly';
     <div class="min-h-[calc(100vh-56px)] bg-[var(--sys-color-bg-surfaces-surface-lowest)] text-text">
       @if (effectiveConfig.recordHistoryKind === 'asiento') {
         <siaf-asiento-history-panel
+          [open]="accountHistoryOpen"
+          [record]="selectedAccountHistoryRecord"
+          (closed)="closeAccountHistory()"
+        />
+      } @else if (effectiveConfig.recordHistoryKind === 'conciliacion') {
+        <siaf-conciliacion-history-panel
           [open]="accountHistoryOpen"
           [record]="selectedAccountHistoryRecord"
           (closed)="closeAccountHistory()"

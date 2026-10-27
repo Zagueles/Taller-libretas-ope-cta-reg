@@ -104,8 +104,9 @@ export type DocumentsRecordsConfig = {
   searchMinChars?: number;
   recordHistoryDocumentLabel: string;
   /** Variante del panel "Historial del registro" de la pestaña Registros:
-   *  'cuenta' (default, plan de cuentas) o 'asiento' (asiento de ajuste). */
-  recordHistoryKind?: 'cuenta' | 'asiento' | 'documento';
+   *  'cuenta' (default, plan de cuentas), 'asiento' (asiento de ajuste), 'conciliacion' (registro de Conciliación diaria)
+   *  o 'documento' (el historial de la solicitud que creó el registro). */
+  recordHistoryKind?: 'cuenta' | 'asiento' | 'conciliacion' | 'documento';
   /** Registros con casilla por fila y «seleccionar todo» (por defecto, solo Documentos las tiene). */
   recordSelectable?: boolean;
   /** Documentos con casilla en cualquier estado (sin esto, solo los Elaborados o Verificados de la acción masiva). */

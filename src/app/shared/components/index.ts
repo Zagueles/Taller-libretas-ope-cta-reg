@@ -35,6 +35,7 @@ export type { TimelineItem, TimelineItemState } from './timeline/timeline.model'
 export { DocumentsRecordsPageComponent } from './documents-records-page/documents-records-page.component';
 export { AccountHistoryPanelComponent } from './account-history-panel/account-history-panel.component';
 export { AsientoHistoryPanelComponent } from './asiento-history-panel/asiento-history-panel.component';
+export { ConciliacionHistoryPanelComponent } from './conciliacion-history-panel/conciliacion-history-panel.component';
 export { DocumentHistoryPanelComponent } from './document-history-panel/document-history-panel.component';
 export type { DocumentHistorySummary } from './document-history-panel/document-history-panel.component';
 export { CreateDocumentComponent } from './create-document/create-document.component';

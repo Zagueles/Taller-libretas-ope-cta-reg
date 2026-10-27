@@ -3302,6 +3302,190 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     "sinUso": false
   },
   {
+    "selector": "siaf-conciliacion-history-panel",
+    "clase": "ConciliacionHistoryPanelComponent",
+    "tipo": "componente",
+    "capa": "components",
+    "importacion": "@siaf/shared/components/conciliacion-history-panel/conciliacion-history-panel.component",
+    "archivo": "src/app/shared/components/conciliacion-history-panel/conciliacion-history-panel.component.ts",
+    "descripcion": "Historial del registro de Conciliación diaria — pestaña Registros (Figma 509:59906).\n\nMisma cáscara que `siaf-account-history-panel` (overlay a la derecha, columna de versiones, tarjetas y tracker), con la\nestructura de la conciliación: el documento, la información y la cuenta bancaria, el registro conciliado o no conciliado\n(número, origen y motivo de inconsistencia) con las tablas del libro banco y del registro de operaciones bancarias, el\ndocumento sustento con su justificación y, al pie, quién elaboró, verificó y aprobó. Todo sale de la fila del registro\n(`record`): no llama a ninguna API.",
+    "usaSesion": false,
+    "proyectaContenido": false,
+    "entradas": [
+      {
+        "nombre": "open",
+        "tipo": "boolean",
+        "porDefecto": "false",
+        "requerida": false,
+        "descripcion": null
+      },
+      {
+        "nombre": "record",
+        "tipo": "DocumentsRecordsRow | null",
+        "porDefecto": "null",
+        "requerida": false,
+        "descripcion": null
+      }
+    ],
+    "eventos": [
+      {
+        "nombre": "closed",
+        "tipo": "void",
+        "descripcion": null
+      }
+    ],
+    "usar": "- Para ver, desde la pestaña Registros de Conciliación diaria (`recordHistoryKind: 'conciliacion'`), cómo quedó un\n  registro: si concilió o no, por qué no, las operaciones de cada lado, el sustento y quién lo trabajó.\n- Para un registro de conciliación manual, que además trae sus documentos de sustento y la justificación.",
+    "evitar": "- Para registros del plan de cuentas o asientos de ajuste: usar `siaf-account-history-panel` o\n  `siaf-asiento-history-panel`; para el historial de estados de un documento, `siaf-document-history-panel`.\n- Para conciliar un registro: la solicitud de conciliación manual lo hace; este panel es de solo lectura.",
+    "teclado": "- **Tab**: al abrir, el foco entra en la X y da la vuelta sin salir del panel.\n- **Enter / Espacio** en la X: cierran el panel (emite `closed`).\n- **Escape**: cierra el panel (emite `closed`) y el foco vuelve al botón de historial.",
+    "accesibilidad": "- **4.1.2 Nombre, función y valor (A)**: es `role=\"dialog\"` con `aria-modal=\"true\"` y nombre desde su título\n  (`aria-labelledby`); la X se llama «Cerrar historial del registro».\n- **1.3.1 Información y relaciones (A)**: títulos `h2` y `h3` por sección y tablas con `thead`, `th` con `scope` y\n  `caption` oculto que las nombra.\n- **1.4.1 Uso del color (A)**: el estado del registro va en `siaf-record-status-tag`, con ícono y texto.\n- **1.4.3 Contraste mínimo (AA)**: títulos y valores `text-neutral-high` 16.29:1 (oscuro 16.53:1), etiquetas\n  `text-neutral-low` 5.01:1 (8.86:1) sobre la superficie.\n- **2.4.3 Orden del foco (A)**: con `siafFoco`, al abrir lleva el foco a la X y lo retiene en el panel; al cerrar lo\n  devuelve al botón de historial.\n- **Pendiente · 2.1.1 Teclado (A)**: el icono de descarga del sustento es solo ilustrativo en el taller: no es un botón.",
+    "figma": [],
+    "aria": {
+      "roles": [
+        "dialog"
+      ],
+      "atributos": [
+        "aria-label",
+        "aria-labelledby",
+        "aria-modal"
+      ]
+    },
+    "tokens": [
+      {
+        "token": "--sys-color-bg-states-light-pressed",
+        "via": [
+          "var()"
+        ]
+      },
+      {
+        "token": "--sys-color-bg-surfaces-surface",
+        "via": [
+          "bg-surface"
+        ]
+      },
+      {
+        "token": "--sys-color-bg-surfaces-surface-high",
+        "via": [
+          "bg-surface-muted",
+          "var()"
+        ]
+      },
+      {
+        "token": "--sys-color-bg-surfaces-surface-lowest",
+        "via": [
+          "var()"
+        ]
+      },
+      {
+        "token": "--sys-color-divider-default",
+        "via": [
+          "var()"
+        ]
+      },
+      {
+        "token": "--sys-color-divider-strong",
+        "via": [
+          "var()"
+        ]
+      },
+      {
+        "token": "--sys-color-text-neutral-high",
+        "via": [
+          "text-text"
+        ]
+      },
+      {
+        "token": "--sys-color-text-neutral-low",
+        "via": [
+          "text-text-muted",
+          "var()"
+        ]
+      },
+      {
+        "token": "--sys-color-text-neutral-medium",
+        "via": [
+          "var()"
+        ]
+      },
+      {
+        "token": "--sys-gap-base-lg",
+        "via": [
+          "mt-siaf-lg",
+          "px-siaf-lg",
+          "py-siaf-lg"
+        ]
+      },
+      {
+        "token": "--sys-gap-base-md",
+        "via": [
+          "gap-siaf-md",
+          "gap-y-siaf-md",
+          "mb-siaf-md",
+          "px-siaf-md",
+          "py-siaf-md",
+          "top-siaf-md"
+        ]
+      },
+      {
+        "token": "--sys-gap-base-sm",
+        "via": [
+          "gap-siaf-sm"
+        ]
+      },
+      {
+        "token": "--sys-gap-base-xl",
+        "via": [
+          "gap-siaf-xl",
+          "gap-x-siaf-xl",
+          "px-siaf-xl"
+        ]
+      },
+      {
+        "token": "--sys-gap-base-xs",
+        "via": [
+          "gap-siaf-xs",
+          "mt-siaf-xs",
+          "py-siaf-xs"
+        ]
+      },
+      {
+        "token": "--sys-gap-base-xxs",
+        "via": [
+          "gap-siaf-xxs"
+        ]
+      },
+      {
+        "token": "--sys-radius-md",
+        "via": [
+          "rounded-l-siaf-md",
+          "rounded-siaf-md"
+        ]
+      },
+      {
+        "token": "--sys-radius-sm",
+        "via": [
+          "rounded-l-siaf-sm",
+          "rounded-r-siaf-sm"
+        ]
+      },
+      {
+        "token": "--sys-shadow-lg",
+        "via": [
+          "shadow-siaf-lg"
+        ]
+      }
+    ],
+    "usa": [
+      "[siafFoco]",
+      "[siafTooltip]",
+      "siaf-action-tracker",
+      "siaf-icon",
+      "siaf-record-status-tag",
+      "siaf-steps",
+      "siaf-summary-card"
+    ],
+    "sinUso": false
+  },
+  {
     "selector": "siaf-consultas-filtros-chips",
     "clase": "ConsultasFiltrosChipsComponent",
     "tipo": "componente",
@@ -5443,6 +5627,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       "siaf-breadcrumb",
       "siaf-button",
       "siaf-column-visibility-panel",
+      "siaf-conciliacion-history-panel",
       "siaf-create-document",
       "siaf-custom-filter",
       "siaf-date-range-filter-pill",

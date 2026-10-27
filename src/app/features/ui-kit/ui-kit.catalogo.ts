@@ -137,6 +137,7 @@ export const CATEGORIA_POR_SELECTOR: Readonly<Record<string, CategoriaId>> = {
   'siaf-document-history-panel': 'trazabilidad',
   'siaf-account-history-panel': 'trazabilidad',
   'siaf-asiento-history-panel': 'trazabilidad',
+  'siaf-conciliacion-history-panel': 'trazabilidad',
   'siaf-timeline': 'trazabilidad',
   'siaf-steps': 'trazabilidad',
   // Overlays
