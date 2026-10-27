@@ -7,10 +7,34 @@ import { SolicitudesStateService } from '../../../../../core/state/solicitudes-s
 import { DocumentsRecordsPageComponent } from '../../../../../shared/components/documents-records-page/documents-records-page.component';
 import type { DocumentsRecordsConfig, DocumentsRecordsRow } from '../../../../../shared/types/documents-records.types';
 import { CONCILIACION_DIARIA_CONFIG, REQUEST_ROUTE } from '../../config/conciliacion-diaria.config';
-import { CODIGO_DOCUMENTO } from '../../models/conciliacion-diaria.model';
+import {
+  CODIGO_DOCUMENTO,
+  CUENTAS_CONCILIACION,
+  FECHA_CONCILIACION_APROBADA,
+  RegistroNoConciliado,
+  conciliarRegistro,
+  diaDeOperacion,
+  registrosNoConciliados,
+  trazabilidadDeEjemplo,
+} from '../../models/conciliacion-diaria.model';
 
-const ENTIDAD = '009 - Ministerio de Economia y Finanzas';
+/** Misma entidad que muestran las solicitudes del usuario en la bandeja. */
+const ENTIDAD = 'MEF Ministerio de Economía y Finanzas';
 const DESC = 'Reporte de Recaudación';
+
+/**
+ * La historia de los datos de ejemplo, de un día a otro: el día D se procesan las operaciones y, al cierre (19:00), el sistema
+ * genera la conciliación automática y las inconsistencias; el día siguiente el usuario crea la conciliación manual que las
+ * ajusta (por eso sus operaciones son siempre de un día antes), que se verifica y aprueba en los días que siguen. Los registros
+ * activos llevan el número del documento que los originó.
+ */
+const CREACION_MANUAL = new Date(`${FECHA_CONCILIACION_APROBADA}T00:00:00`);
+const DIA_D = diaDeOperacion(CREACION_MANUAL);
+const dos = (n: number): string => String(n).padStart(2, '0');
+const DIA_D_TEXTO = `${dos(DIA_D.getDate())}/${dos(DIA_D.getMonth() + 1)}/${DIA_D.getFullYear()}`;
+const DIA_D_ISO = `${DIA_D.getFullYear()}-${dos(DIA_D.getMonth() + 1)}-${dos(DIA_D.getDate())}`;
+const CIERRE = `${DIA_D_TEXTO} 19:00:00`;
+const TRAZA_MANUAL = trazabilidadDeEjemplo(FECHA_CONCILIACION_APROBADA);
 
 const documento = (document: string, number: string, status: string, hora: string): DocumentsRecordsRow => ({
   document,
@@ -18,74 +42,102 @@ const documento = (document: string, number: string, status: string, hora: strin
   actionType: 'Creación',
   status,
   system: 'Tesorería',
-  date: `01/12/2025 ${hora}`,
-  dateIso: '2025-12-01',
+  date: `${DIA_D_TEXTO} ${hora}`,
+  dateIso: DIA_D_ISO,
   entity: ENTIDAD,
 });
 
-/** Documentos que genera el sistema al procesar la conciliación (sin pantalla de detalle). */
-const DOCUMENTOS_DEL_SISTEMA: DocumentsRecordsRow[] = [
-  documento('Conciliación manual diaria', '000001-2025', 'Elaborado', '19:00:00'),
-  documento('Inconsistencias de conciliación diaria', '000001-2025', 'Generado', '19:00:00'),
-  documento('Conciliación automática diaria', '000001-2025', 'Generado', '19:00:00'),
-  documento('Procesamiento de conciliación diaria', '000004-2025', 'Procesado', '10:06:11'),
-  documento('Procesamiento de conciliación diaria', '000003-2025', 'Procesado', '10:05:09'),
-  documento('Procesamiento de conciliación diaria', '000002-2025', 'Procesado', '10:05:06'),
-  documento('Procesamiento de conciliación diaria', '000001-2025', 'Procesado', '10:00:13'),
+/**
+ * Documentos que genera el sistema al procesar la conciliación (sin pantalla de detalle). La conciliación manual no está aquí:
+ * la crea el usuario y viene de su bandeja (000001-2026, aprobada, es la que originó los registros manuales).
+ */
+export const DOCUMENTOS_DEL_SISTEMA: DocumentsRecordsRow[] = [
+  documento('Inconsistencias de conciliación diaria', '000001-2026', 'Generado', '19:00:00'),
+  documento('Conciliación automática diaria', '000001-2026', 'Generado', '19:00:00'),
+  documento('Procesamiento de conciliación diaria', '000004-2026', 'Procesado', '10:06:11'),
+  documento('Procesamiento de conciliación diaria', '000003-2026', 'Procesado', '10:05:09'),
+  documento('Procesamiento de conciliación diaria', '000002-2026', 'Procesado', '10:05:06'),
+  documento('Procesamiento de conciliación diaria', '000001-2026', 'Procesado', '10:00:13'),
 ];
-
-/** Registro conciliado: la misma operación en libro banco y en el registro de operaciones bancarias. */
-const conciliado = (nro: number, tipo: string, hora: string, numero: string, credito: string, desc: string, doc: string): DocumentsRecordsRow => ({
-  nro: String(nro),
-  tipoConciliacion: tipo,
-  lbFecha: `01/12/2025 ${hora}`,
-  lbNumero: numero,
-  lbDescripcion: DESC,
-  lbEntidad: 'SUNAT',
-  lbDebito: '0.00',
-  lbCredito: credito,
-  rbFecha: `01/12/2025 ${hora}`,
-  rbNumero: numero,
-  rbDescripcion: DESC,
-  rbDebito: '0.00',
-  rbCredito: credito,
-  motivo: '-',
-  status: 'Activo',
-  number: '000010-2025',
-  descripcionDocumento: desc,
-  estadoConciliacion: 'Conciliado',
-  document: doc,
-});
 
 const MANUAL = 'Conciliación manual diaria';
 const AUTO = 'Conciliación automática diaria';
+const INCONSISTENCIAS = 'Inconsistencias de conciliación diaria';
 
-const REGISTROS: DocumentsRecordsRow[] = [
-  conciliado(3, 'Manual', '10:00:13', '02698150', '5,068.00', MANUAL, MANUAL),
-  conciliado(1, 'Manual', '10:00:13', '02698147', '9,753.00', MANUAL, MANUAL),
-  conciliado(6, 'Automático', '10:40:06', '02698156', '24,030.00', AUTO, AUTO),
-  conciliado(5, 'Automático', '10:40:05', '02698155', '26,784.00', AUTO, AUTO),
-  conciliado(4, 'Automático', '10:30:11', '02698153', '35,000.00', AUTO, AUTO),
-  conciliado(3, 'Automático', '10:30:10', '02698152', '16,200.00', AUTO, AUTO),
-  conciliado(2, 'Automático', '10:10:09', '02698151', '9,000.00', AUTO, AUTO),
-  conciliado(1, 'Automático', '10:06:11', '02698149', '9,753.00', AUTO, AUTO),
+/** Cuenta bancaria de los registros de ejemplo. */
+const CUENTA = CUENTAS_CONCILIACION[0];
+
+/** Quién elaboró, verificó y aprobó la conciliación manual (Carla crea y verifica; Luis, otra persona, aprueba). */
+const TRAZA_PERSONAS = {
+  elaboradoPor: 'CARLA MENDOZA RÍOS', elaboradoFecha: TRAZA_MANUAL.elaborado,
+  verificadoPor: 'CARLA MENDOZA RÍOS', verificadoFecha: TRAZA_MANUAL.verificado,
+  aprobadoPor: 'LUIS QUISPE SALAS', aprobadoFecha: TRAZA_MANUAL.aprobado,
+};
+/** Lo que genera el sistema (conciliación automática e inconsistencias) lo elabora SIAF RP al cierre del día. */
+const TRAZA_SISTEMA = { elaboradoPor: 'SIAF RP', elaboradoFecha: CIERRE };
+
+/** La fila de un registro: sus operaciones del libro banco y del registro de operaciones bancarias, y su documento. */
+const fila = (r: RegistroNoConciliado, tipo: string, doc: string, number: string, estado: 'Conciliado' | 'No conciliado', extra: DocumentsRecordsRow): DocumentsRecordsRow => ({
+  nro: r.nro,
+  tipoConciliacion: tipo,
+  lbFecha: r.lbFecha,
+  lbNumero: r.lbNumero,
+  lbDescripcion: r.lbDescripcion,
+  lbEntidad: r.lbEntidad,
+  lbDebito: r.lbDebito,
+  lbCredito: r.lbCredito,
+  rbFecha: r.rbFecha,
+  rbNumero: r.rbNumero,
+  rbDescripcion: r.rbDescripcion,
+  rbDebito: r.rbDebito,
+  rbCredito: r.rbCredito,
+  motivo: r.motivo || '-',
+  status: 'Activo',
+  number,
+  descripcionDocumento: doc,
+  estadoConciliacion: estado,
+  document: doc,
+  actionType: 'Creación',
+  cuentaNumero: CUENTA.numeroCuenta,
+  cuentaDenominacion: CUENTA.denominacion,
+  cuentaMoneda: CUENTA.moneda,
+  cuentaEntidad: CUENTA.entidadFinanciera,
+  ...extra,
+});
+
+/** Los registros que Carla concilió a mano en 000001-2026: los mismos que la solicitud aprobada, con su sustento y justificación. */
+const NO_CONCILIADOS = registrosNoConciliados(CREACION_MANUAL);
+const MANUALES = [0, 1].map((i) => {
+  const r = conciliarRegistro(NO_CONCILIADOS[i], '1,000.00');
+  return fila(r, 'Manual', MANUAL, '000001-2026', 'Conciliado', {
+    fechaRegistro: TRAZA_MANUAL.aprobado,
+    sustentosJson: JSON.stringify((r.sustentos ?? []).map((s) => ({ tipo: s.tipo, nombre: s.nombre }))),
+    justificacion: r.justificacion ?? '',
+    ...TRAZA_PERSONAS,
+  });
+});
+
+/** Registro conciliado por el sistema: la misma operación en libro banco y en el registro de operaciones bancarias. */
+const automatico = (nro: number, hora: string, numero: string, credito: string): DocumentsRecordsRow =>
+  fila(
+    {
+      id: `auto-${nro}`, nro: String(nro),
+      lbFecha: `${DIA_D_TEXTO} ${hora}`, lbNumero: numero, lbDescripcion: DESC, lbEntidad: 'SUNAT', lbDebito: '0.00', lbCredito: credito,
+      rbFecha: `${DIA_D_TEXTO} ${hora}`, rbNumero: numero, rbDescripcion: DESC, rbDebito: '0.00', rbCredito: credito, motivo: '-',
+    },
+    'Automático', AUTO, '000001-2026', 'Conciliado', { fechaRegistro: CIERRE, ...TRAZA_SISTEMA },
+  );
+
+export const REGISTROS_DE_EJEMPLO: DocumentsRecordsRow[] = [
+  ...MANUALES,
+  automatico(6, '10:40:06', '02698156', '24,030.00'),
+  automatico(5, '10:40:05', '02698155', '26,784.00'),
+  automatico(4, '10:30:11', '02698153', '35,000.00'),
+  automatico(3, '10:30:10', '02698152', '16,200.00'),
+  automatico(2, '10:10:09', '02698151', '9,000.00'),
+  automatico(1, '10:06:11', '02698149', '9,753.00'),
   // Inconsistencias: sin su par en el libro banco o en el registro de operaciones bancarias, o con montos distintos.
-  {
-    ...conciliado(4, 'Automático', '10:40:04', '02698154', '1,267.00', 'Inconsistencias de conciliación diaria', 'Inconsistencias de conciliación diaria'),
-    rbFecha: '', rbNumero: '', rbDescripcion: '', rbDebito: '', rbCredito: '', motivo: 'No existe OBO', estadoConciliacion: 'No conciliado',
-  },
-  {
-    ...conciliado(3, 'Automático', '10:10:08', '02698150', '5,068.80', 'Inconsistencias de conciliación diaria', 'Inconsistencias de conciliación diaria'),
-    rbCredito: '5,068.00', motivo: 'Montos diferentes', estadoConciliacion: 'No conciliado',
-  },
-  {
-    ...conciliado(2, 'Automático', '10:05:06', '02698148', '31,245.00', 'Inconsistencias de conciliación diaria', 'Inconsistencias de conciliación diaria'),
-    rbFecha: '', rbNumero: '', rbDescripcion: '', rbDebito: '', rbCredito: '', motivo: 'No existe OBO', estadoConciliacion: 'No conciliado',
-  },
-  {
-    ...conciliado(1, 'Automático', '10:00:13', '02698147', '9,753.00', 'Inconsistencias de conciliación diaria', 'Inconsistencias de conciliación diaria'),
-    lbFecha: '', lbNumero: '', lbDescripcion: '', lbEntidad: '', lbDebito: '', lbCredito: '', motivo: 'No existe RR', estadoConciliacion: 'No conciliado',
-  },
+  ...NO_CONCILIADOS.map((r) => fila(r, 'Automático', INCONSISTENCIAS, '000001-2026', 'No conciliado', { fechaRegistro: CIERRE, ...TRAZA_SISTEMA })),
 ];
 
 /**
@@ -135,7 +187,7 @@ export class ConciliacionDiariaDocumentsComponent implements OnInit {
     return {
       ...CONCILIACION_DIARIA_CONFIG,
       documentRows: [...propios, ...DOCUMENTOS_DEL_SISTEMA],
-      recordRows: REGISTROS,
+      recordRows: REGISTROS_DE_EJEMPLO,
     };
   });
 }

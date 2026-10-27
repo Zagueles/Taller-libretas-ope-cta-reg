@@ -8,6 +8,7 @@ import { FocoDirective } from '../../ui/foco/foco.directive';
 
 export type DocumentHistoryRow = {
   usuario: string;
+  /** Lo que se ve en la columna «Unidad organizacional»: la unidad del usuario en ese paso. */
   rol: string;
   fecha: string;
   hora: string;
@@ -288,13 +289,12 @@ export class DocumentHistoryPanelComponent implements OnChanges {
           const nombreUsuario = h.creador
             ? `${h.creador.nombres} ${h.creador.apellidoPaterno} ${h.creador.apellidoMaterno}`.trim()
             : '';
-          // En el modelo v2 el perfil solo expone cfgPerfil.rol (la entidad/
-          // unidad ya no viajan en el historial — se derivan del usuario si
-          // se necesitan).
+          // En el modelo v2 el perfil solo expone cfgPerfil.rol (la unidad ya no viaja en el historial): la columna
+          // «Unidad organizacional» muestra la de la solicitud (la unidad que la creó) y, sin ella, el rol del usuario.
           const rolNombre = h.perfil?.cfgPerfil?.rol?.nombre ?? '';
           return {
             usuario: nombreUsuario,
-            rol: rolNombre,
+            rol: solicitud.unidadCreadora?.nombre ?? rolNombre,
             fecha: d.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' }),
             hora: d.toLocaleTimeString('es-PE', { hour12: false }),
             estado: (h.estadoNuevo ?? '').toUpperCase(),

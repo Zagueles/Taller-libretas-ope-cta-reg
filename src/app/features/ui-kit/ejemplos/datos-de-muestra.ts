@@ -145,6 +145,30 @@ const SOLICITUD_ASIENTO_DE_MUESTRA = {
 
 export const REGISTRO_ASIENTO_DE_MUESTRA = { recordId: 'doc-sraa-12', status: 'Activo' };
 
+/** Registro de Conciliación diaria (no conciliado, de una conciliación manual con sustento) para `siaf-conciliacion-history-panel`. */
+export const REGISTRO_CONCILIACION_DE_MUESTRA = {
+  document: 'Conciliación manual diaria',
+  number: '000001-2026',
+  actionType: 'Creación',
+  status: 'Activo',
+  tipoConciliacion: 'Manual',
+  estadoConciliacion: 'No conciliado',
+  nro: '4',
+  motivo: 'No existe OBO',
+  fechaRegistro: '20/08/2026 11:29:00',
+  lbFecha: '17/08/2026 10:05:09', lbNumero: '02698149', lbDescripcion: 'Reporte de Recaudación', lbEntidad: 'SUNAT', lbDebito: '0.00', lbCredito: '9,000.00',
+  rbFecha: '', rbNumero: '', rbDescripcion: '', rbDebito: '', rbCredito: '',
+  cuentaNumero: '11040103570200000000', cuentaDenominacion: 'MEF - DGTP - CUT', cuentaMoneda: 'PEN', cuentaEntidad: 'Banco Central de Reserva del Perú',
+  sustentosJson: JSON.stringify([
+    { tipo: 'Constancia', nombre: 'Constancia_BCR_02698147.pdf', tamano: '500kb' },
+    { tipo: 'Captura de pantalla', nombre: 'Correo_SUNAT_RR02698152.pdf', tamano: '98kb' },
+  ]),
+  justificacion: 'El BCR informó el RR anterior (02698147) en la operación. La constancia [1] confirma que corresponde al RR 02698152 y SUNAT valida número y monto en [2].',
+  elaboradoPor: 'CARLA MENDOZA RÍOS', elaboradoFecha: '18/08/2026 09:15:00',
+  verificadoPor: 'CARLA MENDOZA RÍOS', verificadoFecha: '19/08/2026 10:22:00',
+  aprobadoPor: 'LUIS QUISPE SALAS', aprobadoFecha: '20/08/2026 11:29:00',
+};
+
 const CONFIGURACION_APERTURA_DE_MUESTRA = [
   {
     ambitoId: 'ent-mef',

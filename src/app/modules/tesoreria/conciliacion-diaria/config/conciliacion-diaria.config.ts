@@ -71,6 +71,9 @@ export const CONCILIACION_DIARIA_CONFIG: DocumentsRecordsConfig = {
   crearEnModoConsulta: true,
   recordTrackKey: 'id',
   recordHistoryDocumentLabel: 'Conciliación diaria',
+  recordHistoryKind: 'conciliacion',
+  recordSelectable: true,
+  documentSelectable: true,
   filterCampoOptions: [
     { label: 'Documento', value: 'document' },
     { label: 'Número', value: 'number' },

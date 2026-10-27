@@ -12,7 +12,9 @@ import {
   CUENTAS_CONCILIACION,
   ConciliacionManualDatos,
   NOMBRE_DOCUMENTO as NOMBRE_CONCILIACION,
-  REGISTROS_NO_CONCILIADOS,
+  FECHA_CONCILIACION_APROBADA,
+  conciliarRegistro,
+  registrosNoConciliados,
 } from '../modules/tesoreria/conciliacion-diaria/models/conciliacion-diaria.model';
 import { DatosLibretas, datosLibretasIniciales } from './libretas-backend';
 import type { QueryReportFavorite } from '../shared/types/query-report.types';
@@ -24,7 +26,7 @@ import { USUARIOS_DEMO, UsuarioDemo } from './usuarios-demo';
  */
 
 const CLAVE = 'taller-siaf-rp:datos';
-const VERSION = 11;
+const VERSION = 12;
 
 export interface NotificacionMock extends NotificacionResponse {
   /** Destinatario: un usuario puntual o, si no hay, todos los perfiles con este rol. */
@@ -187,9 +189,9 @@ function crearDatosIniciales(): DatosTaller {
     libretas: datosLibretasIniciales(),
     favoritos: {},
   };
-  // Un solo usuario de demostración: las solicitudes iniciales las crea con su perfil de creador y las resuelve con el de aprobador.
+  // Las solicitudes iniciales las crea y verifica Carla (creador) y las resuelve Luis (aprobador): nunca la misma persona.
   const ana = USUARIOS_DEMO[0];
-  const luis = USUARIOS_DEMO[0];
+  const luis = USUARIOS_DEMO[1];
 
   for (const semilla of SEMILLAS) {
     const id = nuevoId(datos, 'sol');
@@ -283,29 +285,6 @@ function crearDatosIniciales(): DatosTaller {
 
 // ─── Conciliación manual diaria ────────────────────────────────────
 
-/** Un registro que el creador ya concilió a mano: montos completos en ambas fuentes. */
-function registroConciliado(base: (typeof REGISTROS_NO_CONCILIADOS)[number], credito: string): (typeof REGISTROS_NO_CONCILIADOS)[number] {
-  const propio = base.lbNumero ? 'lb' : 'rb';
-  return {
-    ...base,
-    lbFecha: base.lbFecha || base.rbFecha,
-    lbNumero: base.lbNumero || base.rbNumero,
-    lbDescripcion: base.lbDescripcion || base.rbDescripcion,
-    lbEntidad: base.lbEntidad || 'SUNAT',
-    lbDebito: base.lbDebito || '0.00',
-    lbCredito: base.lbCredito || credito,
-    rbFecha: base.rbFecha || base.lbFecha,
-    rbNumero: base.rbNumero || base.lbNumero,
-    rbDescripcion: base.rbDescripcion || base.lbDescripcion,
-    rbDebito: base.rbDebito || '0.00',
-    rbCredito: base.rbCredito || (propio === 'lb' ? base.lbCredito : credito),
-    motivo: '-',
-    conciliado: true,
-    sustentos: [{ tipo: 'Constancia', nombre: `Constancia registro ${base.nro}.pdf` }],
-    justificacion: 'La operación bancaria coincide con el registro del libro banco.',
-  };
-}
-
 interface SemillaConciliacion {
   creada: string;
   estado: 'ELABORADO' | 'VERIFICADO' | 'APROBADO' | 'OBSERVADO';
@@ -315,7 +294,7 @@ interface SemillaConciliacion {
 }
 
 const SEMILLAS_CONCILIACION: SemillaConciliacion[] = [
-  { creada: '2026-08-18', estado: 'APROBADO', cuenta: 0, registros: [0, 1] },
+  { creada: FECHA_CONCILIACION_APROBADA, estado: 'APROBADO', cuenta: 0, registros: [0, 1] },
   { creada: '2026-09-04', estado: 'VERIFICADO', cuenta: 2, registros: [2] },
   { creada: '2026-09-16', estado: 'OBSERVADO', cuenta: 0, registros: [3], comentario: 'Adjunte el sustento de la operación bancaria conciliada.' },
   { creada: '2026-09-28', estado: 'ELABORADO', cuenta: 5, registros: [0] },
@@ -337,7 +316,8 @@ function sembrarConciliaciones(datos: DatosTaller, creador: UsuarioDemo, aprobad
     }
     const detalle: ConciliacionManualDatos = {
       numeroCuenta: CUENTAS_CONCILIACION[semilla.cuenta].numeroCuenta,
-      registros: semilla.registros.map((i) => registroConciliado(REGISTROS_NO_CONCILIADOS[i], '1,000.00')),
+      // Las operaciones son de la jornada anterior a la creación de la conciliación.
+      registros: semilla.registros.map((i) => conciliarRegistro(registrosNoConciliados(new Date(creada))[i], '1,000.00')),
     };
     datos.solicitudes.push({
       id,

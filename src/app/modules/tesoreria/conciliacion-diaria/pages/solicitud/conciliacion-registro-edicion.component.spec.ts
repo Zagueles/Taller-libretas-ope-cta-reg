@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 
-import { REGISTROS_NO_CONCILIADOS } from '../../models/conciliacion-diaria.model';
+import { REGISTROS_NO_CONCILIADOS, fechaDeOperacion } from '../../models/conciliacion-diaria.model';
 import { ConciliacionRegistroEdicionComponent } from './conciliacion-registro-edicion.component';
 
 describe('ConciliacionRegistroEdicionComponent', () => {
@@ -136,8 +136,8 @@ describe('ConciliacionRegistroEdicionComponent', () => {
     c.seleccion.set(['op-02698150', 'op-02698147']);
     c.aceptarOperaciones();
     expect(c.candidatos().map((o) => [o.numero, o.fecha, o.debito, o.credito])).toEqual([
-      ['02698150', '01/12/2025 10:10:08', '', ''],
-      ['02698147', '01/12/2025 10:00:13', '', ''],
+      ['02698150', fechaDeOperacion(new Date(), '10:10:08'), '', ''],
+      ['02698147', fechaDeOperacion(new Date(), '10:00:13'), '', ''],
     ]);
     // Las que ya están en la tabla no se vuelven a ofrecer.
     c.abrirBusqueda();

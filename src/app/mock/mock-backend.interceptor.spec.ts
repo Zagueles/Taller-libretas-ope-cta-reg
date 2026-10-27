@@ -9,7 +9,7 @@ import type { CuentaBancariaDatos, CuentaBancariaRegistro } from '../modules/tes
 import { CUENTAS_CONCILIACION, ConciliacionManualDatos, REGISTROS_NO_CONCILIADOS } from '../modules/tesoreria/conciliacion-diaria/models/conciliacion-diaria.model';
 import type { DetalleDocumentoLibreta, DetalleMovimientoLibreta, DocumentoLibreta, MovimientoLibretaRegistro, CuentaRegistroCatalogo } from '../modules/tesoreria/registro-libretas-cuentas-registro/models/registro-libretas.model';
 import { mockBackendInterceptor } from './mock-backend.interceptor';
-import { reiniciarDatosDemo } from './mock-db';
+import { leerDatos, reiniciarDatosDemo } from './mock-db';
 import { CONTRASENA_DEMO } from './usuarios-demo';
 
 /**
@@ -39,11 +39,12 @@ describe('mockBackendInterceptor', () => {
     return resultado;
   }
 
-  /** Entra con el usuario de demostración y, si se pide, cambia a ese perfil (creador por defecto). */
+  /** Entra con el usuario de demostración de ese perfil (Carla es creador y visualizador; Luis, aprobador). Creador por defecto. */
   function entrar(perfil: 'creador' | 'aprobador' | 'visualizador' = 'creador'): HttpHeaders {
-    const { valor } = esperar(http.post<LoginResponse>(`${API}/auth/login`, { dni: '33333333', password: CONTRASENA_DEMO }));
+    const dni = perfil === 'aprobador' ? '44444444' : '33333333';
+    const { valor } = esperar(http.post<LoginResponse>(`${API}/auth/login`, { dni, password: CONTRASENA_DEMO }));
     const headers = new HttpHeaders({ Authorization: `Bearer ${valor!.accessToken}` });
-    if (perfil === 'creador') return headers;
+    if (perfil !== 'visualizador') return headers;
     const cambio = esperar(http.patch<{ accessToken: string }>(`${API}/auth/cambiar-perfil`, { perfilId: `perfil-demo-${perfil}` }, { headers }));
     return new HttpHeaders({ Authorization: `Bearer ${cambio.valor!.accessToken}` });
   }
@@ -77,13 +78,35 @@ describe('mockBackendInterceptor', () => {
 
   it('entrega los perfiles del usuario y cambia al que se elige', fakeAsync(() => {
     const { valor } = esperar(http.post<LoginResponse>(`${API}/auth/login`, { dni: '33333333', password: CONTRASENA_DEMO }));
-    expect(valor?.perfilesDisponibles.map((p) => p.rolCodigo)).toEqual(['CREADOR', 'APROBADOR', 'VISUALIZADOR']);
+    expect(valor?.perfilesDisponibles.map((p) => p.rolCodigo)).toEqual(['CREADOR', 'VISUALIZADOR']);
 
     const headers = new HttpHeaders({ Authorization: `Bearer ${valor!.accessToken}` });
-    const cambio = esperar(http.patch<{ perfilActivo: { rolCodigo: string } }>(`${API}/auth/cambiar-perfil`, { perfilId: 'perfil-demo-aprobador' }, { headers }));
+    const cambio = esperar(http.patch<{ perfilActivo: { rolCodigo: string } }>(`${API}/auth/cambiar-perfil`, { perfilId: 'perfil-demo-visualizador' }, { headers }));
 
-    expect(cambio.valor?.perfilActivo.rolCodigo).toBe('APROBADOR');
+    expect(cambio.valor?.perfilActivo.rolCodigo).toBe('VISUALIZADOR');
   }));
+
+  it('el aprobador es otra persona que el creador: no puede cambiar al perfil de creador ni aprobar con el de Carla', fakeAsync(() => {
+    const { valor } = esperar(http.post<LoginResponse>(`${API}/auth/login`, { dni: '44444444', password: CONTRASENA_DEMO }));
+    expect(valor?.perfilesDisponibles.map((p) => p.rolCodigo)).toEqual(['APROBADOR']);
+
+    const headers = new HttpHeaders({ Authorization: `Bearer ${valor!.accessToken}` });
+    const cambio = esperar(http.patch(`${API}/auth/cambiar-perfil`, { perfilId: 'perfil-demo-creador' }, { headers }));
+    expect(cambio.error?.status).toBe(404);
+  }));
+
+  it('quien aprueba en el historial de los documentos de ejemplo no es quien los creó', () => {
+    const datos = leerDatos();
+    const nombre = (h: { creador?: { nombres: string; apellidoPaterno: string; apellidoMaterno?: string | null } | null }): string =>
+      `${h.creador?.nombres} ${h.creador?.apellidoPaterno} ${h.creador?.apellidoMaterno ?? ''}`.trim();
+    expect(datos.solicitudes.length).toBeGreaterThan(0);
+    for (const solicitud of datos.solicitudes) {
+      const historial = solicitud.historialEstados ?? [];
+      const creadores = new Set(historial.filter((h) => ['NUEVO', 'ELABORADO', 'VERIFICADO'].includes(h.estadoNuevo ?? '')).map(nombre));
+      const aprobadores = historial.filter((h) => ['APROBADO', 'OBSERVADO', 'RECHAZADO'].includes(h.estadoNuevo ?? '')).map(nombre);
+      for (const aprobador of aprobadores) expect(creadores.has(aprobador)).withContext(`${solicitud.numero}: ${aprobador}`).toBeFalse();
+    }
+  });
 
   it('la bandeja no muestra solicitudes en NUEVO y pagina si se pide', fakeAsync(() => {
     const headers = entrar('creador');

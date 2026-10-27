@@ -3,10 +3,10 @@ import type { PerfilItem } from '../core/api/auth-api.service';
 /**
  * Usuarios de demostración del taller. Entran con su DNI y la contraseña común.
  *
- * Hay un solo usuario con tres perfiles, para mostrar el cambio de perfil desde el menú del usuario:
- * - Creador: registra y verifica solicitudes.
- * - Aprobador: aprueba, observa o rechaza lo verificado.
- * - Visualizador de consultas: solo consulta documentos, registros y reportes.
+ * Son dos personas distintas, porque quien aprueba una solicitud no puede ser quien la creó:
+ * - Carla (creador y visualizador de consultas): registra y verifica solicitudes, o solo consulta; cambia de perfil desde el
+ *   menú del usuario.
+ * - Luis (aprobador): aprueba, observa o rechaza lo verificado.
  *
  * Son datos de ejemplo: no hay contraseñas reales ni se validan contra un servidor.
  */
@@ -55,12 +55,21 @@ export const USUARIOS_DEMO: UsuarioDemo[] = [
     nombres: 'Carla',
     apellidoPaterno: 'Mendoza',
     apellidoMaterno: 'Ríos',
-    descripcion: 'Tres perfiles: creador, aprobador y visualizador de consultas (cambia de perfil desde el menú del usuario)',
+    descripcion: 'Creador y visualizador de consultas (cambia de perfil desde el menú del usuario)',
     perfiles: [
       perfil('perfil-demo-creador', 'CREADOR', 'Creador', 'Operador de cuentas bancarias'),
-      perfil('perfil-demo-aprobador', 'APROBADOR', 'Aprobador', 'Aprobador de cuentas bancarias'),
       perfil('perfil-demo-visualizador', 'VISUALIZADOR', 'Visualizador de consultas', 'Visualizador de consultas'),
     ],
+  },
+  {
+    id: 'usr-demo-aprobador',
+    dni: '44444444',
+    email: 'luis.quispe@taller.pe',
+    nombres: 'Luis',
+    apellidoPaterno: 'Quispe',
+    apellidoMaterno: 'Salas',
+    descripcion: 'Aprobador: aprueba, observa o rechaza lo que Carla verifica',
+    perfiles: [perfil('perfil-demo-aprobador', 'APROBADOR', 'Aprobador', 'Aprobador de cuentas bancarias')],
   },
 ];
 

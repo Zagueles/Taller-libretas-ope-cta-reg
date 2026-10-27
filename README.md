@@ -25,13 +25,14 @@ Abrir <http://127.0.0.1:4200>. Otro puerto: `npm start -- --port 4300`.
 La contraseña de todos es **`Taller2026*`**. En el login, el panel «Usuarios de demostración» llena el DNI y la
 contraseña con un clic.
 
-Hay **un solo usuario** de demostración, con tres perfiles que se cambian desde su menú de usuario (Perfil):
+Hay **dos usuarios** de demostración, porque quien aprueba una solicitud no puede ser quien la creó. Carla cambia entre sus
+dos perfiles desde su menú de usuario (Perfil); Luis entra aparte para aprobar:
 
 | Usuario | DNI | Perfil | Qué puede hacer |
 | --- | --- | --- | --- |
 | Carla Mendoza Ríos | `33333333` | Creador | Crear, grabar, editar, verificar y eliminar solicitudes |
-| | | Aprobador | Aprobar, observar (con comentario) o rechazar lo verificado |
 | | | Visualizador de consultas | Solo consulta documentos, registros y reportes (sin «Crear» ni acciones) |
+| Luis Quispe Salas | `44444444` | Aprobador | Aprobar, observar (con comentario) o rechazar lo verificado |
 
 «Olvidé mi contraseña» también funciona: con el correo de un usuario (`carla.mendoza@taller.pe`) el código de
 verificación es `123456`.
