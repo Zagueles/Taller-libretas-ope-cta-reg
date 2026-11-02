@@ -61,7 +61,7 @@ describe('ConciliacionRegistroEdicionComponent', () => {
       c.cambiar('lb', 'rr-02698147', 'fecha', '31/02/2026');
       sustentar(c);
       expect(c.puedeAceptar()).toBeFalse();
-      expect(c.errorCampo('lb', c.lineasLB()[0], 'fecha')).toContain('fecha válida');
+      expect(c.errorCampo('lb', c.lineasLB()[0], 'fecha')).toContain('Fecha no válida');
     });
   });
 

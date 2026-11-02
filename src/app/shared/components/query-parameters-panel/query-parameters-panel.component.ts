@@ -158,7 +158,7 @@ export class QueryParametersPanelComponent implements OnChanges {
   errorMinimo(campo: QueryReportParameterField): string {
     const minimo = this.minimo(campo);
     if (!minimo) return '';
-    if (minimo === campo.minDate) return `Ingrese una fecha igual o posterior al ${minimo.split('-').reverse().join('/')}.`;
+    if (minimo === campo.minDate) return `Ingresa ${minimo.split('-').reverse().join('/')} o posterior`;
     return 'Ingrese una fecha igual o posterior a la fecha desde.';
   }
 

@@ -132,6 +132,7 @@ const linea = (id: string, datos: DatosLinea): LineaConciliacion => ({ id, ...da
                         <td class="px-siaf-sm py-siaf-sm">
                           <siaf-input
                             [type]="c === 'debito' || c === 'credito' ? 'decimal' : 'text'"
+                            [thousands]="c === 'debito' || c === 'credito'"
                             [autoSuccess]="false"
                             [disabled]="!editable(c)"
                             [value]="l[c]"
@@ -456,7 +457,7 @@ export class ConciliacionRegistroEdicionComponent implements OnChanges {
   private mensajeCampo(lado: Lado, l: LineaConciliacion, campo: Campo): string {
     const v = l[campo];
     switch (campo) {
-      case 'fecha': return fechaValida(v) ? '' : 'Ingrese una fecha válida.';
+      case 'fecha': return fechaValida(v) ? '' : 'Fecha no válida';
       case 'debito':
       case 'credito': return valido(v) ? '' : 'Este campo es obligatorio.';
       case 'secuencia': return /^\d+$/.test(v.trim()) && Number(v) > 0 ? '' : 'Ingrese una secuencia válida.';

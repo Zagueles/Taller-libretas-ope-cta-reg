@@ -183,6 +183,22 @@ describe('DateTimePickerComponent — escribir la fecha', () => {
       expect(campo().value).toBe('dd/mm/aaaa');
     });
 
+    it('mantener Retroceso pulsado vacía la fecha completa, sección por sección', () => {
+      enfocar();
+      teclear('15032026');
+      expect(campo().value).toBe('15/03/2026');
+      // Pulsaciones repetidas: cada sección elegida se vacía y la siguiente pulsación pasa a la anterior.
+      for (let i = 0; i < 12 && campo().value !== 'dd/mm/aaaa'; i++) tecla('Backspace');
+      expect(campo().value).toBe('dd/mm/aaaa');
+    });
+
+    it('mantener Retroceso pulsado desde una fecha vacía por secciones no deja nada a medias', () => {
+      enfocar();
+      teclear('1503');
+      for (let i = 0; i < 12; i++) tecla('Backspace');
+      expect(campo().value).toBe('dd/mm/aaaa');
+    });
+
     it('«/» cierra una sección de un solo dígito anteponiendo 0 y pasa a la siguiente', () => {
       enfocar();
       teclear('7');
@@ -191,11 +207,11 @@ describe('DateTimePickerComponent — escribir la fecha', () => {
       expect(campo().value).toBe('07/04/aaaa');
     });
 
-    it('una fecha completa que no existe se queda en rojo con «Ingrese una fecha válida.»', () => {
+    it('una fecha completa que no existe se queda en rojo con «Fecha no válida»', () => {
       enfocar();
       teclear('00000000');
       expect(campo().value).toBe('00/00/0000');
-      expect(fixture.nativeElement.textContent).toContain('Ingrese una fecha válida.');
+      expect(fixture.nativeElement.textContent).toContain('Fecha no válida');
       expect(campo().getAttribute('aria-invalid')).toBe('true');
       expect(emitidos).toEqual([]);
       salir();
@@ -203,10 +219,10 @@ describe('DateTimePickerComponent — escribir la fecha', () => {
       enfocar();
       teclear('3102');
       teclear('2026');
-      expect(fixture.nativeElement.textContent).toContain('Ingrese una fecha válida.');
+      expect(fixture.nativeElement.textContent).toContain('Fecha no válida');
     });
 
-    it('un año muy antiguo con minDateError muestra ese error y sin él, «fecha válida»', () => {
+    it('un año muy antiguo con minDateError muestra ese error y sin él, «Fecha no válida»', () => {
       fixture.componentRef.setInput('minDate', '2020-01-01');
       fixture.componentRef.setInput('minDateError', 'Ingrese una fecha igual o posterior al 01/01/2020.');
       fixture.detectChanges();
@@ -218,7 +234,7 @@ describe('DateTimePickerComponent — escribir la fecha', () => {
       fixture.detectChanges();
       enfocar();
       teclear('10101000');
-      expect(fixture.nativeElement.textContent).toContain('Ingrese una fecha válida.');
+      expect(fixture.nativeElement.textContent).toContain('Fecha no válida');
     });
 
     describe('recientes', () => {
@@ -290,17 +306,28 @@ describe('DateTimePickerComponent — escribir la fecha', () => {
     expect(emitidos).toEqual(['2026-03-15']);
   });
 
-  it('una fecha inexistente no se emite y se queda en rojo con su mensaje; una incompleta vuelve a la elegida al salir', () => {
+  it('una fecha inexistente o a medio escribir no se emite y, al salir, se queda en rojo con «Fecha no válida»', () => {
     fixture.componentRef.setInput('value', '2026-03-15');
     fixture.detectChanges();
     escribir('31022026');
     expect(emitidos).toEqual([]);
     salir();
     expect(campo().value).toBe('31/02/2026');
-    expect(fixture.nativeElement.textContent).toContain('Ingrese una fecha válida.');
+    expect(fixture.nativeElement.textContent).toContain('Fecha no válida');
+
     escribir('1503');
+    expect(fixture.nativeElement.textContent).not.toContain('Fecha no válida');
     salir();
-    expect(campo().value).toBe('15/03/2026');
+    expect(campo().value).toBe('15/03/aaaa');
+    expect(fixture.nativeElement.textContent).toContain('Fecha no válida');
+    expect(campo().getAttribute('aria-invalid')).toBe('true');
+    expect(emitidos).toEqual([]);
+  });
+
+  it('un campo vacío al salir no muestra error', () => {
+    escribir('');
+    salir();
+    expect(fixture.nativeElement.textContent).not.toContain('Fecha no válida');
   });
 
   it('respeta minDate y vaciar el campo borra la fecha cuando no hay fecha por defecto', () => {

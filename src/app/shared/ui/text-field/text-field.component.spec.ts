@@ -220,3 +220,83 @@ describe('TextFieldComponent — otros tipos', () => {
     expect(emitidos.at(-1)).toEqual([]);
   });
 });
+
+describe('TextFieldComponent — type="decimal" con miles', () => {
+  let fixture: ComponentFixture<TextFieldComponent>;
+  let component: TextFieldComponent;
+  let emitido: (string | number | string[])[];
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [TextFieldComponent] }).compileComponents();
+    fixture = TestBed.createComponent(TextFieldComponent);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('type', 'decimal');
+    fixture.componentRef.setInput('thousands', true);
+    fixture.detectChanges();
+    emitido = [];
+    component.valueChange.subscribe((v) => emitido.push(v));
+  });
+
+  const input = (): HTMLInputElement => fixture.debugElement.query(By.css('input')).nativeElement as HTMLInputElement;
+  const teclear = (texto: string): void => {
+    input().value = texto;
+    input().dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+  };
+
+  it('agrupa los miles al escribir y emite el número sin comas', () => {
+    input().dispatchEvent(new Event('focus'));
+    for (const [escrito, visto, valor] of [['1', '1', '1'], ['1234', '1,234', '1234'], ['1,2345', '12,345', '12345'], ['1234567', '1,234,567', '1234567']]) {
+      teclear(escrito);
+      expect(input().value).withContext(escrito).toBe(visto);
+      expect(emitido[emitido.length - 1]).toBe(valor);
+    }
+  });
+
+  it('entiende los decimales con punto, también con miles ya escritos', () => {
+    input().dispatchEvent(new Event('focus'));
+    teclear('1,234.5');
+    expect(input().value).toBe('1,234.5');
+    expect(emitido[emitido.length - 1]).toBe('1234.5');
+    teclear('1,234.567');
+    expect(input().value).withContext('recorta a 2 decimales').toBe('1,234.56');
+    teclear('5068.');
+    expect(input().value).withContext('conserva el punto a medio escribir').toBe('5,068.');
+  });
+
+  it('la coma con 1 o 2 dígitos detrás es el decimal del teclado numérico; con 3, es de miles', () => {
+    input().dispatchEvent(new Event('focus'));
+    teclear('12,5');
+    expect(input().value).toBe('12.5');
+    teclear('12,50');
+    expect(input().value).toBe('12.50');
+    teclear('1,234');
+    expect(input().value).toBe('1,234');
+    teclear('1,234,567');
+    expect(input().value).toBe('1,234,567');
+  });
+
+  it('descarta lo que no sea número', () => {
+    input().dispatchEvent(new Event('focus'));
+    teclear('1a2b3');
+    expect(input().value).toBe('123');
+  });
+
+  it('muestra agrupado lo que llega del padre y completa los decimales al salir', () => {
+    fixture.componentRef.setInput('value', '5068.8');
+    fixture.detectChanges();
+    expect(input().value).toBe('5,068.8');
+
+    input().dispatchEvent(new Event('focus'));
+    teclear('5068.8');
+    input().dispatchEvent(new Event('blur'));
+    fixture.detectChanges();
+    expect(input().value).toBe('5,068.80');
+    expect(emitido[emitido.length - 1]).toBe('5068.80');
+
+    fixture.componentRef.setInput('value', '5,068.80');
+    fixture.detectChanges();
+    expect(input().value).toBe('5,068.80');
+  });
+});
+

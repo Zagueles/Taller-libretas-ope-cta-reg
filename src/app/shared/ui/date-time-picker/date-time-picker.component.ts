@@ -14,6 +14,9 @@ type CalendarDay = {
   disabled?: boolean;
 };
 
+/** El error de una fecha incompleta, que no existe o fuera de rango de año. */
+const MENSAJE_FECHA_NO_VALIDA = 'Fecha no válida';
+
 /**
  * Selector de fecha (y opcionalmente hora) con calendario propio, label flotante,
  * estados de error/éxito, `[minDate]` para deshabilitar días anteriores y `[maxDate]` para los posteriores (no se aceptan tampoco al escribirlos; con `[maxDateError]` y `[minDateError]`, la fecha fuera de rango escrita y confirmada se conserva con ese mensaje de error).
@@ -801,7 +804,10 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
     if (indice < this.secciones.length - 1) this.elegirSeccion(campo, indice + 1);
   }
 
-  /** Retroceso/Supr: con la sección elegida entera la vacía; si no, quita su último dígito (y, sin dígitos, pasa a la sección anterior). */
+  /**
+   * Retroceso/Supr: con la sección elegida entera la vacía; si no, quita su último dígito (y, sin dígitos, pasa a la sección
+   * anterior). Al mantener la tecla pulsada sigue de sección en sección hasta vaciar toda la fecha.
+   */
   private borrar(campo: HTMLInputElement): void {
     if (this.texto === '') return;
     const indice = this.seccionActiva;
@@ -810,6 +816,8 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
     if (this.reemplazaSeccion) {
       this.ponerSeccion(campo, indice, sec.ph);
       campo.setSelectionRange(sec.ini, sec.fin);
+      // Ya vacía: la siguiente pulsación (también la repetida al mantener la tecla) sigue con la sección anterior.
+      this.reemplazaSeccion = false;
       return;
     }
     const ultimo = [...actual].map((c) => /\d/.test(c)).lastIndexOf(true);
@@ -839,13 +847,18 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
     else this.aplicarTexto();
   }
 
-  /** Al salir del campo o con Enter: aplica lo escrito si es una fecha válida; si no, vuelve a la fecha elegida. */
+  /** Al salir del campo o con Enter: aplica lo escrito si es una fecha válida; si está incompleta o no existe, queda en rojo con «Fecha no válida». */
   confirmarTexto(event?: Event): void {
     event?.preventDefault();
     if (!/\d/.test(this.texto)) this.texto = '';
     if (this.texto === '' && this.selectedDate && !this.defaultToToday) {
       this.selectedDate = '';
       this.valueChange.emit('');
+      return;
+    }
+    // Fechas a medio escribir que no se aplicaron: se queda lo escrito y se avisa, en vez de volver en silencio a la anterior.
+    if (/[a-z]/.test(this.texto)) {
+      this.errorRango = MENSAJE_FECHA_NO_VALIDA;
       return;
     }
     if (!this.aplicarTexto() && !this.errorRango) this.texto = this.displayValue;
@@ -862,7 +875,7 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
     const horaValida = this.variant !== 'datetime' || (Number(hora) <= 23 && Number(minuto) <= 59 && Number(segundo) <= 59);
     const antes = Boolean(this.minDate && iso < this.minDate);
     const despues = Boolean(this.maxDate && iso > this.maxDate);
-    if (!existe || !horaValida || (Number(anio) < 1900 && !(antes && this.minDateError))) this.errorRango = 'Ingrese una fecha válida.';
+    if (!existe || !horaValida || (Number(anio) < 1900 && !(antes && this.minDateError))) this.errorRango = MENSAJE_FECHA_NO_VALIDA;
     else if (despues && this.maxDateError) this.errorRango = this.maxDateError;
     else if (antes && this.minDateError) this.errorRango = this.minDateError;
     else this.errorRango = '';

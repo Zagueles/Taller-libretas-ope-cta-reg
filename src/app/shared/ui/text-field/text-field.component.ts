@@ -36,6 +36,8 @@ export type TextFieldState = 'enabled' | 'error' | 'success';
  * - `type="select"` o `select-multiple` para listas cortas y cerradas: tipo de plan contable, tipo de libro y mes,
  *   ámbitos institucionales o estados en los paneles de búsqueda.
  * - `type="decimal"` para importes, como el importe de cada cuenta del asiento de ajuste; `number` solo para enteros.
+ * - `type="decimal"` con `thousands` para importes grandes que se corrigen a mano (montos de la conciliación): agrupa los miles
+ *   al escribir y entiende la coma de miles, el punto decimal y la coma del teclado numérico.
  * - `select-multiple` con `selectAllLabel="Seleccionar todo"` en los paneles de parámetros de las consultas: casillas,
  *   la fila para marcar todas y el valor en una línea.
  * - Con `trailingIcon` y `trailingButtonLabel` para una acción dentro del campo: «Buscar» en la bandeja de documentos
@@ -340,6 +342,11 @@ export class TextFieldComponent implements OnChanges, ControlValueAccessor {
   /** Decimales admitidos cuando `type="decimal"` (importes contables: 2). */
   @Input() decimals = 2;
   /**
+   * Con `type="decimal"`, agrupa los miles mientras se escribe (1,234,567.89): la coma separa miles y el punto, los decimales.
+   * Una coma sola con 1 o 2 dígitos detrás (la del teclado numérico) se toma como decimal. Emite el número sin comas.
+   */
+  @Input() thousands = false;
+  /**
    * En `select-multiple`, la lista del Figma «Parámetros de consulta»: una casilla por opción, arriba esta fila para
    * marcar o desmarcar todas, y el valor en una sola línea en vez de chips.
    */
@@ -369,7 +376,7 @@ export class TextFieldComponent implements OnChanges, ControlValueAccessor {
       return;
     }
 
-    this.internalValue = Array.isArray(this.value) ? this.value : this.inputValue;
+    this.internalValue = Array.isArray(this.value) ? this.value : this.agruparSiAplica(this.inputValue);
   }
 
   /** ¿El valor que llega del padre es el mismo que el usuario ya tiene escrito? */
@@ -378,8 +385,8 @@ export class TextFieldComponent implements OnChanges, ControlValueAccessor {
       return true;
     }
 
-    const escrito = parseFloat(String(this.internalValue ?? ''));
-    const entrante = parseFloat(String(this.value ?? ''));
+    const escrito = parseFloat(String(this.internalValue ?? '').replace(/,/g, ''));
+    const entrante = parseFloat(String(this.value ?? '').replace(/,/g, ''));
 
     // "10.00" (escrito) vs 10 (guardado) son la misma cantidad: no repintar.
     return !Number.isNaN(escrito) && escrito === entrante;
@@ -553,6 +560,20 @@ export class TextFieldComponent implements OnChanges, ControlValueAccessor {
     const input = event.target as HTMLInputElement;
     let value = input.value;
 
+    if (this.type === 'decimal' && this.thousands) {
+      const crudo = this.numeroCrudo(value);
+      const agrupado = this.agrupar(crudo);
+      if (agrupado !== value) {
+        const cursor = input.selectionStart ?? value.length;
+        const destino = this.posicionTrasDigitos(agrupado, value.slice(0, cursor));
+        input.value = agrupado;
+        input.setSelectionRange(destino, destino);
+      }
+      this.internalValue = agrupado;
+      this.emitValue(crudo);
+      return;
+    }
+
     if (this.type === 'decimal') {
       const limpio = this.sanitizarDecimal(value);
 
@@ -569,6 +590,51 @@ export class TextFieldComponent implements OnChanges, ControlValueAccessor {
 
     this.internalValue = value;
     this.emitValue(value);
+  }
+
+  /**
+   * El número tal como se escribió, sin comas de miles y con punto decimal. Si hay un punto, las comas son miles; si no,
+   * la última coma es el decimal cuando tiene 0, 1 o 2 dígitos detrás (la del teclado numérico) y miles si tiene 3 o más (así
+   * se pueden seguir tecleando dígitos al final de un número ya agrupado: 1,234 + 5 → 12,345).
+   */
+  private numeroCrudo(texto: string): string {
+    let t = texto.replace(/[^\d.,]/g, '');
+    if (t.includes('.')) {
+      t = t.replace(/,/g, '');
+    } else if (t.includes(',')) {
+      const i = t.lastIndexOf(',');
+      const detras = t.slice(i + 1);
+      t = detras.length >= 3 ? t.replace(/,/g, '') : `${t.slice(0, i).replace(/,/g, '')}.${detras}`;
+    }
+    const [entero, ...resto] = t.split('.');
+    if (!resto.length) return entero;
+    return `${entero}.${resto.join('').slice(0, this.decimals)}`;
+  }
+
+  /** Agrupa los miles de un número crudo: 1234567.8 → 1,234,567.8 (conserva un punto final mientras se escribe). */
+  private agrupar(crudo: string): string {
+    const [entero, decimales] = crudo.split('.');
+    const miles = entero.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return decimales === undefined ? miles : `${miles}.${decimales}`;
+  }
+
+  /** Lo que llega del padre, en el modo de miles: «5068.8» o «5,068.80» se ven agrupados. */
+  private agruparSiAplica(valor: string | number): string | number {
+    if (this.type !== 'decimal' || !this.thousands || valor === '' || valor == null) return valor;
+    return this.agrupar(this.numeroCrudo(String(valor)));
+  }
+
+  /** Dónde queda el cursor tras reagrupar: después del mismo número de dígitos (y del punto, si se acababa de escribir) que tenía a su izquierda. */
+  private posicionTrasDigitos(agrupado: string, antesDelCursor: string): number {
+    const digitos = (antesDelCursor.match(/\d/g) ?? []).length;
+    const acabaDeEscribirDecimal = /[.,]$/.test(antesDelCursor) && agrupado.includes('.');
+    if (digitos === 0) return acabaDeEscribirDecimal ? agrupado.indexOf('.') + 1 : 0;
+    let vistos = 0;
+    for (let i = 0; i < agrupado.length; i++) {
+      if (/\d/.test(agrupado[i])) vistos++;
+      if (vistos === digitos) return acabaDeEscribirDecimal && agrupado[i + 1] === '.' ? i + 2 : i + 1;
+    }
+    return agrupado.length;
   }
 
   /**
@@ -594,7 +660,7 @@ export class TextFieldComponent implements OnChanges, ControlValueAccessor {
 
   /** Al salir del campo, deja el importe con sus decimales completos (10 → 10.00). */
   private normalizarDecimal(): void {
-    const texto = String(this.internalValue ?? '').trim();
+    const texto = String(this.internalValue ?? '').trim().replace(/,/g, '');
     const numero = parseFloat(texto);
 
     // Vacío o basura ("." suelto) se limpia: equivale a "sin importe".
@@ -607,6 +673,11 @@ export class TextFieldComponent implements OnChanges, ControlValueAccessor {
     }
 
     const formateado = numero.toFixed(this.decimals);
+    if (this.thousands) {
+      this.internalValue = this.agrupar(formateado);
+      if (formateado !== texto) this.emitValue(formateado);
+      return;
+    }
     if (formateado !== texto) {
       this.internalValue = formateado;
       this.emitValue(formateado);

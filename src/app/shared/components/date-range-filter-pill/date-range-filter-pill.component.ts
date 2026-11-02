@@ -153,7 +153,7 @@ export class DateRangeFilterPillComponent {
   /** Error de una fecha escrita anterior al mínimo del selector: el del período o, en «Hasta», la fecha «Desde» elegida. */
   errorMinimo(minimo: string): string {
     if (!minimo) return '';
-    if (minimo === this.minDate) return `Ingrese una fecha igual o posterior al ${minimo.split('-').reverse().join('/')}.`;
+    if (minimo === this.minDate) return `Ingresa ${minimo.split('-').reverse().join('/')} o posterior`;
     return 'Ingrese una fecha igual o posterior a la fecha desde.';
   }
 
