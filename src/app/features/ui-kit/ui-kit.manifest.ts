@@ -1080,7 +1080,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     "capa": "ui",
     "importacion": "@siaf/ui/alert/alert.component",
     "archivo": "src/app/shared/ui/alert/alert.component.ts",
-    "descripcion": "Mensaje de feedback en línea, con tono (neutral/info/éxito/advertencia/error), ícono y cierre opcional.\nEl título, el ícono y la × se apagan por separado (`title` vacío, `leadingIcon`, `showClose`); con varias líneas\nde texto, el ícono y la × quedan arriba, a la altura del título. La descripción respeta los saltos de línea (`\\n`):\nsirve para listar varios motivos en un solo aviso.\n\nUsarlo para avisos fijos dentro de una pantalla o formulario. Para confirmaciones de acciones de\nsolicitud (aprobar, observar, rechazar) el canónico es `siaf-request-approval-modals` con su snackbar.",
+    "descripcion": "Mensaje de feedback en línea, con tono (neutral/info/éxito/advertencia/error), ícono y cierre opcional.\nEl título, el ícono y la × se apagan por separado (`title` vacío, `leadingIcon`, `showClose`); con varias líneas\nde texto, el ícono y la × quedan arriba, a la altura del título. La descripción respeta los saltos de línea (`\\n`):\nsirve para listar varios motivos en un solo aviso. Con `live=\"status\"` el aviso se anuncia con cortesía, sin\ninterrumpir, en vez de como `alert`. La espera de un proceso va aparte, con `siaf-loader-overlay`.\n\nUsarlo para avisos fijos dentro de una pantalla o formulario. Para confirmaciones de acciones de\nsolicitud (aprobar, observar, rechazar) el canónico es `siaf-request-approval-modals` con su snackbar.",
     "usaSesion": false,
     "proyectaContenido": true,
     "entradas": [
@@ -1097,6 +1097,13 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "porDefecto": "true",
         "requerida": false,
         "descripcion": null
+      },
+      {
+        "nombre": "live",
+        "tipo": "'alert' | 'status'",
+        "porDefecto": "'alert'",
+        "requerida": false,
+        "descripcion": "`status` lo anuncia con cortesía (`role=\"status\"`); `alert`, de inmediato."
       },
       {
         "nombre": "showClose",
@@ -1130,7 +1137,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     "usar": "- Para validar un dato en línea mientras se llena el formulario: el código de la cuenta en la solicitud del\n  Plan de Cuentas (formato inválido, código ya registrado, validación exitosa).\n- Para explicar por qué algo no se puede editar: «No se puede modificar la vigencia» de una cuenta en uso.\n- Para errores de carga o de una acción que el usuario cierra con `showClose`: «No se pudo cargar el\n  documento» en Apertura contable, o «Sin conexión con el servidor» cuando se muestran datos de demostración.\n- Para un estado que exige atención en un detalle: «Solicitud fallida en el procesado automático» en\n  Contabilización.",
     "evitar": "- Para confirmar que una acción terminó (grabar, verificar, aprobar): usar `siaf-snackbar`, que en las\n  solicitudes ya emite `siaf-request-approval-modals`.\n- Para notas grises sin tono: usar `message-box`.\n- Para pedir una decisión antes de seguir: usar `siaf-modal`.\n- Para el estado de un documento o registro: usar `siaf-flow-status-tag` o `siaf-record-status-tag`.",
     "teclado": "- **Tab**: con `showClose`, enfoca la × del aviso; sin ella, el aviso no recibe foco.\n- **Enter / Espacio**: la × emite `closed` (botón nativo); quien retira el aviso es el padre.",
-    "accesibilidad": "- **4.1.3 Mensajes de estado (AA)**: el contenedor es `role=\"alert\"` en todos los tonos: al insertarse se\n  anuncia de inmediato, también los neutrales, informativos y de éxito.\n- **1.1.1 Contenido no textual (A)**: el ícono del tono va con `aria-hidden`; el tipo de aviso tiene que quedar\n  dicho en `title` o `description`.\n- **1.4.1 Uso del color (A)**: cada tono cambia de color y de ícono, salvo neutral y éxito, que comparten\n  `check_circle`: entre esos dos solo el texto los distingue.\n- **Pendiente · 1.4.3 Contraste mínimo (AA)**: `warning` en claro pone `text-feedback-warning` sobre\n  `bg-feedback-light-warning` con 4.43:1. Los demás cumplen (info 5.81:1, éxito 5.31:1, error 6.21:1,\n  neutral 11.46:1) y en oscuro todos superan 8:1.\n- **4.1.2 Nombre, función y valor (A)**: la × es un `<button>` con `aria-label=\"Cerrar alerta\"`.\n- **2.4.7 Foco visible (AA)**: la × muestra un contorno de 2 px del color del texto del tono (4.43:1 o más\n  sobre el fondo del aviso).\n- **2.5.8 Tamaño del objetivo (AA)**: la × mide 40 × 40 px.\n- **2.4.3 Orden del foco (A)**: al cerrar, el padre retira el aviso y el foco queda en el documento; conviene\n  llevarlo a un control cercano.",
+    "accesibilidad": "- **4.1.3 Mensajes de estado (AA)**: el contenedor es `role=\"alert\"` en todos los tonos: al insertarse se\n  anuncia de inmediato, también los neutrales, informativos y de éxito. Con `live=\"status\"` pasa a `role=\"status\"` y\n  `aria-live=\"polite\"`: usarlo en lo informativo o de éxito que no exige atención inmediata (un proceso en curso).\n- **1.1.1 Contenido no textual (A)**: el ícono del tono va con `aria-hidden`; el tipo de aviso tiene que quedar\n  dicho en `title` o `description`.\n- **1.4.1 Uso del color (A)**: cada tono cambia de color y de ícono, salvo neutral y éxito, que comparten\n  `check_circle`: entre esos dos solo el texto los distingue.\n- **Pendiente · 1.4.3 Contraste mínimo (AA)**: `warning` en claro pone `text-feedback-warning` sobre\n  `bg-feedback-light-warning` con 4.43:1. Los demás cumplen (info 5.81:1, éxito 5.31:1, error 6.21:1,\n  neutral 11.46:1) y en oscuro todos superan 8:1.\n- **4.1.2 Nombre, función y valor (A)**: la × es un `<button>` con `aria-label=\"Cerrar alerta\"`.\n- **2.4.7 Foco visible (AA)**: la × muestra un contorno de 2 px del color del texto del tono (4.43:1 o más\n  sobre el fondo del aviso).\n- **2.5.8 Tamaño del objetivo (AA)**: la × mide 40 × 40 px.\n- **2.4.3 Orden del foco (A)**: al cerrar, el padre retira el aviso y el foco queda en el documento; conviene\n  llevarlo a un control cercano.",
     "figma": [
       {
         "nodo": "6989:873",
@@ -1139,11 +1146,13 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     ],
     "aria": {
       "roles": [
-        "alert"
+        "alert",
+        "status"
       ],
       "atributos": [
         "aria-hidden",
-        "aria-label"
+        "aria-label",
+        "aria-live"
       ]
     },
     "tokens": [
@@ -3334,7 +3343,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "descripcion": null
       }
     ],
-    "usar": "- Para ver, desde la pestaña Registros de Conciliación diaria (`recordHistoryKind: 'conciliacion'`), cómo quedó un\n  registro: si concilió o no, por qué no, las operaciones de cada lado, el sustento y quién lo trabajó.\n- Para un registro de conciliación manual, que además trae sus documentos de sustento y la justificación.",
+    "usar": "- Para ver, desde la pestaña Registros de Conciliación diaria (`recordHistoryKind: 'conciliacion'`), cómo quedó un\n  registro: si concilió o no, por qué no, las operaciones de cada lado, el sustento y quién lo trabajó.\n- Para un registro de conciliación manual, que además trae sus documentos de sustento y la justificación. Con\n  `documentosJson`, la columna de versiones lista la creación y cada modificación aprobada (trazabilidad del registro).",
     "evitar": "- Para registros del plan de cuentas o asientos de ajuste: usar `siaf-account-history-panel` o\n  `siaf-asiento-history-panel`; para el historial de estados de un documento, `siaf-document-history-panel`.\n- Para conciliar un registro: la solicitud de conciliación manual lo hace; este panel es de solo lectura.",
     "teclado": "- **Tab**: al abrir, el foco entra en la X y da la vuelta sin salir del panel.\n- **Enter / Espacio** en la X: cierran el panel (emite `closed`).\n- **Escape**: cierra el panel (emite `closed`) y el foco vuelve al botón de historial.",
     "accesibilidad": "- **4.1.2 Nombre, función y valor (A)**: es `role=\"dialog\"` con `aria-modal=\"true\"` y nombre desde su título\n  (`aria-labelledby`); la X se llama «Cerrar historial del registro».\n- **1.3.1 Información y relaciones (A)**: títulos `h2` y `h3` por sección y tablas con `thead`, `th` con `scope` y\n  `caption` oculto que las nombra.\n- **1.4.1 Uso del color (A)**: el estado del registro va en `siaf-record-status-tag`, con ícono y texto.\n- **1.4.3 Contraste mínimo (AA)**: títulos y valores `text-neutral-high` 16.29:1 (oscuro 16.53:1), etiquetas\n  `text-neutral-low` 5.01:1 (8.86:1) sobre la superficie.\n- **2.4.3 Orden del foco (A)**: con `siafFoco`, al abrir lleva el foco a la X y lo retiene en el panel; al cerrar lo\n  devuelve al botón de historial.\n- **Pendiente · 2.1.1 Teclado (A)**: el icono de descarga del sustento es solo ilustrativo en el taller: no es un botón.",
@@ -8781,6 +8790,13 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "descripcion": null
       },
       {
+        "nombre": "confirmLoading",
+        "tipo": "boolean",
+        "porDefecto": "false",
+        "requerida": false,
+        "descripcion": "El botón de confirmar muestra el giro y queda deshabilitado mientras la acción se envía."
+      },
+      {
         "nombre": "confirmVariant",
         "tipo": "'accent' | 'primary' | 'standard' | 'filled' | 'outline' | 'text' | 'secondary' | 'ghost'",
         "porDefecto": "\"primary\"",
@@ -10181,7 +10197,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     "capa": "layout",
     "importacion": "@siaf/layout/process-menu-tree/process-menu-tree.component",
     "archivo": "src/app/layout/process-menu-tree/process-menu-tree.component.ts",
-    "descripcion": "Árbol canónico de procesos del shell: el menú jerárquico que abre la opción \"Procesos\" del sidebar.\n\nSus datos por defecto son `DEFAULT_PROCESS_TREE` de `shared/utils/process-tree.util` (este archivo solo\nre-exporta el tipo y las utilidades). Es el único menú en árbol: el shell también lo usa para \"Ajustes\" con\n`ADMIN_MENU_TREE` y otros textos, así que un árbol nuevo es solo otro arreglo de nodos. El campo de búsqueda\nfunciona como paleta de comandos: filtra la navegación en vivo, sin ir al servidor, y expande las ramas\ncon coincidencias, resalta en negrita el texto buscado (sin distinguir tildes ni mayúsculas) y, sin coincidencias, muestra\n«Sin resultados» con el texto buscado. Los nodos `comingSoon` solo expanden — nunca emiten `nodeSelected`.",
+    "descripcion": "Árbol canónico de procesos del shell: el menú jerárquico que abre la opción \"Procesos\" del sidebar.\n\nSus datos por defecto son `DEFAULT_PROCESS_TREE` de `shared/utils/process-tree.util` (este archivo solo\nre-exporta el tipo y las utilidades). Es el único menú en árbol: el shell también lo usa para \"Ajustes\" con\n`ADMIN_MENU_TREE` y otros textos, así que un árbol nuevo es solo otro arreglo de nodos. El campo de búsqueda\nfunciona como paleta de comandos: filtra la navegación en vivo, sin ir al servidor, y expande las ramas\ncon coincidencias, resalta en negrita el texto buscado (sin distinguir tildes ni mayúsculas) y, sin coincidencias, muestra\n«Sin resultados» con el texto buscado. Los nodos `comingSoon` sin hijos van deshabilitados (texto e ícono atenuados, `aria-disabled`) con el tooltip «Próximamente» al pasar el mouse o enfocarlos; nunca emiten `nodeSelected`.",
     "usaSesion": false,
     "proyectaContenido": false,
     "entradas": [
@@ -10249,7 +10265,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     ],
     "usar": "- Para el panel Procesos del armazón: `siaf-app-shell` lo abre desde el rail y navega a la `moduleRoute` o\n  `createRoute` del nodo emitido (plan de cuentas contables, catálogo de eventos, asientos de ajuste, apertura\n  contable…).\n- Para el menú Ajustes: el mismo componente con `ADMIN_MENU_TREE` y sus textos (`title`, `subtitle`, `placeholder`,\n  `searchLabel`), con gestión de usuarios, entidades y auditoría.\n- Para cualquier menú jerárquico nuevo del armazón: basta otro arreglo de `ProcessMenuNode`.",
     "evitar": "- Para envolverlo o copiarlo en otro componente de menú: por eso se retiró `siaf-admin-menu`; basta pasarle otros\n  `nodes` y textos.\n- Para mostrar datos jerárquicos de solo lectura dentro de una pantalla: usar `siaf-tree-view`.\n- Para buscar registros en el servidor: usar `siaf-form-table-search` (en Documentos y registros y la bandeja, su\n  variante `siaf-records-search-toolbar`); este buscador solo filtra la navegación en memoria.",
-    "teclado": "- **Tab**: pasa por el buscador y su lupa, y luego por los nodos visibles en orden. La lupa no hace nada: el filtro\n  se aplica al escribir.\n- **Escribir en el buscador**: filtra el árbol en vivo, sin distinguir tildes ni mayúsculas, y abre las ramas con\n  coincidencias.\n- **Enter / Espacio** en un nodo: lo marca y emite `nodeSelected`; si tiene hijos, además los muestra u oculta. Los\n  nodos `comingSoon` solo expanden.",
+    "teclado": "- **Tab**: pasa por el buscador y su lupa, y luego por los nodos visibles en orden. La lupa no hace nada: el filtro\n  se aplica al escribir.\n- **Escribir en el buscador**: filtra el árbol en vivo, sin distinguir tildes ni mayúsculas, y abre las ramas con\n  coincidencias.\n- **Enter / Espacio** en un nodo: lo marca y emite `nodeSelected`; si tiene hijos, además los muestra u oculta. Un\n  nodo `comingSoon` no hace nada (con hijos, solo los muestra u oculta); sigue enfocable para leer su tooltip.",
     "accesibilidad": "- **Pendiente · 1.3.1 Información y relaciones (A)**: es un `<aside>` con `h2` y `h3`, pero la jerarquía solo se ve\n  (sangría y línea a la izquierda): los nodos son botones en `div` anidados, sin `ul`/`li` ni `role=\"tree\"`, y el\n  lector no anuncia nivel ni cantidad. Además, el `aria-label` del `aside` es fijo («Menu de procesos») y también se\n  lee en Ajustes.\n- **1.4.1 Uso del color (A)**: el nodo elegido se distingue por el fondo `bg-states-light-selected`, el color de\n  texto e ícono y, además, la negrita — no solo por el color.\n- **1.4.3 Contraste mínimo (AA)**: en claro, título `text-neutral-high` 16.29:1 y nodos `text-neutral-medium` 14.53:1\n  sobre blanco; en oscuro el panel usa `bg-surfaces-field` y falta medirlo.\n- **1.4.11 Contraste no textual (AA)**: el contorno de foco es el azul del kit (`border-states-focus`, 5.35:1 claro\n  / 10.15:1 oscuro sobre la superficie).\n- **Pendiente · 2.4.3 Orden del foco (A)**: no toma el foco al abrirse ni cierra con Escape. El armazón lo pinta\n  después del rail: desde Procesos el Tab pasa antes por Ayuda y Ajustes, y si lo pide una página\n  (`ShellNavigationService`) queda antes que el botón que lo abrió.\n- **2.4.7 Foco visible (AA)**: cada nodo muestra un contorno azul de 2 px con `focus-visible`.\n- **Pendiente · 4.1.2 Nombre, función y valor (A)**: los nodos con hijos publican `aria-expanded`, pero el elegido no\n  publica `aria-current`.\n- **Pendiente · 4.1.3 Mensajes de estado (AA)**: al filtrar no se anuncia cuántos nodos quedan. Sin coincidencias se\n  muestra «Sin resultados» (`role=\"status\"`) con el texto buscado.",
     "figma": [],
     "aria": {
@@ -10257,6 +10273,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "status"
       ],
       "atributos": [
+        "aria-disabled",
         "aria-expanded",
         "aria-hidden",
         "aria-label"
@@ -10318,6 +10335,12 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         ]
       },
       {
+        "token": "--sys-color-icon-states-disabled",
+        "via": [
+          "var()"
+        ]
+      },
+      {
         "token": "--sys-color-icon-states-enabled",
         "via": [
           "var()"
@@ -10325,6 +10348,12 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       },
       {
         "token": "--sys-color-text-neutral-activated",
+        "via": [
+          "var()"
+        ]
+      },
+      {
+        "token": "--sys-color-text-neutral-disabled",
         "via": [
           "var()"
         ]
@@ -10386,6 +10415,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       }
     ],
     "usa": [
+      "[siafTooltip]",
       "siaf-icon",
       "siaf-input"
     ],
@@ -11785,11 +11815,39 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     "proyectaContenido": false,
     "entradas": [
       {
+        "nombre": "approveConfirmLabel",
+        "tipo": "string",
+        "porDefecto": "''",
+        "requerida": false,
+        "descripcion": null
+      },
+      {
+        "nombre": "approveDescription",
+        "tipo": "string",
+        "porDefecto": "''",
+        "requerida": false,
+        "descripcion": null
+      },
+      {
         "nombre": "approveOpen",
         "tipo": "boolean",
         "porDefecto": "false",
         "requerida": false,
         "descripcion": null
+      },
+      {
+        "nombre": "approveSending",
+        "tipo": "boolean",
+        "porDefecto": "false",
+        "requerida": false,
+        "descripcion": "La aprobación se está enviando: el botón de aprobar muestra el giro y el modal sigue abierto (sin el loader de pantalla)."
+      },
+      {
+        "nombre": "approveTitle",
+        "tipo": "string",
+        "porDefecto": "''",
+        "requerida": false,
+        "descripcion": "Título, texto y botón propios del proceso; vacíos, valen los del preset «¿Aprobar solicitud?»."
       },
       {
         "nombre": "deleteOpen",

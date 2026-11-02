@@ -1,11 +1,12 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Observable } from 'rxjs';
+import { Observable, Subscription, timer } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 
 import { CatalogosApiService, TipoDocumentoResponse } from '../../../../../core/api/catalogos-api.service';
 import { SolicitudResponse, SolicitudesApiService } from '../../../../../core/api/solicitudes-api.service';
 import { PermissionService } from '../../../../../core/auth/permission.service';
+import { NotificationsStateService } from '../../../../../core/realtime/notifications-state.service';
 import { ESTADO, MOTIVOS_RECHAZO } from '../../../../../core/models/documento.model';
 import { SolicitudesFacadeService } from '../../../../../core/state/solicitudes-facade.service';
 import { BreadcrumbItem } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
@@ -22,6 +23,7 @@ import { SolicitudePageLayoutComponent } from '../../../../../shared/components/
 import { TableControlsComponent } from '../../../../../shared/components/table-controls/table-controls.component';
 import { ActionTrackerComponent, ActionTrackerSummary } from '../../../../../shared/ui/action-tracker/action-tracker.component';
 import { AlertComponent } from '../../../../../shared/ui/alert/alert.component';
+import { LoaderOverlayComponent } from '../../../../../shared/ui/loader-overlay/loader-overlay.component';
 import { ButtonComponent } from '../../../../../shared/ui/button/button.component';
 import { DocumentSummaryCardComponent } from '../../../../../shared/ui/document-summary-card/document-summary-card.component';
 import { FlowStatus } from '../../../../../shared/ui/flow-status-tag/flow-status-tag.component';
@@ -34,15 +36,20 @@ import { buildProcessBreadcrumbs } from '../../../../../shared/utils/breadcrumbs
 import { crearSnapshotFormulario, hayCambiosRespectoAlSnapshot } from '../../../../../shared/utils/form-snapshot.util';
 import { ConciliacionDiariaApiService } from '../../api/conciliacion-diaria-api.service';
 import { ConciliacionRegistrosTablaComponent } from '../../components/conciliacion-registros-tabla.component';
-import { PROCESS_ID, PROCESS_ROUTE, REQUEST_SEGMENT } from '../../config/conciliacion-diaria.config';
+import { AVISO_APROBACION_MS, INTERVALO_PROCESAMIENTO_MS, LOADER_PROCESAMIENTO_MS, PROCESS_ID, PROCESS_ROUTE, REQUEST_SEGMENT, TIMEOUT_PROCESAMIENTO_MS } from '../../config/conciliacion-diaria.config';
 import {
   CODIGO_DOCUMENTO,
   CUENTAS_CONCILIACION,
   ConciliacionManualDatos,
   CuentaBancariaConciliacion,
   NOMBRE_DOCUMENTO,
+  ProcesamientoConciliacion,
   REGISTROS_NO_CONCILIADOS,
+  RegistroConciliado,
   RegistroNoConciliado,
+  TIPOS_MODIFICACION,
+  TipoModificacion,
+  bannerDeProcesamiento,
 } from '../../models/conciliacion-diaria.model';
 import { ConciliacionRegistroEdicionComponent } from './conciliacion-registro-edicion.component';
 
@@ -50,7 +57,8 @@ const montoSoles = (valor: string): number => Number(valor.replace(/,/g, '')) ||
 const soles = (valor: number): string => `S/ ${valor.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /** Una línea de la alerta de «Verificar»: qué le falta al registro y qué hacer (Figma 327:49127). */
-const lineaVerificacion = (r: RegistroNoConciliado): string => {
+const lineaVerificacion = (r: RegistroNoConciliado, modificacion: TipoModificacion | '' = ''): string => {
+  if (modificacion) return `Registro ${r.nro}: Modifique ${modificacion === 'Montos' ? 'los montos' : 'los datos'} del registro conciliado.`;
   const lb = montoSoles(r.lbDebito) + montoSoles(r.lbCredito);
   const rb = montoSoles(r.rbDebito) + montoSoles(r.rbCredito);
   switch (r.motivo) {
@@ -91,6 +99,7 @@ const fechaHora = (iso: string): string => {
     ButtonComponent,
     ConciliacionRegistroEdicionComponent,
     ConciliacionRegistrosTablaComponent,
+    LoaderOverlayComponent,
     DetailHistoryTabsComponent,
     DocumentSummaryCardComponent,
     FormTableSearchComponent,
@@ -117,6 +126,8 @@ export class ConciliacionDiariaSolicitudComponent implements OnInit {
   private readonly solicitudesApi = inject(SolicitudesApiService);
   private readonly solicitudesFacade = inject(SolicitudesFacadeService);
   private readonly conciliacionApi = inject(ConciliacionDiariaApiService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly notificaciones = inject(NotificationsStateService);
 
   readonly heading = NOMBRE_DOCUMENTO;
   readonly breadcrumbs: BreadcrumbItem[] = buildProcessBreadcrumbs(PROCESS_ID, PROCESS_ROUTE, NOMBRE_DOCUMENTO);
@@ -138,6 +149,18 @@ export class ConciliacionDiariaSolicitudComponent implements OnInit {
   readonly editando = signal(false);
   readonly cargando = signal(false);
   readonly saving = signal(false);
+
+  // ── Tipo de acción: creación o modificación de registros conciliados ──
+  /** «Creación» concilia registros no conciliados; «Modificación» corrige registros ya conciliados (el tipo de acción llega desde «Crear documento»). */
+  readonly tipoAccion = signal<'creacion' | 'modificacion'>('creacion');
+  readonly esModificacion = computed(() => this.tipoAccion() === 'modificacion');
+  readonly textoAccion = computed(() => (this.esModificacion() ? 'Modificación' : 'Creación'));
+  readonly tituloRegistros = computed(() => (this.esModificacion() ? 'Registros conciliados' : 'Registros no conciliados'));
+  /** Qué corrige la modificación: los datos o los montos de los registros. */
+  readonly tipoModificacion = signal<TipoModificacion | ''>('');
+  readonly tiposModificacion = TIPOS_MODIFICACION.map((t) => ({ label: t, value: t }));
+  /** Los registros conciliados de la cuenta que se pueden modificar (del backend). */
+  private readonly registrosConciliados = signal<RegistroNoConciliado[]>([]);
 
   readonly headerRole = computed<'creator' | 'approver'>(() => (this.permissions.currentRole() === 'approver' ? 'approver' : 'creator'));
   readonly elaborado = computed(() => this.estado() !== 'NUEVO');
@@ -218,8 +241,9 @@ export class ConciliacionDiariaSolicitudComponent implements OnInit {
 
   readonly registrosFiltrados = computed(() => {
     const q = normalizar(this.busquedaRegistro());
-    return REGISTROS_NO_CONCILIADOS.filter((r) => !q || normalizar(Object.values(r).join(' ')).includes(q));
+    return this.fuenteRegistros().filter((r) => !q || normalizar(Object.values(r).join(' ')).includes(q));
   });
+  private readonly fuenteRegistros = computed(() => (this.esModificacion() ? this.registrosConciliados() : REGISTROS_NO_CONCILIADOS));
   readonly todosMarcados = computed(() => this.registrosFiltrados().length > 0 && this.registrosFiltrados().every((r) => this.registrosTemporales().includes(r.id)));
 
   // Tabla del documento: búsqueda, página y selección propias.
@@ -242,7 +266,7 @@ export class ConciliacionDiariaSolicitudComponent implements OnInit {
    * este momento»; los que se conciliaron ya salen completos del formulario de edición (que exige montos y sustento).
    */
   readonly formValido = computed(
-    () => !this.soloLectura() && !this.registroEnEdicion() && !!this.cuenta() && this.hayCambios(),
+    () => !this.soloLectura() && !this.registroEnEdicion() && !!this.cuenta() && (!this.esModificacion() || !!this.tipoModificacion()) && this.hayCambios(),
   );
 
   // ── Historial y trazabilidad (del historial de estados) ───────────
@@ -280,11 +304,30 @@ export class ConciliacionDiariaSolicitudComponent implements OnInit {
   readonly verificacionFallida = signal(false);
   /** Un solo aviso de error con una línea por cada registro pendiente. */
   readonly alertaVerificacion = computed(() => {
-    const pendientes = this.verificacionFallida() ? this.registrosElegidos().filter((r) => !r.conciliado) : [];
-    return pendientes.length ? { titulo: 'No se pudo verificar el documento', descripcion: pendientes.map(lineaVerificacion).join('\n') } : null;
+    const pendientes = this.verificacionFallida() ? this.registrosElegidos().filter((r) => this.pendiente(r)) : [];
+    return pendientes.length ? { titulo: 'No se pudo verificar el documento', descripcion: pendientes.map((r) => lineaVerificacion(r, this.esModificacion() ? this.tipoModificacion() : '')).join('\n') } : null;
   });
   readonly modalEliminar = signal(false);
   readonly modalAprobar = signal(false);
+  /** La aprobación se está enviando: el modal sigue abierto con el giro en «Aprobar» (sin doble envío). */
+  readonly aprobando = signal(false);
+  readonly descripcionAprobar = computed(() => {
+    const n = this.registrosElegidos().length;
+    const estado = this.esModificacion() ? 'modific' : 'concili';
+    return `La solicitud será aprobada, ${n === 1 ? `el registro quedará ${estado}ado` : `los ${n} registros quedarán ${estado}ados`}. Esto puede tardar unos segundos.`;
+  });
+
+  // ── Procesamiento posterior a la aprobación ───────────────────────
+  /** Cómo va la actualización de los sistemas relacionados; distinto del estado del documento, que sigue Aprobado. */
+  readonly procesamiento = signal<ProcesamientoConciliacion | null>(null);
+  private readonly bannerCerrado = signal(false);
+  readonly banner = computed(() => (this.bannerCerrado() ? null : bannerDeProcesamiento(this.procesamiento(), this.numeroDocumento())));
+  private consulta?: Subscription;
+  private cierreAviso?: Subscription;
+  /** Tras aprobar, el loader tapa la pantalla mientras el procesamiento siga en proceso, hasta `LOADER_PROCESAMIENTO_MS`. */
+  private readonly esperando = signal(false);
+  readonly mostrarLoader = computed(() => this.esperando() && this.procesamiento()?.estado === 'EN_PROCESO');
+  private cierreLoader?: Subscription;
   readonly modalObservar = signal(false);
   readonly modalRechazar = signal(false);
   readonly comentario = signal('');
@@ -294,12 +337,20 @@ export class ConciliacionDiariaSolicitudComponent implements OnInit {
   readonly aviso = signal<SnackbarVariant>('creation-elaborated');
 
   ngOnInit(): void {
+    this.destroyRef.onDestroy(() => {
+      this.detenerConsulta();
+      this.cierreAviso?.unsubscribe();
+      this.cierreLoader?.unsubscribe();
+    });
     this.catalogosApi.listarTiposDocumento().subscribe((tipos) => (this.tiposDocumento = tipos));
     const id = this.route.snapshot.paramMap.get('id');
+    // «Crear documento» pasa el tipo de acción en la URL (creacion o modificacion, a veces con tilde).
+    const accion = (this.route.snapshot.queryParamMap.get('actionType') ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    if (accion === 'modificacion') this.tipoAccion.set('modificacion');
     if (id) this.cargar(id);
 
     const estadoNavegacion = history.state as { fromSave?: boolean } | null;
-    if (estadoNavegacion?.fromSave) this.mostrarAviso('creation-elaborated');
+    if (estadoNavegacion?.fromSave) this.mostrarAviso(this.variante('elaborated'));
   }
 
   // ── Cuenta bancaria ───────────────────────────────────────────────
@@ -322,7 +373,20 @@ export class ConciliacionDiariaSolicitudComponent implements OnInit {
   abrirRegistros(): void {
     this.registrosTemporales.set(this.registrosElegidos().map((r) => r.id));
     this.busquedaRegistro.set('');
-    this.registrosAbierto.set(true);
+    if (!this.esModificacion()) {
+      this.registrosAbierto.set(true);
+      return;
+    }
+    // Una modificación parte de los registros conciliados de la cuenta, sin su trabajo anterior (sustento, justificación, ediciones).
+    this.conciliacionApi.listarRegistros(this.cuenta()?.numeroCuenta).subscribe((lista) => {
+      this.registrosConciliados.set(lista.map((r) => this.comoRegistroAModificar(r)));
+      this.registrosAbierto.set(true);
+    });
+  }
+
+  private comoRegistroAModificar(r: RegistroConciliado): RegistroNoConciliado {
+    const { documentos: _documentos, numeroCuenta: _cuenta, ...registro } = r;
+    return { ...registro, conciliado: true, modificado: false, sustentos: [], justificacion: '', ediciones: [] };
   }
 
   alternarRegistro(id: string): void {
@@ -338,7 +402,7 @@ export class ConciliacionDiariaSolicitudComponent implements OnInit {
     const ids = this.registrosTemporales();
     // Los registros que ya se habían conciliado conservan su trabajo.
     const previos = new Map(this.registrosElegidos().map((r) => [r.id, r]));
-    this.registrosElegidos.set(REGISTROS_NO_CONCILIADOS.filter((r) => ids.includes(r.id)).map((r) => previos.get(r.id) ?? r));
+    this.registrosElegidos.set(this.fuenteRegistros().filter((r) => ids.includes(r.id)).map((r) => previos.get(r.id) ?? r));
     this.marcados.set([]);
     this.registrosAbierto.set(false);
   }
@@ -397,7 +461,7 @@ export class ConciliacionDiariaSolicitudComponent implements OnInit {
     this.modalGrabar.set(false);
     const cuenta = this.cuenta();
     if (!cuenta) return;
-    const datos: ConciliacionManualDatos = { numeroCuenta: cuenta.numeroCuenta, registros: this.registrosElegidos() };
+    const datos: ConciliacionManualDatos = { numeroCuenta: cuenta.numeroCuenta, registros: this.registrosElegidos(), ...(this.esModificacion() && this.tipoModificacion() ? { tipoModificacion: this.tipoModificacion() as TipoModificacion } : {}) };
     const guardarYElaborar = (id: string): Observable<unknown> =>
       this.conciliacionApi.guardarDetalle(id, datos).pipe(switchMap(() => this.solicitudesApi.cambiarEstado(id, { estadoNuevo: 'ELABORADO' })));
 
@@ -408,7 +472,7 @@ export class ConciliacionDiariaSolicitudComponent implements OnInit {
       this.solicitudesApi.actualizar(id, { justificacion: this.justificacion(), organoLinea: ENTE_RECTOR })
         .pipe(switchMap(() => guardarYElaborar(id)))
         .subscribe({
-          next: () => { this.editando.set(false); this.mostrarAviso('creation-elaborated'); this.cargar(id); },
+          next: () => { this.editando.set(false); this.mostrarAviso(this.variante('elaborated')); this.cargar(id); },
           error: () => this.cargar(id),
         });
       return;
@@ -418,7 +482,7 @@ export class ConciliacionDiariaSolicitudComponent implements OnInit {
     if (!tipo) { this.saving.set(false); return; }
     this.solicitudesFacade.crearSolicitud({
       tipoDocumentoId: tipo.id,
-      tipoAccion: 'creacion',
+      tipoAccion: this.tipoAccion(),
       fechaRequerimiento: new Date().toISOString(),
       organoLinea: ENTE_RECTOR,
       justificacion: this.justificacion(),
@@ -436,25 +500,32 @@ export class ConciliacionDiariaSolicitudComponent implements OnInit {
 
   /** Motivo del documento: la cantidad de registros que se concilian. */
   private justificacion(): string {
-    return `Conciliación manual de ${this.registrosElegidos().length} registro(s) no conciliado(s).`;
+    return this.esModificacion()
+      ? `Modificación de ${this.tipoModificacion().toLowerCase()} de ${this.registrosElegidos().length} registro(s) conciliado(s).`
+      : `Conciliación manual de ${this.registrosElegidos().length} registro(s) no conciliado(s).`;
   }
 
   // ── Acciones de estado ────────────────────────────────────────────
+  /** Falta trabajar el registro: conciliarlo (creación) o modificarlo (modificación). */
+  private pendiente(r: RegistroNoConciliado): boolean {
+    return this.esModificacion() ? !r.modificado : !r.conciliado;
+  }
+
   /** «Verificar»: si queda algún registro sin conciliar lo informa con alertas; si no, pide la confirmación. */
   onVerificar(): void {
-    const pendientes = this.registrosElegidos().some((r) => !r.conciliado);
+    const pendientes = this.registrosElegidos().some((r) => this.pendiente(r));
     this.verificacionFallida.set(pendientes);
     if (!pendientes) this.modalVerificar.set(true);
   }
 
   onConfirmarVerificar(): void {
     this.modalVerificar.set(false);
-    this.accion((id) => this.solicitudesApi.cambiarEstado(id, { estadoNuevo: 'VERIFICADO' }), 'creation-verified');
+    this.accion((id) => this.solicitudesApi.cambiarEstado(id, { estadoNuevo: 'VERIFICADO' }), this.variante('verified'));
   }
 
   onConfirmarEliminar(): void {
     this.modalEliminar.set(false);
-    this.accion((id) => this.solicitudesApi.cambiarEstado(id, { estadoNuevo: 'ELIMINADO' }), 'creation-deleted');
+    this.accion((id) => this.solicitudesApi.cambiarEstado(id, { estadoNuevo: 'ELIMINADO' }), this.variante('deleted'));
   }
 
   abrirAprobar(): void { this.comentario.set(''); this.modalAprobar.set(true); }
@@ -462,26 +533,47 @@ export class ConciliacionDiariaSolicitudComponent implements OnInit {
   abrirRechazar(): void { this.comentario.set(''); this.motivoRechazo.set(''); this.modalRechazar.set(true); }
 
   cerrarModalesAprobador(): void {
+    if (this.aprobando()) return;
     this.modalAprobar.set(false);
     this.modalObservar.set(false);
     this.modalRechazar.set(false);
   }
 
+  /** Aprueba: el documento queda Aprobado y sus registros conciliados al momento; los sistemas relacionados se actualizan después. */
   onConfirmarAprobar(): void {
-    this.modalAprobar.set(false);
-    this.accion((id) => this.solicitudesFacade.aprobar(id), 'creation-approved');
+    const id = this.solicitudId;
+    if (!id || this.aprobando()) return;
+    this.aprobando.set(true);
+    this.conciliacionApi.aprobar(id).subscribe({
+      next: (r) => {
+        this.aprobando.set(false);
+        this.modalAprobar.set(false);
+        this.bannerCerrado.set(false);
+        this.procesamiento.set({ estado: r.procesamiento, actualizadoEn: new Date().toISOString(), sistemasConError: [], reintentosAgotados: false });
+        this.mostrarAviso(this.variante('approved'));
+        // El toast de éxito se cierra solo.
+        this.cierreAviso?.unsubscribe();
+        this.cierreAviso = timer(AVISO_APROBACION_MS).subscribe(() => this.avisoAbierto.set(false));
+        this.esperando.set(true);
+        this.cierreLoader?.unsubscribe();
+        this.cierreLoader = timer(LOADER_PROCESAMIENTO_MS).subscribe(() => this.esperando.set(false));
+        this.cargar(id);
+      },
+      // El modal sigue abierto para reintentar.
+      error: () => this.aprobando.set(false),
+    });
   }
 
   onConfirmarObservar(): void {
     if (!this.comentario().trim()) return;
     this.modalObservar.set(false);
-    this.accion((id) => this.solicitudesFacade.observar(id, this.comentario()), 'creation-observed');
+    this.accion((id) => this.solicitudesFacade.observar(id, this.comentario()), this.variante('observed'));
   }
 
   onConfirmarRechazar(): void {
     if (!this.comentario().trim()) return;
     this.modalRechazar.set(false);
-    this.accion((id) => this.solicitudesFacade.rechazar(id, this.comentario(), this.motivoRechazo() || undefined), 'creation-rejected');
+    this.accion((id) => this.solicitudesFacade.rechazar(id, this.comentario(), this.motivoRechazo() || undefined), this.variante('rejected'));
   }
 
   /** Verificar, eliminar, aprobar, observar y rechazar: llamar, avisar y recargar. */
@@ -493,6 +585,11 @@ export class ConciliacionDiariaSolicitudComponent implements OnInit {
       next: () => { this.mostrarAviso(aviso); this.cargar(id); },
       error: () => this.saving.set(false),
     });
+  }
+
+  /** El aviso de creación o de modificación según el tipo de acción del documento. */
+  private variante(accion: 'elaborated' | 'verified' | 'deleted' | 'approved' | 'observed' | 'rejected'): SnackbarVariant {
+    return `${this.esModificacion() ? 'modification' : 'creation'}-${accion}` as SnackbarVariant;
   }
 
   private mostrarAviso(variante: SnackbarVariant): void {
@@ -512,13 +609,44 @@ export class ConciliacionDiariaSolicitudComponent implements OnInit {
         this.restaurar(s);
         this.cargando.set(false);
         this.saving.set(false);
+        if (s.estado === 'APROBADO') this.consultarProcesamiento(s.id);
+        else this.detenerConsulta();
       },
       error: () => { this.cargando.set(false); this.saving.set(false); },
     });
   }
 
+  /** Consulta el procesamiento y, mientras siga en proceso, vuelve a preguntar cada `INTERVALO_PROCESAMIENTO_MS` hasta que termine, venza el tiempo o se salga de la pantalla. */
+  private consultarProcesamiento(id: string): void {
+    this.detenerConsulta();
+    const inicio = Date.now();
+    this.consulta = timer(0, INTERVALO_PROCESAMIENTO_MS)
+      .pipe(switchMap(() => this.conciliacionApi.obtenerProcesamiento(id)))
+      .subscribe({
+        next: (p) => {
+          const terminoAhora = this.procesamiento()?.estado === 'EN_PROCESO' && p.estado !== 'EN_PROCESO';
+          this.procesamiento.set(p);
+          // Al terminar el backend avisa al elaborador y al aprobador: la campana se actualiza sin recargar.
+          if (terminoAhora) void this.notificaciones.refresh();
+          if (p.estado !== 'EN_PROCESO' || Date.now() - inicio > TIMEOUT_PROCESAMIENTO_MS) this.detenerConsulta();
+        },
+        error: () => { this.procesamiento.set(null); this.detenerConsulta(); },
+      });
+  }
+
+  cerrarBanner(): void {
+    this.bannerCerrado.set(true);
+  }
+
+  private detenerConsulta(): void {
+    this.consulta?.unsubscribe();
+    this.consulta = undefined;
+  }
+
   private restaurar(s: SolicitudResponse | null): void {
     const detalle = s?.detalleConciliacionManual;
+    if (s) this.tipoAccion.set(s.tipoAccion === 'modificacion' ? 'modificacion' : 'creacion');
+    this.tipoModificacion.set(detalle?.tipoModificacion ?? '');
     this.cuenta.set(CUENTAS_CONCILIACION.find((c) => c.numeroCuenta === detalle?.numeroCuenta) ?? null);
     this.registrosElegidos.set(detalle?.registros.map((r) => ({ ...r })) ?? []);
     this.registroEnEdicion.set(null);

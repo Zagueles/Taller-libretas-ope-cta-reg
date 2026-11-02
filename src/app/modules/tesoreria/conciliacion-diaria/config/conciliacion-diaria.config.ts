@@ -39,18 +39,18 @@ const recordColumns: DocumentsRecordsColumn[] = [
   { key: 'lbNumero', label: 'Número', panelLabel: 'Libro banco · Número', headerGroup: 'Libro banco', visibility: 'visible', group: 'default', widthClass: 'w-[110px]', sortable: true },
   { key: 'lbDescripcion', label: 'Descripción', panelLabel: 'Libro banco · Descripción', headerGroup: 'Libro banco', visibility: 'visible', group: 'default', widthClass: 'w-[150px]', sortable: true },
   { key: 'lbEntidad', label: 'Ent. adm. ing.', panelLabel: 'Libro banco · Ent. adm. ing.', headerGroup: 'Libro banco', visibility: 'visible', group: 'default', widthClass: 'w-[130px]', sortable: true },
-  { key: 'lbDebito', label: 'Débito (S/)', panelLabel: 'Libro banco · Débito', headerGroup: 'Libro banco', visibility: 'visible', group: 'default', align: 'right', widthClass: 'w-[110px]', sortable: true, sortType: 'number' },
-  { key: 'lbCredito', label: 'Crédito (S/)', panelLabel: 'Libro banco · Crédito', headerGroup: 'Libro banco', visibility: 'visible', group: 'default', align: 'right', widthClass: 'w-[110px]', sortable: true, sortType: 'number' },
+  { key: 'lbDebito', label: 'Débito (S/)', panelLabel: 'Libro banco · Débito', headerGroup: 'Libro banco', visibility: 'visible', group: 'default', align: 'right', widthClass: 'w-[140px]', sortable: true, sortType: 'number' },
+  { key: 'lbCredito', label: 'Crédito (S/)', panelLabel: 'Libro banco · Crédito', headerGroup: 'Libro banco', visibility: 'visible', group: 'default', align: 'right', widthClass: 'w-[140px]', sortable: true, sortType: 'number' },
   { key: 'rbFecha', label: 'F. operación B.', panelLabel: 'Registro de operaciones bancarias · F. operación B.', headerGroup: 'Registro de operaciones bancarias', visibility: 'visible', group: 'default', widthClass: 'w-[140px]', sortable: true, sortType: 'date' },
   { key: 'rbNumero', label: 'Número', panelLabel: 'Registro de operaciones bancarias · Número', headerGroup: 'Registro de operaciones bancarias', visibility: 'visible', group: 'default', widthClass: 'w-[110px]', sortable: true },
   { key: 'rbDescripcion', label: 'Descripción', panelLabel: 'Registro de operaciones bancarias · Descripción', headerGroup: 'Registro de operaciones bancarias', visibility: 'visible', group: 'default', widthClass: 'w-[150px]', sortable: true },
-  { key: 'rbDebito', label: 'Débito (S/)', panelLabel: 'Registro de operaciones bancarias · Débito', headerGroup: 'Registro de operaciones bancarias', visibility: 'visible', group: 'default', align: 'right', widthClass: 'w-[110px]', sortable: true, sortType: 'number' },
-  { key: 'rbCredito', label: 'Crédito (S/)', panelLabel: 'Registro de operaciones bancarias · Crédito', headerGroup: 'Registro de operaciones bancarias', visibility: 'visible', group: 'default', align: 'right', widthClass: 'w-[110px]', sortable: true, sortType: 'number' },
+  { key: 'rbDebito', label: 'Débito (S/)', panelLabel: 'Registro de operaciones bancarias · Débito', headerGroup: 'Registro de operaciones bancarias', visibility: 'visible', group: 'default', align: 'right', widthClass: 'w-[140px]', sortable: true, sortType: 'number' },
+  { key: 'rbCredito', label: 'Crédito (S/)', panelLabel: 'Registro de operaciones bancarias · Crédito', headerGroup: 'Registro de operaciones bancarias', visibility: 'visible', group: 'default', align: 'right', widthClass: 'w-[140px]', sortable: true, sortType: 'number' },
   { key: 'motivo', label: 'Mot. incons.', panelLabel: 'Motivo de inconsistencias', visibility: 'visible', group: 'default', widthClass: 'w-[140px]', sortable: true },
   { key: 'status', label: 'Estado reg.', panelLabel: 'Estado del registro', visibility: 'visible', group: 'default', widthClass: 'w-[130px]', kind: 'record-status', sortable: true },
   { key: 'number', label: 'Número', panelLabel: 'Documento · Número', headerGroup: 'Documento', visibility: 'visible', group: 'default', widthClass: 'w-[130px]', sortable: true },
   { key: 'descripcionDocumento', label: 'Descripción', panelLabel: 'Documento · Descripción', headerGroup: 'Documento', visibility: 'visible', group: 'default', widthClass: 'w-[270px]', sortable: true },
-  { key: 'estadoConciliacion', label: 'Estado conciliación', panelLabel: 'Estado de conciliación', visibility: 'visible', group: 'default', widthClass: 'w-[150px]', kind: 'conciliation-status', fixed: true, sortable: true },
+  { key: 'estadoConciliacion', label: 'Estado conc.', panelLabel: 'Estado de conciliación', visibility: 'visible', group: 'default', widthClass: 'w-[150px]', kind: 'conciliation-status', fixed: true, sortable: true },
 ];
 
 /** Documentos y registros de Conciliación diaria (Figma 261:54041 y 203:14262). Los documentos los genera el sistema. */
@@ -65,7 +65,7 @@ export const CONCILIACION_DIARIA_CONFIG: DocumentsRecordsConfig = {
   documentColumns,
   recordColumns,
   documentTableMinWidthClass: 'min-w-[1270px]',
-  recordTableMinWidthClass: 'min-w-[2300px]',
+  recordTableMinWidthClass: 'min-w-[2420px]',
   rememberTab: true,
   modoConsulta: true,
   crearEnModoConsulta: true,
@@ -101,3 +101,12 @@ export const CONCILIACION_DIARIA_CONFIG: DocumentsRecordsConfig = {
   recordFilter2Key: 'status',
   recordFilter2Options: ['Activo'],
 };
+
+/** Cada cuánto se consulta el procesamiento mientras el documento aprobado está abierto. */
+export const INTERVALO_PROCESAMIENTO_MS = 5000;
+/** Cuánto se espera antes de dejar de consultar. Pendiente de definir con el equipo. */
+export const TIMEOUT_PROCESAMIENTO_MS = 10 * 60 * 1000;
+/** El toast «se ha aprobado con éxito» se cierra solo a los 5 s. */
+export const AVISO_APROBACION_MS = 5000;
+/** Cuánto tapa la pantalla el loader «Procesando la conciliación» tras aprobar; después queda solo el banner y se puede salir. */
+export const LOADER_PROCESAMIENTO_MS = 15000;

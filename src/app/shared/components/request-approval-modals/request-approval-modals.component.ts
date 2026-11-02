@@ -102,9 +102,13 @@ import { SnackbarComponent, SnackbarVariant } from '../../ui/snackbar/snackbar.c
     <siaf-modal
       variant="approve"
       [open]="approveOpen"
+      [title]="approveTitle"
+      [description]="approveDescription"
+      [confirmLabel]="approveConfirmLabel"
       confirmVariant="primary"
       [showIllustration]="true"
-      [confirmDisabled]="saving"
+      [confirmLoading]="approveSending"
+      [confirmDisabled]="saving || approveSending"
       (canceled)="approvalClosed.emit()"
       (closed)="approvalClosed.emit()"
       (confirmed)="approveConfirmed.emit()"
@@ -170,6 +174,14 @@ export class RequestApprovalModalsComponent {
 
   /** Acción en curso — deshabilita confirmar y muestra el loader. */
   @Input() saving = false;
+
+  // ── Aprobar ──
+  /** Título, texto y botón propios del proceso; vacíos, valen los del preset «¿Aprobar solicitud?». */
+  @Input() approveTitle = '';
+  @Input() approveDescription = '';
+  @Input() approveConfirmLabel = '';
+  /** La aprobación se está enviando: el botón de aprobar muestra el giro y el modal sigue abierto (sin el loader de pantalla). */
+  @Input() approveSending = false;
 
   // ── Observar / Rechazar ──
   /** Comentario de la observación / motivo del rechazo. */

@@ -6,10 +6,11 @@ import { Observable } from 'rxjs';
 import type { LoginResponse } from '../core/api/auth-api.service';
 import type { SolicitudResponse } from '../core/api/solicitudes-api.service';
 import type { CuentaBancariaDatos, CuentaBancariaRegistro } from '../modules/tesoreria/cuentas-bancarias/models/cuenta-bancaria.model';
-import { CUENTAS_CONCILIACION, ConciliacionManualDatos, REGISTROS_NO_CONCILIADOS } from '../modules/tesoreria/conciliacion-diaria/models/conciliacion-diaria.model';
+import { CUENTAS_CONCILIACION, ConciliacionManualDatos, REGISTROS_NO_CONCILIADOS, RegistroConciliado } from '../modules/tesoreria/conciliacion-diaria/models/conciliacion-diaria.model';
 import type { DetalleDocumentoLibreta, DetalleMovimientoLibreta, DocumentoLibreta, MovimientoLibretaRegistro, CuentaRegistroCatalogo } from '../modules/tesoreria/registro-libretas-cuentas-registro/models/registro-libretas.model';
 import { mockBackendInterceptor } from './mock-backend.interceptor';
 import { leerDatos, reiniciarDatosDemo } from './mock-db';
+import { DEMO_PROCESAMIENTO } from './procesamiento-conciliacion';
 import { CONTRASENA_DEMO } from './usuarios-demo';
 
 /**
@@ -246,6 +247,186 @@ describe('mockBackendInterceptor', () => {
       const antes = esperar(http.get<CuentaBancariaRegistro[]>(`${API}/cuentas-bancarias`, { headers: luis })).valor!.length;
       esperar(http.patch(`${API}/solicitudes/${id}/estado`, { estadoNuevo: 'APROBADO' }, { headers: luis }));
       expect(esperar(http.get<CuentaBancariaRegistro[]>(`${API}/cuentas-bancarias`, { headers: luis })).valor!.length).toBe(antes);
+    }));
+  });
+
+  describe('modificación de registros conciliados', () => {
+    const original = { ...DEMO_PROCESAMIENTO };
+    afterEach(() => Object.assign(DEMO_PROCESAMIENTO, original));
+
+    const registros = (headers: HttpHeaders) => esperar(http.get<RegistroConciliado[]>(`${API}/conciliaciones-manuales/registros`, { headers })).valor!;
+
+    /** Una modificación en borrador: el registro de ejemplo ya conciliado, con el crédito corregido en ambos lados. */
+    function modificacion(carla: HttpHeaders, tipoModificacion = 'Montos') {
+      const creada = esperar(http.post<SolicitudResponse>(`${API}/solicitudes`, { tipoDocumentoId: 'td-scmd', tipoAccion: 'modificacion', organoLinea: 'DGTP', justificacion: 'Prueba' }, { headers: carla }));
+      const id = creada.valor!.id;
+      const actual = registros(carla)[0];
+      const { documentos: _documentos, numeroCuenta: _cuenta, ...base } = actual;
+      const corregido = { ...base, lbCredito: '1,300.00', rbCredito: '1,300.00', modificado: true, sustentos: [{ tipo: 'Constancia', nombre: 'modificacion.pdf' }], justificacion: 'Se corrige el monto.', ediciones: [{ lado: 'Libro banco', numero: base.lbNumero, campo: 'Crédito', antes: base.lbCredito, despues: '1,300.00' }] };
+      const guardar = (detalle: object) => esperar(http.post(`${API}/solicitudes/${id}/conciliacion-manual`, detalle, { headers: carla })).error;
+      return { id, actual, corregido, guardar, numeroCuenta: actual.numeroCuenta, tipoModificacion };
+    }
+
+    it('la conciliación ofrece la acción «modificación» y los registros conciliados salen del backend', fakeAsync(() => {
+      const carla = entrar('creador');
+      const tipos = esperar(http.get<{ codigo: string; accionesPermitidas: { tipoAccion: string }[] }[]>(`${API}/tipos-documento`, { headers: carla }));
+      expect(tipos.valor!.find((t) => t.codigo === 'SCMD')!.accionesPermitidas.map((a) => a.tipoAccion)).toEqual(['creacion', 'modificacion']);
+
+      const lista = registros(carla);
+      expect(lista.length).toBe(2);
+      expect(lista[0].documentos.map((d) => [d.tipoAccion, d.numero])).toEqual([['Creación', '000001-2026']]);
+      expect(lista[0].motivo).toBe('-');
+    }));
+
+    it('exige el tipo de modificación y que los registros ya estén conciliados', fakeAsync(() => {
+      const carla = entrar('creador');
+      const { guardar, corregido, numeroCuenta } = modificacion(carla);
+
+      expect(guardar({ numeroCuenta, registros: [corregido] })?.error.message).toContain('tipo de modificación');
+      expect(guardar({ numeroCuenta, tipoModificacion: 'Otro', registros: [corregido] })?.status).toBe(400);
+      expect(guardar({ numeroCuenta, tipoModificacion: 'Montos', registros: [{ ...corregido, id: 'nc-1' }] })?.error.message).toContain('registros conciliados');
+      expect(guardar({ numeroCuenta, tipoModificacion: 'Montos', registros: [corregido] })).toBeUndefined();
+    }));
+
+    it('no se puede elaborar sin haber modificado cada registro', fakeAsync(() => {
+      const carla = entrar('creador');
+      const { id, guardar, corregido, numeroCuenta } = modificacion(carla);
+      const elaborar = () => esperar(http.patch(`${API}/solicitudes/${id}/estado`, { estadoNuevo: 'ELABORADO' }, { headers: carla })).error;
+
+      guardar({ numeroCuenta, tipoModificacion: 'Montos', registros: [{ ...corregido, modificado: false }] });
+      expect(elaborar()?.error.message).toContain('Modifique cada registro');
+      guardar({ numeroCuenta, tipoModificacion: 'Montos', registros: [corregido] });
+      expect(elaborar()).toBeUndefined();
+    }));
+
+    it('al aprobar, el registro toma los datos nuevos y su historial suma el documento de modificación', fakeAsync(() => {
+      Object.assign(DEMO_PROCESAMIENTO, { escenario: 'aplicado', duracionMs: 60_000 });
+      const carla = entrar('creador');
+      const luis = entrar('aprobador');
+      const { id, actual, corregido, guardar, numeroCuenta } = modificacion(carla);
+      guardar({ numeroCuenta, tipoModificacion: 'Montos', registros: [corregido] });
+      const numero = esperar(http.patch<{ numero: string }>(`${API}/solicitudes/${id}/estado`, { estadoNuevo: 'ELABORADO' }, { headers: carla })).valor!.numero;
+      esperar(http.patch(`${API}/solicitudes/${id}/estado`, { estadoNuevo: 'VERIFICADO' }, { headers: carla }));
+
+      // Mientras no se apruebe, el registro sigue como estaba.
+      expect(registros(luis)[0].lbCredito).toBe(actual.lbCredito);
+      const aprobada = esperar(http.post<{ procesamiento: string }>(`${API}/conciliaciones-manuales/${id}/aprobar`, {}, { headers: luis }));
+      expect(aprobada.valor?.procesamiento).toBe('EN_PROCESO');
+
+      const despues = registros(luis);
+      const modificado = despues.find((r) => r.id === actual.id)!;
+      expect(despues.length).toBe(2);
+      expect([modificado.lbCredito, modificado.rbCredito]).toEqual(['1,300.00', '1,300.00']);
+      expect(modificado.documentos.map((d) => [d.tipoAccion, d.numero, d.tipoModificacion])).toEqual([
+        ['Creación', '000001-2026', undefined],
+        ['Modificación', numero, 'Montos'],
+      ]);
+      // Cada documento conserva los datos con los que se aprobó: la creación, lo conciliado; la modificación, lo corregido.
+      expect([modificado.documentos[0].datos.lbCredito, modificado.documentos[1].datos.lbCredito]).toEqual([actual.lbCredito, '1,300.00']);
+      expect(modificado.documentos[1]).toEqual(jasmine.objectContaining({ elaboradoPor: 'CARLA MENDOZA RÍOS', aprobadoPor: 'LUIS QUISPE SALAS', justificacion: 'Se corrige el monto.' }));
+      expect(modificado.ediciones?.some((e) => e.despues === '1,300.00')).toBeTrue();
+    }));
+
+    it('una creación aprobada suma sus registros conciliados a la lista', fakeAsync(() => {
+      Object.assign(DEMO_PROCESAMIENTO, { escenario: 'aplicado', duracionMs: 60_000 });
+      const carla = entrar('creador');
+      const luis = entrar('aprobador');
+      const creada = esperar(http.post<SolicitudResponse>(`${API}/solicitudes`, { tipoDocumentoId: 'td-scmd', tipoAccion: 'creacion', organoLinea: 'DGTP', justificacion: 'Prueba' }, { headers: carla }));
+      const id = creada.valor!.id;
+      const nuevo = { ...REGISTROS_NO_CONCILIADOS[0], lbDebito: '0.00', lbCredito: '1,000.00', rbDebito: '0.00', rbCredito: '1,000.00', conciliado: true, sustentos: [{ tipo: 'Constancia', nombre: 'c.pdf' }], justificacion: 'Coincide.' };
+      esperar(http.post(`${API}/solicitudes/${id}/conciliacion-manual`, { numeroCuenta: CUENTAS_CONCILIACION[0].numeroCuenta, registros: [nuevo] }, { headers: carla }));
+      const numero = esperar(http.patch<{ numero: string }>(`${API}/solicitudes/${id}/estado`, { estadoNuevo: 'ELABORADO' }, { headers: carla })).valor!.numero;
+      esperar(http.patch(`${API}/solicitudes/${id}/estado`, { estadoNuevo: 'VERIFICADO' }, { headers: carla }));
+      esperar(http.post(`${API}/conciliaciones-manuales/${id}/aprobar`, {}, { headers: luis }));
+
+      const lista = registros(luis);
+      expect(lista.length).toBe(3);
+      expect(lista[2].documentos.map((d) => [d.tipoAccion, d.numero])).toEqual([['Creación', numero]]);
+      expect(lista[2].motivo).toBe('-');
+    }));
+  });
+
+  describe('procesamiento de la conciliación tras la aprobación', () => {
+    interface Aviso { titulo: string; mensaje: string; leida: boolean; documento: { id: string } }
+    const original = { ...DEMO_PROCESAMIENTO };
+    afterEach(() => Object.assign(DEMO_PROCESAMIENTO, original));
+
+    /** Carla elabora y verifica una conciliación y Luis la aprueba: el documento queda Aprobado y el procesamiento, en proceso. */
+    function aprobar(escenario: typeof DEMO_PROCESAMIENTO.escenario, duracionMs = 0) {
+      Object.assign(DEMO_PROCESAMIENTO, { escenario, duracionMs });
+      const carla = entrar('creador');
+      const luis = entrar('aprobador');
+      const creada = esperar(http.post<SolicitudResponse>(`${API}/solicitudes`, { tipoDocumentoId: 'td-scmd', tipoAccion: 'creacion', organoLinea: 'DGTP', justificacion: 'Prueba' }, { headers: carla }));
+      const id = creada.valor!.id;
+      const registro = { ...REGISTROS_NO_CONCILIADOS[0], lbDebito: '0.00', lbCredito: '1,000.00', rbDebito: '0.00', rbCredito: '1,000.00', conciliado: true, sustentos: [{ tipo: 'Constancia', nombre: 'c.pdf' }], justificacion: 'Coincide.' };
+      esperar(http.post(`${API}/solicitudes/${id}/conciliacion-manual`, { numeroCuenta: CUENTAS_CONCILIACION[0].numeroCuenta, registros: [registro] }, { headers: carla }));
+      const numero = esperar(http.patch<{ numero: string }>(`${API}/solicitudes/${id}/estado`, { estadoNuevo: 'ELABORADO' }, { headers: carla })).valor!.numero;
+      esperar(http.patch(`${API}/solicitudes/${id}/estado`, { estadoNuevo: 'VERIFICADO' }, { headers: carla }));
+      const respuesta = esperar(http.post<{ estadoDocumento: string; procesamiento: string }>(`${API}/conciliaciones-manuales/${id}/aprobar`, {}, { headers: luis }));
+      return { id, numero, carla, luis, respuesta };
+    }
+    const procesamiento = (id: string, headers: HttpHeaders) =>
+      esperar(http.get<{ estado: string; sistemasConError: { nombre: string }[]; reintentosAgotados: boolean }>(`${API}/conciliaciones-manuales/${id}/procesamiento`, { headers })).valor!;
+    const avisos = (headers: HttpHeaders, id: string) =>
+      esperar(http.get<Aviso[]>(`${API}/notificaciones`, { headers })).valor!.filter((n) => n.documento.id === id && n.titulo.startsWith('Conciliación'));
+
+    it('aprobar deja el documento Aprobado y el procesamiento en proceso, sin avisar todavía', fakeAsync(() => {
+      const { id, respuesta, carla, luis } = aprobar('aplicado', 60_000);
+
+      expect(respuesta.valor).toEqual({ estadoDocumento: 'APROBADO', procesamiento: 'EN_PROCESO' });
+      expect(esperar(http.get<SolicitudResponse>(`${API}/solicitudes/${id}`, { headers: luis })).valor?.estado).toBe('APROBADO');
+      expect(procesamiento(id, luis).estado).toBe('EN_PROCESO');
+      expect(avisos(carla, id)).withContext('«en proceso» no genera notificación').toEqual([]);
+    }));
+
+    it('«aplicado»: al terminar avisa al elaborador y al aprobador', fakeAsync(() => {
+      const { id, numero, carla, luis } = aprobar('aplicado');
+
+      expect(procesamiento(id, luis)).toEqual(jasmine.objectContaining({ estado: 'APLICADO', sistemasConError: [], reintentosAgotados: false }));
+      for (const quien of [carla, luis]) {
+        const [aviso] = avisos(quien, id);
+        expect(aviso.titulo).toBe(`Conciliación ${numero} aplicada`);
+        expect(aviso.mensaje).toBe('Los sistemas relacionados se actualizaron.');
+        expect(aviso.leida).toBeFalse();
+      }
+      // Una segunda consulta no repite el aviso.
+      procesamiento(id, luis);
+      expect(avisos(carla, id).length).toBe(1);
+    }));
+
+    it('«con incidencias»: el documento sigue Aprobado y se nombra el sistema que falló', fakeAsync(() => {
+      const { id, numero, carla, luis } = aprobar('con-incidencias');
+      const p = procesamiento(id, luis);
+
+      expect(p.estado).toBe('CON_INCIDENCIAS');
+      expect(p.sistemasConError.map((x) => x.nombre)).toEqual(['Contabilidad']);
+      expect(p.reintentosAgotados).toBeFalse();
+      expect(esperar(http.get<SolicitudResponse>(`${API}/solicitudes/${id}`, { headers: luis })).valor?.estado).toBe('APROBADO');
+      expect(avisos(carla, id)[0].titulo).toBe(`Conciliación ${numero}: no se pudo actualizar Contabilidad`);
+      expect(avisos(carla, id)[0].mensaje).toBe('El documento sigue aprobado.');
+    }));
+
+    it('«reintentos agotados»: fallan varios sistemas y el procesamiento lo indica', fakeAsync(() => {
+      const { id, numero, carla, luis } = aprobar('reintentos-agotados');
+      const p = procesamiento(id, luis);
+
+      expect(p.sistemasConError.map((x) => x.nombre)).toEqual(['Libretas', 'Contabilidad']);
+      expect(p.reintentosAgotados).toBeTrue();
+      expect(avisos(carla, id)[0].titulo).toBe(`Conciliación ${numero}: no se pudo actualizar 2 sistemas: Libretas y Contabilidad`);
+    }));
+
+    it('«procesando» no termina nunca', fakeAsync(() => {
+      const { id, luis } = aprobar('procesando');
+      expect(procesamiento(id, luis).estado).toBe('EN_PROCESO');
+    }));
+
+    it('solo el aprobador aprueba y la conciliación aprobada de ejemplo ya está aplicada', fakeAsync(() => {
+      const carla = entrar('creador');
+      const luis = entrar('aprobador');
+      const aprobada = leerDatos().solicitudes.find((x) => x.estado === 'APROBADO' && x.catDocumento?.codigo === 'SCMD')!;
+      expect(esperar(http.post(`${API}/conciliaciones-manuales/${aprobada.id}/aprobar`, {}, { headers: carla })).error?.status).toBe(409);
+      expect(procesamiento(aprobada.id, luis).estado).toBe('APLICADO');
+      expect(esperar(http.get(`${API}/conciliaciones-manuales/inexistente/procesamiento`, { headers: luis })).error?.status).toBe(404);
     }));
   });
 

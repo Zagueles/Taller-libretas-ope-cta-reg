@@ -1,6 +1,6 @@
 import { leerDatos, reiniciarDatosDemo } from '../../../../../mock/mock-db';
 import { FECHA_CONCILIACION_APROBADA, diaDeOperacion, trazabilidadDeEjemplo } from '../../models/conciliacion-diaria.model';
-import { DOCUMENTOS_DEL_SISTEMA, REGISTROS_DE_EJEMPLO } from './conciliacion-diaria-documents.component';
+import { DOCUMENTOS_DEL_SISTEMA, REGISTROS_DE_EJEMPLO, filaRegistroConciliado } from './conciliacion-diaria-documents.component';
 
 const soloDia = (fecha: string): string => fecha.split(' ')[0];
 const hora = (fecha: string): string => fecha.split(' ')[1] ?? '';
@@ -16,6 +16,8 @@ describe('datos de ejemplo de Conciliación diaria: consistencia de fechas, núm
   beforeAll(() => reiniciarDatosDemo());
   afterAll(() => reiniciarDatosDemo());
 
+  /** Lo que lista la pestaña Registros: los manuales (del backend simulado) y los del sistema. */
+  const registros = () => [...leerDatos().registrosConciliacion.map(filaRegistroConciliado), ...REGISTROS_DE_EJEMPLO];
   const manualAprobada = () => leerDatos().solicitudes.find((s) => s.estado === 'APROBADO' && s.catDocumento?.nombre === 'Conciliación manual diaria')!;
   const diaD = (): string => {
     const d = diaDeOperacion(new Date(`${FECHA_CONCILIACION_APROBADA}T00:00:00`));
@@ -27,7 +29,7 @@ describe('datos de ejemplo de Conciliación diaria: consistencia de fechas, núm
     const delSistema = new Set(DOCUMENTOS_DEL_SISTEMA.map((d) => `${d['document']}|${d['number']}`));
 
     expect(numeroManual).toBe('000001-2026');
-    for (const registro of REGISTROS_DE_EJEMPLO.filter((r) => r['status'] === 'Activo')) {
+    for (const registro of registros().filter((r) => r['status'] === 'Activo')) {
       const clave = `${registro['document']}|${registro['number']}`;
       const existe = registro['document'] === 'Conciliación manual diaria' ? registro['number'] === numeroManual : delSistema.has(clave);
       expect(existe).withContext(clave).toBeTrue();
@@ -37,7 +39,7 @@ describe('datos de ejemplo de Conciliación diaria: consistencia de fechas, núm
   it('las operaciones de los registros son siempre del día anterior al de los documentos que las ajustan', () => {
     const creacionManual = visible(manualAprobada().createdAt!);
     const dia = diaD();
-    for (const registro of REGISTROS_DE_EJEMPLO) {
+    for (const registro of registros()) {
       for (const clave of ['lbFecha', 'rbFecha']) {
         const fecha = String(registro[clave] ?? '');
         if (fecha) expect(soloDia(fecha)).withContext(`${registro['document']} ${registro['nro']} ${clave}`).toBe(dia);
@@ -55,7 +57,7 @@ describe('datos de ejemplo de Conciliación diaria: consistencia de fechas, núm
     const traza = trazabilidadDeEjemplo(FECHA_CONCILIACION_APROBADA);
 
     expect(traza).toEqual({ elaborado: fecha('ELABORADO'), verificado: fecha('VERIFICADO'), aprobado: fecha('APROBADO') });
-    for (const registro of REGISTROS_DE_EJEMPLO.filter((r) => r['document'] === 'Conciliación manual diaria')) {
+    for (const registro of registros().filter((r) => r['document'] === 'Conciliación manual diaria')) {
       expect(registro['elaboradoFecha']).toBe(traza.elaborado);
       expect(registro['verificadoFecha']).toBe(traza.verificado);
       expect(registro['aprobadoFecha']).toBe(traza.aprobado);
@@ -67,7 +69,7 @@ describe('datos de ejemplo de Conciliación diaria: consistencia de fechas, núm
 
   it('los registros manuales son los mismos de la solicitud aprobada, con su fecha de operación del día anterior', () => {
     const delDocumento = manualAprobada().detalleConciliacionManual!.registros;
-    const manuales = REGISTROS_DE_EJEMPLO.filter((r) => r['document'] === 'Conciliación manual diaria');
+    const manuales = registros().filter((r) => r['document'] === 'Conciliación manual diaria');
 
     expect(manuales.map((r) => r['nro'])).toEqual(delDocumento.map((r) => r.nro));
     expect(manuales.map((r) => r['lbNumero'])).toEqual(delDocumento.map((r) => r.lbNumero));
@@ -75,12 +77,22 @@ describe('datos de ejemplo de Conciliación diaria: consistencia de fechas, núm
   });
 
   it('lo que genera el sistema lo elabora SIAF RP al cierre del día de las operaciones, a las 19:00', () => {
-    const delSistema = REGISTROS_DE_EJEMPLO.filter((r) => r['document'] !== 'Conciliación manual diaria');
+    const delSistema = registros().filter((r) => r['document'] !== 'Conciliación manual diaria');
     expect(delSistema.length).toBeGreaterThan(0);
     for (const registro of delSistema) {
       expect(registro['elaboradoPor']).toBe('SIAF RP');
       expect(soloDia(String(registro['fechaRegistro']))).toBe(diaD());
       expect(hora(String(registro['fechaRegistro']))).toBe('19:00:00');
+    }
+  });
+
+  it('cada registro manual trae en su historial el documento que lo creó, para la trazabilidad', () => {
+    const manuales = registros().filter((r) => r['document'] === 'Conciliación manual diaria');
+    expect(manuales.length).toBe(2);
+    for (const registro of manuales) {
+      const documentos = JSON.parse(String(registro['documentosJson'])) as { numero: string; tipoAccion: string }[];
+      expect(documentos.map((d) => [d.numero, d.tipoAccion])).toEqual([[manualAprobada().numero ?? '', 'Creación']]);
+      expect(registro['motivo']).toBe('-');
     }
   });
 });

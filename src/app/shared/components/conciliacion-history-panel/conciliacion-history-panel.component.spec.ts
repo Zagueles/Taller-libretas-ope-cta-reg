@@ -98,4 +98,55 @@ describe('ConciliacionHistoryPanelComponent', () => {
     expect(pie).toContain('RICARDO JOHN DOE BUSTAMANTE');
     expect(pie).toContain('No asignado aún');
   });
+
+  describe('versiones del registro (creación y modificación)', () => {
+    const documentos = [
+      {
+        numero: '000001-2026', tipoAccion: 'Creación', elaboradoPor: 'CARLA', elaboradoFecha: '2026-08-18T09:15:00', verificadoPor: 'CARLA', verificadoFecha: '2026-08-19T10:22:00', aprobadoPor: 'LUIS', aprobadoFecha: '2026-08-20T11:29:00',
+        datos: { lbNumero: '02698154', lbCredito: '1,267.00', rbNumero: '02698154', rbCredito: '1,267.00', lbFecha: '17/08/2026 10:40:04', rbFecha: '17/08/2026 10:40:04', lbDescripcion: 'RR', rbDescripcion: 'RR', lbEntidad: 'SUNAT', lbDebito: '0.00', rbDebito: '0.00' },
+        sustentos: [{ tipo: 'Constancia', nombre: 'creacion.pdf' }], justificacion: 'Se concilia con la operación.',
+      },
+      {
+        numero: '000005-2026', tipoAccion: 'Modificación', tipoModificacion: 'Montos', elaboradoPor: 'CARLA', elaboradoFecha: '2026-10-30T16:22:00', verificadoPor: 'CARLA', verificadoFecha: '2026-10-30T16:23:00', aprobadoPor: 'LUIS', aprobadoFecha: '2026-10-30T16:24:00',
+        datos: { lbNumero: '02698154', lbCredito: '1,300.00', rbNumero: '02698154', rbCredito: '1,300.00', lbFecha: '17/08/2026 10:40:04', rbFecha: '17/08/2026 10:40:04', lbDescripcion: 'RR', rbDescripcion: 'RR', lbEntidad: 'SUNAT', lbDebito: '0.00', rbDebito: '0.00' },
+        sustentos: [{ tipo: 'Constancia', nombre: 'modificacion.pdf' }], justificacion: 'Se corrige el monto.',
+      },
+    ];
+    // La fila trae lo vigente (ya modificado); cada versión muestra lo que se aprobó en su documento.
+    const registro = { ...REGISTRO, estadoConciliacion: 'Conciliado', number: '000001-2026', lbCredito: '1,300.00', rbCredito: '1,300.00', rbNumero: '02698154', documentosJson: JSON.stringify(documentos) };
+
+    it('abre en la versión más reciente: lo aprobado en la modificación', () => {
+      abrir(registro);
+      expect(fixture.componentInstance.pasoActivo).toBe(1);
+      expect(fixture.componentInstance.value('number')).toBe('000005-2026');
+      expect(fixture.componentInstance.value('actionType')).toBe('Modificación');
+      expect(fixture.componentInstance.libroBanco[0].credito).toBe('1,300.00');
+      expect(fixture.componentInstance.justificacion).toBe('Se corrige el monto.');
+      expect(fixture.componentInstance.sustentos.map((x) => x.nombre)).toEqual(['modificacion.pdf']);
+    });
+
+    it('al elegir la creación muestra los datos con los que se aprobó ese documento', () => {
+      abrir(registro);
+      fixture.componentInstance.pasoActivo = 2;
+      fixture.detectChanges();
+      const c = fixture.componentInstance;
+      expect(c.value('number')).toBe('000001-2026');
+      expect(c.value('actionType')).toBe('Creación');
+      expect(c.libroBanco[0].credito).toBe('1,267.00');
+      expect(c.operacionesBancarias[0].credito).toBe('1,267.00');
+      expect(c.justificacion).toBe('Se concilia con la operación.');
+      expect(c.sustentos.map((x) => x.nombre)).toEqual(['creacion.pdf']);
+      expect(c.actionSummary[0].actionBy).toBe('CARLA');
+      expect(c.actionSummary[2].actionBy).toBe('LUIS');
+    });
+
+    it('al abrir otro registro vuelve a la versión más reciente', () => {
+      abrir(registro);
+      fixture.componentInstance.pasoActivo = 2;
+      fixture.componentRef.setInput('record', { ...registro });
+      fixture.detectChanges();
+      expect(fixture.componentInstance.pasoActivo).toBe(1);
+    });
+  });
 });
+

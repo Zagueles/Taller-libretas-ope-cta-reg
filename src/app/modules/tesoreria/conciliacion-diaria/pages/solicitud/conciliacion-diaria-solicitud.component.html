@@ -6,7 +6,7 @@
     [state]="headerState()"
     [loading]="cargando()"
     [heading]="heading"
-    secondaryText="Creación"
+    [secondaryText]="textoAccion()"
     [showReturn]="soloLectura()"
     [saveDisabled]="!formValido() || saving()"
     [keepVerifyOnEdit]="true"
@@ -33,6 +33,16 @@
       @if (alertaVerificacion(); as a) {
         <siaf-alert tone="error" [title]="a.titulo" [description]="a.descripcion" />
       }
+      @if (banner(); as b) {
+        <siaf-alert
+          [tone]="b.tono"
+          [title]="b.titulo"
+          [description]="b.mensaje"
+          [live]="b.tono === 'error' ? 'alert' : 'status'"
+          [showClose]="b.cerrable"
+          (closed)="cerrarBanner()"
+        />
+      }
       @if (elaborado()) {
         <section class="grid gap-siaf-md lg:grid-cols-[1fr_360px]">
           <siaf-solicitude-info-card [fields]="camposEntidad()" />
@@ -45,10 +55,27 @@
       <!-- ── Información de conciliación ── -->
       <siaf-solicitude-form-card title="Información de conciliación">
         @if (soloLectura()) {
-          <readonly-field caption="Tipo de conciliación" value="Manual" />
+          <div class="grid gap-siaf-lg md:grid-cols-2 xl:grid-cols-4">
+            <readonly-field caption="Tipo de conciliación" value="Manual" />
+            @if (esModificacion()) {
+              <readonly-field caption="Tipo de modificación" [value]="tipoModificacion()" />
+            }
+          </div>
         } @else {
           <div class="grid gap-siaf-lg md:grid-cols-2 xl:grid-cols-4">
             <siaf-input label="Tipo de conciliación" value="Manual" [disabled]="true" />
+            @if (esModificacion()) {
+              <siaf-input
+                label="Tipo de modificación"
+                type="select"
+                [required]="true"
+                [options]="tiposModificacion"
+                [value]="tipoModificacion()"
+                [disabled]="registrosElegidos().length > 0"
+                hint="Datos corrige fecha, número, descripción, entidad y secuencia; Montos, el débito y el crédito."
+                (valueChange)="tipoModificacion.set($any($event))"
+              />
+            }
           </div>
         }
       </siaf-solicitude-form-card>
@@ -67,14 +94,14 @@
 
       <!-- ── Registros no conciliados (o su edición) ── -->
       @if (registroEnEdicion(); as r) {
-        <siaf-conciliacion-registro-edicion [registro]="r" (cancelled)="registroEnEdicion.set(null)" (accepted)="aceptarEdicion($event)" />
+        <siaf-conciliacion-registro-edicion [registro]="r" [tipoModificacion]="esModificacion() ? (tipoModificacion() || null) : null" (cancelled)="registroEnEdicion.set(null)" (accepted)="aceptarEdicion($event)" />
       } @else {
-        <siaf-solicitude-form-card title="Registros no conciliados">
+        <siaf-solicitude-form-card [title]="tituloRegistros()">
           @if (!soloLectura()) {
-            <siaf-button card-actions variant="filled" icon="search" [iconOnly]="true" [disabled]="!cuenta()" ariaLabel="Buscar registros no conciliados" (click)="abrirRegistros()" />
+            <siaf-button card-actions variant="filled" icon="search" [iconOnly]="true" [disabled]="!cuenta() || (esModificacion() && !tipoModificacion())" [ariaLabel]="'Buscar ' + tituloRegistros().toLowerCase()" (click)="abrirRegistros()" />
           }
           @if (!registrosElegidos().length) {
-            <message-box text="No es necesario completar esta información en este momento." />
+            <message-box [text]="esModificacion() ? 'Seleccione los registros conciliados que se van a modificar.' : 'No es necesario completar esta información en este momento.'" />
           } @else {
             <siaf-form-table-search [value]="busquedaTabla()" ariaLabel="Buscar registros" (valueChange)="busquedaTabla.set($event)" />
             @if (!soloLectura()) {
@@ -97,7 +124,7 @@
             }
             <siaf-conciliacion-registros-tabla
               [rows]="registrosTabla()"
-              [aprobado]="estado() === 'APROBADO'"
+              [aprobado]="estado() === 'APROBADO' || esModificacion()"
               [selectable]="!soloLectura()"
               [selectedIds]="marcados()"
               (toggled)="alternarMarcado($event)"
@@ -158,10 +185,10 @@
   <!-- Seleccionar registros no conciliados (Figma 284:8153) -->
   <siaf-selection-side-nav
     [open]="registrosAbierto()"
-    title="Seleccionar registros no conciliados"
+    [title]="'Seleccionar ' + tituloRegistros().toLowerCase()"
     mode="multiple"
     [customTable]="true"
-    selectAllLabel="Seleccionar registros no conciliados"
+    [selectAllLabel]="'Seleccionar ' + tituloRegistros().toLowerCase()"
     [showSelectAll]="true"
     [selectAllChecked]="todosMarcados()"
     [selectAllIndeterminate]="registrosTemporales().length > 0 && !todosMarcados()"
@@ -182,11 +209,14 @@
   >
     <siaf-conciliacion-registros-tabla
       [rows]="registrosFiltrados()"
+      [aprobado]="esModificacion()"
       [selectable]="true"
       [selectedIds]="registrosTemporales()"
       (toggled)="alternarRegistro($event)"
     />
   </siaf-selection-side-nav>
+
+  <siaf-loader-overlay [open]="mostrarLoader()" message="Procesando la conciliación..." label="Procesando la conciliación" />
 
   <siaf-request-approval-modals
     [saveOpen]="modalGrabar()"
@@ -195,13 +225,17 @@
     [approveOpen]="modalAprobar()"
     [observeOpen]="modalObservar()"
     [rejectOpen]="modalRechazar()"
-    [saving]="saving()"
+    [saving]="saving() && !aprobando()"
+    approveTitle="¿Aprobar la solicitud?"
+    [approveDescription]="descripcionAprobar()"
+    approveConfirmLabel="Aprobar"
+    [approveSending]="aprobando()"
     [reason]="comentario()"
     [rejectReasonType]="motivoRechazo()"
     [rejectReasonTypeOptions]="motivosRechazo"
     [snackbarVariant]="aviso()"
     [snackbarOpen]="avisoAbierto()"
-    requestType="creación"
+    [requestType]="esModificacion() ? 'modificación' : 'creación'"
     [requestNumber]="numeroDocumento()"
     (saveConfirmed)="onConfirmarGrabar()"
     (verifyConfirmed)="onConfirmarVerificar()"

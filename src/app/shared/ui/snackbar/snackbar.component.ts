@@ -13,6 +13,7 @@ export type SnackbarVariant =
   | 'request-uploaded'
   | 'file-uploaded'
   | 'creation-elaborated'
+  | 'modification-elaborated'
   | 'creation-verified'
   | 'modification-verified'
   | 'creation-approved'
@@ -74,6 +75,10 @@ const SNACKBAR_PRESETS: Record<Exclude<SnackbarVariant, 'custom'>, SnackbarPrese
   },
   'creation-elaborated': {
     requestType: 'creación',
+    requestAction: 'elaborado'
+  },
+  'modification-elaborated': {
+    requestType: 'modificación',
     requestAction: 'elaborado'
   },
   'creation-verified': {

@@ -87,6 +87,19 @@ Para empezar de cero: **Reiniciar datos** en el login (o borrar el almacenamient
   `/api/v1/libretas/{movimientos,documentos,documentos/:numero,registros/:sec,cuentas-registro}`.
 - **`src/app/mock/usuarios-demo.ts`** define los usuarios y sus perfiles. El token es un JWT sin firma: la app solo lee
   su vencimiento.
+- **`src/app/mock/procesamiento-conciliacion.ts`** simula lo que ocurre tras **Aprobar** una Conciliación manual diaria
+  (`POST /conciliaciones-manuales/:id/aprobar` y `GET /conciliaciones-manuales/:id/procesamiento`): el documento queda
+  Aprobado y el procesamiento de los sistemas relacionados, «en proceso» durante `DEMO_PROCESAMIENTO.duracionMs` (8 s).
+  Luego termina según `DEMO_PROCESAMIENTO.escenario`: `aplicado` (por defecto), `con-incidencias` (falla Contabilidad),
+  `reintentos-agotados` (fallan Libretas y Contabilidad) o `procesando` (no termina). Cambiar el valor y recargar antes
+  de aprobar. La pantalla consulta cada 5 s (`INTERVALO_PROCESAMIENTO_MS`) y, al terminar, el backend notifica al
+  elaborador y al aprobador.
+- **Modificación de registros conciliados** (Conciliación manual diaria): en **Crear documento → Conciliación manual
+  diaria → Tipo de acción: Modificación** se elige el tipo de modificación (**Datos** o **Montos**), la cuenta y los
+  registros ya conciliados, y se corrigen con el mismo formulario de edición (solo los campos del tipo elegido; sin
+  agregar ni quitar registros). Al aprobar, el registro toma los valores nuevos y su «Historial del registro» suma el
+  documento de modificación. Los registros de la pestaña Registros salen del backend simulado
+  (`GET /conciliaciones-manuales/registros`): cada conciliación aprobada suma los suyos.
 - Las notificaciones en tiempo real (socket) están apagadas: la campana se actualiza al iniciar sesión y al abrirla.
 
 ## Estructura

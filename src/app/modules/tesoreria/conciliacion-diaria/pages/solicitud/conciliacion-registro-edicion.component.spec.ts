@@ -1,96 +1,202 @@
 import { TestBed } from '@angular/core/testing';
 
-import { REGISTROS_NO_CONCILIADOS, fechaDeOperacion } from '../../models/conciliacion-diaria.model';
+import { REGISTROS_NO_CONCILIADOS, RegistroNoConciliado, conciliarRegistro } from '../../models/conciliacion-diaria.model';
 import { ConciliacionRegistroEdicionComponent } from './conciliacion-registro-edicion.component';
 
 describe('ConciliacionRegistroEdicionComponent', () => {
-  const crear = (indice: number) => {
+  const crear = (indice: number, registro: RegistroNoConciliado = REGISTROS_NO_CONCILIADOS[indice]) => {
     const fixture = TestBed.createComponent(ConciliacionRegistroEdicionComponent);
-    fixture.componentRef.setInput('registro', REGISTROS_NO_CONCILIADOS[indice]);
+    fixture.componentRef.setInput('registro', registro);
     fixture.detectChanges();
-    return fixture.componentInstance;
+    return { fixture, c: fixture.componentInstance };
+  };
+  const agregar = (c: ConciliacionRegistroEdicionComponent, lado: 'lb' | 'rb', ...ids: string[]) => {
+    c.abrirBusqueda(lado);
+    c.seleccion.set(ids);
+    c.aceptarOperaciones();
+  };
+  const sustentar = (c: ConciliacionRegistroEdicionComponent) => {
+    c.sustentos.set([{ tipo: 'Constancia', nombre: 'constancia.pdf' }]);
+    c.justificacion.set('La operación coincide.');
   };
 
-  it('precarga los montos del libro banco y exige los de cada operación a conciliar', () => {
-    const c = crear(0);
-    c.abrirBusqueda();
-    c.seleccion.set(['op-02698150', 'op-02698147']);
-    c.aceptarOperaciones();
-    expect(c.debito()).toBe('0.00');
-    expect(c.credito()).toBe('1,267.00');
-    expect(c.puedeAceptar()).toBeFalse();
-
-    c.candidatos().forEach((o) => {
-      c.cambiarCandidato(o.id, 'debito', '0');
-      c.cambiarCandidato(o.id, 'credito', '100');
+  describe('caso 2: la contraparte existe pero un dato impide formar el par', () => {
+    it('arranca con el registro de origen y sin operaciones', () => {
+      const { c } = crear(0);
+      expect(c.lineasLB().map((l) => l.id)).toEqual(['origen']);
+      expect(c.lineasRB()).toEqual([]);
+      expect(c.banner()).toBeNull();
+      expect(c.puedeAceptar()).toBeFalse();
     });
-    expect(c.puedeAceptar()).withContext('falta el sustento').toBeFalse();
-    c.sustentos.set([{ tipo: 'Constancia', nombre: 'constancia.pdf' }]);
-    expect(c.puedeAceptar()).withContext('falta la justificación').toBeFalse();
-    c.justificacion.set('La operación coincide.');
+
+    it('con el número mal informado no cuadra hasta corregirlo, y la corrección queda en la bitácora', () => {
+      const { c } = crear(0);
+      agregar(c, 'rb', 'op-02698145');
+      sustentar(c);
+      expect(c.puedeAceptar()).withContext('números distintos').toBeFalse();
+
+      c.cambiar('rb', 'op-02698145', 'numero', '02698154');
+      expect(c.antes(c.lineasRB()[0], 'numero')).toBe('Antes: 02698145');
+      expect(c.puedeAceptar()).toBeTrue();
+
+      const emitidos: RegistroNoConciliado[] = [];
+      c.accepted.subscribe((r) => emitidos.push(r));
+      c.aceptar();
+      expect(emitidos[0]).toEqual(jasmine.objectContaining({ conciliado: true, rbNumero: '02698154', rbCredito: '1,267.00', justificacion: 'La operación coincide.' }));
+      expect(emitidos[0].ediciones).toEqual([{ lado: 'Operaciones bancarias', numero: '02698145', campo: 'Número', antes: '02698145', despues: '02698154' }]);
+    });
+
+    it('si falta el RR, la fecha de un día antes se corrige hasta que todos tengan el mismo día', () => {
+      const { c } = crear(3);
+      agregar(c, 'lb', 'rr-02698147');
+      sustentar(c);
+      expect(c.puedeAceptar()).withContext('fechas de días distintos').toBeFalse();
+      c.cambiar('lb', 'rr-02698147', 'fecha', c.lineasRB()[0].fecha);
+      expect(c.puedeAceptar()).toBeTrue();
+    });
+
+    it('una fecha que no existe no se acepta', () => {
+      const { c } = crear(3);
+      agregar(c, 'lb', 'rr-02698147');
+      c.cambiar('lb', 'rr-02698147', 'fecha', '31/02/2026');
+      sustentar(c);
+      expect(c.puedeAceptar()).toBeFalse();
+      expect(c.errorCampo('lb', c.lineasLB()[0], 'fecha')).toContain('fecha válida');
+    });
+  });
+
+  describe('caso 1: monto distinto con la misma llave', () => {
+    it('trae la operación y avisa la diferencia; al corregir el monto marca «Editado · Antes»', () => {
+      const { c } = crear(1);
+      expect(c.lineasRB().length).toBe(1);
+      expect(c.cuadra()).toBeFalse();
+      sustentar(c);
+      expect(c.puedeAceptar()).toBeFalse();
+
+      c.cambiar('rb', 'rb0', 'credito', '5068.80');
+      expect(c.antes(c.lineasRB()[0], 'credito')).toBe('Antes: 5,068.00');
+      expect(c.puedeAceptar()).toBeTrue();
+
+      const emitidos: RegistroNoConciliado[] = [];
+      c.accepted.subscribe((r) => emitidos.push(r));
+      c.aceptar();
+      expect(emitidos[0].ediciones).toEqual([{ lado: 'Operaciones bancarias', numero: '02698150', campo: 'Crédito', antes: '5,068.00', despues: '5,068.80' }]);
+      expect(emitidos[0].rbCredito).toBe('5,068.80');
+    });
+
+    it('si se corrige el monto del otro lado también cuadra', () => {
+      const { c } = crear(1);
+      c.cambiar('lb', 'origen', 'credito', '5068');
+      expect(c.cuadra()).toBeTrue();
+    });
+  });
+
+  describe('caso 3: grupo con varios registros en cada lado', () => {
+    const armarGrupo = () => {
+      const { c, fixture } = crear(2);
+      agregar(c, 'lb', 'rr-02698149');
+      agregar(c, 'rb', 'op-02698148-a', 'op-02698148-b', 'op-02698157');
+      // Como indica el banner: el mismo número en todos los registros que se concilian juntos.
+      c.cambiar('lb', 'rr-02698149', 'numero', '02698148');
+      c.cambiar('rb', 'op-02698157', 'numero', '02698148');
+      return { c, fixture };
+    };
+
+    it('cuadra cuando la suma de los RR iguala la de las operaciones y todos llevan el mismo número', () => {
+      const { c } = armarGrupo();
+      expect(c.esGrupo()).toBeTrue();
+      expect(c.cuadra()).toBeTrue();
+      expect(c.lineasRB().map((l) => l.secuencia)).toEqual(['1', '2', '3']);
+      sustentar(c);
+      expect(c.puedeAceptar()).toBeTrue();
+    });
+
+    it('exige secuencias seguidas y sin repetir en el lado con varios registros', () => {
+      const { c } = armarGrupo();
+      sustentar(c);
+      c.cambiar('rb', 'op-02698148-b', 'secuencia', '1');
+      expect(c.puedeAceptar()).toBeFalse();
+      c.cambiar('rb', 'op-02698148-b', 'secuencia', '2');
+      expect(c.puedeAceptar()).toBeTrue();
+    });
+
+    it('con una suma distinta no cuadra, y con números distintos tampoco', () => {
+      const { c } = armarGrupo();
+      sustentar(c);
+      c.cambiar('lb', 'rr-02698149', 'numero', '02698149');
+      expect(c.puedeAceptar()).withContext('número distinto').toBeFalse();
+      c.cambiar('lb', 'rr-02698149', 'numero', '02698148');
+      c.quitar('lb', 'rr-02698149');
+      expect(c.cuadra()).toBeFalse();
+      expect(c.puedeAceptar()).toBeFalse();
+    });
+
+    it('el banner explica qué hacer con varios registros', () => {
+      const { c } = armarGrupo();
+      expect(c.banner()?.titulo).toBe('Varios RR y operaciones en un mismo registro');
+      expect(c.banner()?.descripcion).toContain('mismo número');
+    });
+
+    it('emite una línea por registro y suma los montos de cada lado', () => {
+      const { c } = armarGrupo();
+      sustentar(c);
+      const emitidos: RegistroNoConciliado[] = [];
+      c.accepted.subscribe((r) => emitidos.push(r));
+      c.aceptar();
+      expect(emitidos[0].lbLineas?.length).toBe(2);
+      expect(emitidos[0].rbLineas?.length).toBe(3);
+      expect(emitidos[0]).toEqual(jasmine.objectContaining({ lbCredito: '34,490.00', rbCredito: '34,490.00' }));
+    });
+  });
+
+  it('con «Montos diferentes» el banner se adapta y solo aparece con varios registros', () => {
+    const { c, fixture } = crear(1);
+    expect(c.banner()).withContext('un RR y una operación').toBeNull();
+    agregar(c, 'rb', 'op-02698145');
+    fixture.detectChanges();
+    expect(c.banner()?.titulo).toBe('Montos diferentes con varios registros');
+    expect(fixture.nativeElement.textContent).toContain('Montos diferentes con varios registros');
+    expect(fixture.nativeElement.textContent).not.toContain('Resumen de la conciliación');
+  });
+
+  it('el registro de origen no se puede quitar y su botón no se muestra', () => {
+    const { c, fixture } = crear(0);
+    c.quitar('lb', 'origen');
+    expect(c.lineasLB().length).toBe(1);
+    expect(fixture.nativeElement.querySelector('[aria-label^="Quitar el registro"]')).toBeNull();
+    agregar(c, 'rb', 'op-02698145');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('[aria-label^="Quitar el registro"]').length).toBe(1);
+  });
+
+  it('todos los campos son editables y no se acepta uno vacío', () => {
+    const { c } = crear(1);
+    c.cambiar('rb', 'rb0', 'descripcion', '');
+    c.cambiar('rb', 'rb0', 'credito', '5068.80');
+    sustentar(c);
+    expect(c.errorCampo('rb', c.lineasRB()[0], 'descripcion')).toContain('obligatorio');
+    expect(c.puedeAceptar()).toBeFalse();
+    c.cambiar('rb', 'rb0', 'descripcion', 'Reporte de Recaudación SUNAT');
     expect(c.puedeAceptar()).toBeTrue();
-
-    c.cambiarCandidato('op-02698147', 'credito', '');
-    expect(c.puedeAceptar()).toBeFalse();
-    expect(c.error('op-02698147:credito', '')).toContain('obligatorio');
+    c.cambiar('lb', 'origen', 'entidad', '');
+    expect(c.puedeAceptar()).withContext('la entidad del libro banco es obligatoria').toBeFalse();
   });
 
-  it('exige también el débito y el crédito del registro de origen', () => {
-    const c = crear(0);
-    c.candidatos().forEach((o) => {
-      c.cambiarCandidato(o.id, 'debito', '0');
-      c.cambiarCandidato(o.id, 'credito', '1');
-    });
-    c.cambiarBase('credito', '');
-    expect(c.puedeAceptar()).toBeFalse();
-  });
-
-  it('al aceptar emite el registro conciliado con la contraparte', () => {
-    const c = crear(0);
-    c.abrirBusqueda();
-    c.seleccion.set(['op-02698150']);
-    c.aceptarOperaciones();
-    const emitidos: unknown[] = [];
-    c.accepted.subscribe((r) => emitidos.push(r));
-    c.candidatos().forEach((o) => {
-      c.cambiarCandidato(o.id, 'debito', '0');
-      c.cambiarCandidato(o.id, 'credito', '1267');
-    });
+  it('al reabrir un registro ya editado vuelve con sus líneas y lo que traían', () => {
+    const { c } = crear(1);
+    c.cambiar('rb', 'rb0', 'credito', '5068.80');
+    sustentar(c);
+    let guardado!: RegistroNoConciliado;
+    c.accepted.subscribe((r) => (guardado = r));
     c.aceptar();
-    expect(emitidos.length).withContext('sin sustento ni justificación no acepta').toBe(0);
-    c.sustentos.set([{ tipo: 'Constancia', nombre: 'constancia.pdf' }]);
-    c.justificacion.set('La operación coincide.');
-    c.aceptar();
-    expect(emitidos.length).toBe(1);
-    expect(emitidos[0]).toEqual(jasmine.objectContaining({ conciliado: true, motivo: REGISTROS_NO_CONCILIADOS[0].motivo, rbCredito: '1,267.00', sustentos: [{ tipo: 'Constancia', nombre: 'constancia.pdf', tamano: undefined }], justificacion: 'La operación coincide.' }));
-  });
 
-  it('la sección arranca vacía y no muestra alertas (lo que falte lo informa «Verificar»)', () => {
-    const c = crear(0);
-    expect(c.candidatos()).withContext('no existe OBO: sin operaciones').toEqual([]);
-  });
-
-  it('la tabla totaliza débito y crédito de las operaciones ingresadas', () => {
-    const c = crear(0);
-    c.abrirBusqueda();
-    c.seleccion.set(['op-02698150', 'op-02698147']);
-    c.aceptarOperaciones();
-    c.cambiarCandidato('op-02698150', 'credito', '9000');
-    c.cambiarCandidato('op-02698147', 'credito', '753');
-    c.cambiarCandidato('op-02698147', 'debito', '1.5');
-    expect(c.totalCredito()).toBe('9,753.00');
-    expect(c.totalDebito()).toBe('1.50');
-    expect(c.secuenciaDe(0)).toBe('0001');
-    expect(c.secuenciaDe(1)).toBe('0002');
-  });
-
-  it('en «Montos diferentes» la operación existente viene precargada, sin alerta', () => {
-    const c = crear(1);
-    expect(c.candidatos().length).toBe(1);
+    const reabierto = crear(1, guardado).c;
+    expect(reabierto.lineasRB()[0].credito).toBe('5,068.80');
+    expect(reabierto.antes(reabierto.lineasRB()[0], 'credito')).toBe('Antes: 5,068.00');
   });
 
   it('suma varios sustentos con su tipo en una carga, reemplaza uno y exige al menos uno', () => {
-    const c = crear(0);
+    const { c } = crear(0);
     c.abrirSustento();
     c.tipoSustento.set('Constancia');
     c.agregarSustentos([new File(['a'], 'constancia.pdf')]);
@@ -111,45 +217,115 @@ describe('ConciliacionRegistroEdicionComponent', () => {
     expect(c.sustentos()).toEqual([]);
   });
 
-  it('sin operaciones muestra la vista vacía y el (+) las vuelve a ofrecer', () => {
-    const fixture = TestBed.createComponent(ConciliacionRegistroEdicionComponent);
-    fixture.componentRef.setInput('registro', REGISTROS_NO_CONCILIADOS[0]);
-    fixture.detectChanges();
-    const c = fixture.componentInstance;
-    c.candidatos().forEach((o) => c.quitarCandidato(o.id));
-    fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('haga clic en el botón de búsqueda para seleccionar una opción');
-    expect(fixture.nativeElement.querySelector('table')).toBeNull();
+  describe('panel de búsqueda', () => {
+    it('cada lupa ofrece lo suyo (RR u operaciones), sin lo que ya está en alguna tabla', () => {
+      const { c } = crear(0);
+      c.abrirBusqueda('rb');
+      expect(c.operacionesFiltradas().map((o) => o.id)).toEqual(['op-02698145', 'op-02698148-a', 'op-02698148-b', 'op-02698157']);
+      c.abrirBusqueda('lb');
+      expect(c.operacionesFiltradas().map((o) => o.id)).toEqual(['rr-02698147', 'rr-02698149']);
 
-    c.abrirBusqueda();
-    c.seleccion.set(['op-02698150']);
-    c.aceptarOperaciones();
-    fixture.detectChanges();
-    expect(c.candidatos().length).toBe(1);
-    expect(fixture.nativeElement.textContent).not.toContain('haga clic en el botón de búsqueda');
+      agregar(c, 'rb', 'op-02698145');
+      c.abrirBusqueda('rb');
+      expect(c.operacionesFiltradas().map((o) => o.id)).not.toContain('op-02698145');
+    });
+
+    it('trae la fecha, el número, la descripción y los montos del registro elegido', () => {
+      const { c } = crear(0);
+      agregar(c, 'rb', 'op-02698148-a');
+      expect(c.lineasRB().map((l) => [l.numero, l.debito, l.credito, l.secuencia])).toEqual([['02698148', '0.00', '20,000.00', '1']]);
+    });
+
+    it('filtra por la búsqueda y no suma nada si se cancela', () => {
+      const { c } = crear(0);
+      c.abrirBusqueda('rb');
+      c.busqueda.set('02698157');
+      expect(c.operacionesFiltradas().map((o) => o.numero)).toEqual(['02698157']);
+      c.busquedaAbierta.set(false);
+      expect(c.lineasRB()).toEqual([]);
+    });
+
+    it('un lado sin registros muestra la vista vacía', () => {
+      const { fixture } = crear(0);
+      expect(fixture.nativeElement.textContent).toContain('haga clic en el botón de búsqueda para seleccionar una opción');
+    });
   });
 
-  it('el panel de búsqueda agrega una o más operaciones con su propia fecha, número y descripción, y solo falta su débito y crédito', () => {
-    const c = crear(0);
-    c.abrirBusqueda();
-    expect(c.operacionesFiltradas().length).toBe(2);
-    c.seleccion.set(['op-02698150', 'op-02698147']);
-    c.aceptarOperaciones();
-    expect(c.candidatos().map((o) => [o.numero, o.fecha, o.debito, o.credito])).toEqual([
-      ['02698150', fechaDeOperacion(new Date(), '10:10:08'), '', ''],
-      ['02698147', fechaDeOperacion(new Date(), '10:00:13'), '', ''],
-    ]);
-    // Las que ya están en la tabla no se vuelven a ofrecer.
-    c.abrirBusqueda();
-    expect(c.operacionesFiltradas()).toEqual([]);
+  it('el motivo de inconsistencia se conserva hasta que el documento se aprueba', () => {
+    expect(conciliarRegistro(REGISTROS_NO_CONCILIADOS[0], '1,000.00').motivo).toBe('No existe OBO');
+    expect(conciliarRegistro(REGISTROS_NO_CONCILIADOS[0], '1,000.00', true).motivo).toBe('-');
   });
 
-  it('el panel filtra por la búsqueda y no suma nada si se cancela', () => {
-    const c = crear(0);
-    c.abrirBusqueda();
-    c.busqueda.set('02698147');
-    expect(c.operacionesFiltradas().map((o) => o.numero)).toEqual(['02698147']);
-    c.busquedaAbierta.set(false);
-    expect(c.candidatos()).toEqual([]);
+  describe('modificación de un registro conciliado', () => {
+    const conciliado = (): RegistroNoConciliado => ({ ...conciliarRegistro(REGISTROS_NO_CONCILIADOS[0], '1,267.00'), sustentos: [], justificacion: '', ediciones: [], modificado: false });
+    const abrir = (tipo: 'Datos' | 'Montos') => {
+      const fixture = TestBed.createComponent(ConciliacionRegistroEdicionComponent);
+      fixture.componentRef.setInput('registro', conciliado());
+      fixture.componentRef.setInput('tipoModificacion', tipo);
+      fixture.detectChanges();
+      return { fixture, c: fixture.componentInstance };
+    };
+
+    it('«Montos» solo deja corregir el débito y el crédito', () => {
+      const { c } = abrir('Montos');
+      expect(c.esModificacion()).toBeTrue();
+      expect((['fecha', 'numero', 'descripcion', 'entidad', 'secuencia', 'debito', 'credito'] as const).filter((x) => c.editable(x))).toEqual(['debito', 'credito']);
+    });
+
+    it('«Datos» deja corregir fecha, número, descripción, entidad y secuencia, pero no los montos', () => {
+      const { c } = abrir('Datos');
+      expect((['fecha', 'numero', 'descripcion', 'entidad', 'secuencia', 'debito', 'credito'] as const).filter((x) => c.editable(x))).toEqual(['fecha', 'numero', 'descripcion', 'entidad', 'secuencia']);
+    });
+
+    it('sin cambios no se acepta; con la corrección, el sustento y la justificación emite el registro modificado con su «Antes»', () => {
+      const { c } = abrir('Montos');
+      sustentar(c);
+      expect(c.puedeAceptar()).withContext('aunque cuadre, no cambió nada').toBeFalse();
+
+      c.cambiar('lb', 'origen', 'credito', '1300');
+      expect(c.puedeAceptar()).withContext('los dos lados deben seguir cuadrando').toBeFalse();
+      c.cambiar('rb', 'rb0', 'credito', '1300');
+      expect(c.antes(c.lineasLB()[0], 'credito')).toBe('Antes: 1,267.00');
+      expect(c.puedeAceptar()).toBeTrue();
+
+      let emitido!: RegistroNoConciliado;
+      c.accepted.subscribe((r) => (emitido = r));
+      c.aceptar();
+      expect(emitido).toEqual(jasmine.objectContaining({ modificado: true, conciliado: true, lbCredito: '1,300.00', rbCredito: '1,300.00' }));
+      expect(emitido.ediciones?.map((e) => [e.lado, e.campo, e.antes, e.despues])).toEqual([
+        ['Libro banco', 'Crédito', '1,267.00', '1,300.00'],
+        ['Operaciones bancarias', 'Crédito', '1,267.00', '1,300.00'],
+      ]);
+    });
+
+    it('lo que se compara es lo vigente del registro, no lo de su creación', () => {
+      const previo = { ...conciliado(), ediciones: [{ lado: 'Libro banco' as const, numero: 'x', campo: 'Crédito', antes: '1.00', despues: '1,267.00' }] };
+      const fixture = TestBed.createComponent(ConciliacionRegistroEdicionComponent);
+      fixture.componentRef.setInput('registro', previo);
+      fixture.componentRef.setInput('tipoModificacion', 'Montos');
+      fixture.detectChanges();
+      expect(fixture.componentInstance.hayEdiciones()).toBeFalse();
+    });
+
+    it('no se agregan ni se quitan registros: sin lupas ni botón de quitar', () => {
+      const { fixture } = abrir('Datos');
+      expect(fixture.nativeElement.querySelector('[aria-label^="Buscar"]')).toBeNull();
+      expect(fixture.nativeElement.querySelector('[aria-label^="Quitar el registro"]')).toBeNull();
+      expect(fixture.nativeElement.textContent).toContain('Editar registro conciliado');
+      expect(fixture.nativeElement.textContent).toContain('Tipo de modificación');
+    });
+  });
+
+  it('las secciones van siempre en el mismo orden, libro banco primero, también cuando falta el RR', () => {
+    const titulos = (indice: number): string[] => {
+      const { fixture } = crear(indice);
+      return Array.from(fixture.nativeElement.querySelectorAll('h3')).map((h) => (h as HTMLElement).textContent!.trim()).filter((t) => /libro banco|operaciones bancarias/i.test(t));
+    };
+    const esperado = ['Libro banco', 'Registro de operaciones bancarias'];
+    // «No existe OBO» (nace en el libro banco), «Montos diferentes» y «No existe RR» (nace en las operaciones bancarias).
+    expect(titulos(0)).toEqual(esperado);
+    expect(titulos(1)).toEqual(esperado);
+    expect(titulos(3)).toEqual(esperado);
   });
 });
+

@@ -24,6 +24,40 @@ interface OperacionFila {
   credito: string;
 }
 
+const dos = (n: number): string => String(n).padStart(2, '0');
+/** «dd/mm/aaaa hh:mm:ss» de una fecha ISO. */
+const fechaHoraTexto = (iso: string): string => {
+  const d = new Date(iso);
+  return `${dos(d.getDate())}/${dos(d.getMonth() + 1)}/${d.getFullYear()} ${dos(d.getHours())}:${dos(d.getMinutes())}:${dos(d.getSeconds())}`;
+};
+
+/** Un documento de la vida del registro: lo que guarda `documentosJson`. */
+interface DocumentoHistorial {
+  numero: string;
+  tipoAccion: string;
+  tipoModificacion?: string;
+  elaboradoPor: string;
+  elaboradoFecha: string;
+  verificadoPor: string;
+  verificadoFecha: string;
+  aprobadoPor: string;
+  aprobadoFecha: string;
+  /** Cómo quedó el registro al aprobarse ese documento. */
+  datos?: Record<string, unknown>;
+  sustentos?: { tipo: string; nombre: string }[];
+  justificacion?: string;
+}
+
+interface LineaHistorial {
+  secuencia: string;
+  fecha: string;
+  numero: string;
+  descripcion: string;
+  entidad: string;
+  debito: string;
+  credito: string;
+}
+
 interface SustentoFila {
   nro: number;
   tipo: string;
@@ -51,7 +85,8 @@ const aImporte = (valor: number): string => valor.toLocaleString('en-US', { mini
  * @usar
  * - Para ver, desde la pestaña Registros de Conciliación diaria (`recordHistoryKind: 'conciliacion'`), cómo quedó un
  *   registro: si concilió o no, por qué no, las operaciones de cada lado, el sustento y quién lo trabajó.
- * - Para un registro de conciliación manual, que además trae sus documentos de sustento y la justificación.
+ * - Para un registro de conciliación manual, que además trae sus documentos de sustento y la justificación. Con
+ *   `documentosJson`, la columna de versiones lista la creación y cada modificación aprobada (trazabilidad del registro).
  * @evitar
  * - Para registros del plan de cuentas o asientos de ajuste: usar `siaf-account-history-panel` o
  *   `siaf-asiento-history-panel`; para el historial de estados de un documento, `siaf-document-history-panel`.
@@ -90,7 +125,7 @@ const aImporte = (valor: number): string => valor.toLocaleString('en-US', { mini
           <div class="min-h-0 flex-1 overflow-y-auto bg-surface">
             <div class="mx-auto grid min-h-full w-full max-w-[1160px] grid-cols-1 gap-[64px] px-siaf-md py-siaf-md sm:px-siaf-xl lg:grid-cols-[210px_minmax(0,890px)] lg:px-0">
               <aside class="hidden lg:block">
-                <siaf-steps class="sticky top-siaf-md block" variant="cards" [steps]="versiones" [activeStep]="1" />
+                <siaf-steps class="sticky top-siaf-md block" variant="cards" [steps]="versiones" [activeStep]="pasoActivo" (activeStepChange)="pasoActivo = $event" />
               </aside>
 
               <section class="flex min-w-0 flex-col gap-siaf-sm">
@@ -284,12 +319,41 @@ export class ConciliacionHistoryPanelComponent implements OnChanges {
   /** Render animado del panel (entrada/salida por la derecha, 300ms). */
   readonly anim = new SidePanelAnimacion();
 
+  /** La versión (de arriba hacia abajo, desde 1) que se muestra: por omisión, la más reciente. */
+  pasoActivo = 1;
+
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['open']) this.anim.actualizar(this.open);
+    if (changes['record']) this.pasoActivo = 1;
+  }
+
+  /** El documento de la versión elegida, si el registro lleva historial de documentos. */
+  private get documentoActivo(): DocumentoHistorial | null {
+    return this.documentos[this.pasoActivo - 1] ?? null;
+  }
+
+  /**
+   * Un dato del registro tal como estaba en la versión elegida: con historial de documentos, lo que ese documento dejó al
+   * aprobarse (su número, datos, sustento, justificación y trazabilidad); si no, el de la fila.
+   */
+  private dato(key: string): unknown {
+    const d = this.documentoActivo;
+    if (!d) return this.record?.[key];
+    const propios: Record<string, unknown> = {
+      number: d.numero,
+      actionType: d.tipoAccion,
+      justificacion: d.justificacion ?? '',
+      elaboradoPor: d.elaboradoPor, elaboradoFecha: fechaHoraTexto(d.elaboradoFecha),
+      verificadoPor: d.verificadoPor, verificadoFecha: fechaHoraTexto(d.verificadoFecha),
+      aprobadoPor: d.aprobadoPor, aprobadoFecha: fechaHoraTexto(d.aprobadoFecha),
+    };
+    if (key in propios) return propios[key];
+    if (d.datos && key in d.datos) return d.datos[key];
+    return this.record?.[key];
   }
 
   value(key: string, fallback = '--'): string {
-    const valor = this.record?.[key];
+    const valor = this.dato(key);
     return valor == null || valor === '' ? fallback : String(valor);
   }
 
@@ -302,22 +366,37 @@ export class ConciliacionHistoryPanelComponent implements OnChanges {
     return (['Activo', 'Inactivo', 'Anulado', 'En Proceso', 'Validado', 'Eliminado'] as string[]).includes(estado) ? (estado as RecordStatus) : 'Activo';
   }
 
-  /** Versiones del registro para la columna de `siaf-steps`: hoy solo la de creación. */
+  /** Los documentos que crearon y modificaron el registro (`documentosJson`), del más reciente al más antiguo. */
+  private get documentos(): DocumentoHistorial[] {
+    const crudo = this.record?.['documentosJson'];
+    if (!crudo) return [];
+    try {
+      return (JSON.parse(String(crudo)) as DocumentoHistorial[]).slice().reverse();
+    } catch {
+      return [];
+    }
+  }
+
+  /** Versiones del registro para la columna de `siaf-steps`: su creación y cada modificación aprobada, la más reciente arriba. */
   get versiones(): StepItem[] {
-    // Como en el Figma: la fecha con el año a dos cifras y la hora a su lado («19/08/26  08:00:59»).
-    const [fechaLarga, hora] = this.value('fechaRegistro', '--').split(' ');
-    const [dia, mes, anio] = fechaLarga.split('/');
-    const fecha = anio && anio.length === 4 ? `${dia}/${mes}/${anio.slice(2)}` : fechaLarga;
-    return [
-      {
-        label: 'Creación',
+    const version = (label: string, numero: string, tipoAccion: string, cuando: string, tipoModificacion?: string): StepItem => {
+      // Como en el Figma: la fecha con el año a dos cifras y la hora a su lado («19/08/26  08:00:59»).
+      const [fechaLarga, hora] = cuando.split(' ');
+      const [dia, mes, anio] = fechaLarga.split('/');
+      const fecha = anio && anio.length === 4 ? `${dia}/${mes}/${anio.slice(2)}` : fechaLarga;
+      return {
+        label,
         fields: [
-          { label: 'Nº documento', value: this.value('number') },
-          { label: 'Tipo de acción', value: this.value('actionType', 'Creación') },
+          { label: 'Nº documento', value: numero },
+          { label: 'Tipo de acción', value: tipoAccion },
+          ...(tipoModificacion ? [{ label: 'Modificación', value: tipoModificacion }] : []),
           { label: 'Fecha', value: hora ? `${fecha}\u00a0\u00a0\u00a0${hora}` : fecha },
         ],
-      },
-    ];
+      };
+    };
+    const documentos = this.documentos;
+    if (documentos.length) return documentos.map((d) => version(d.tipoAccion, d.numero, d.tipoAccion, fechaHoraTexto(d.aprobadoFecha), d.tipoModificacion));
+    return [version('Creación', this.value('number'), this.value('actionType', 'Creación'), this.value('fechaRegistro', '--'))];
   }
 
   get cuentaFields(): SummaryCardField[] {
@@ -339,7 +418,7 @@ export class ConciliacionHistoryPanelComponent implements OnChanges {
 
   /** «LB» si el registro viene del libro banco; si solo existe en las operaciones bancarias, «OBO». */
   get origen(): string {
-    return this.record?.['lbNumero'] ? 'LB' : 'OBO';
+    return this.dato('lbNumero') ? 'LB' : 'OBO';
   }
 
   get motivo(): string {
@@ -348,15 +427,21 @@ export class ConciliacionHistoryPanelComponent implements OnChanges {
   }
 
   get libroBanco(): OperacionFila[] {
-    const r = this.record;
-    if (!r?.['lbNumero']) return [];
-    return [{ sec: '0001', fecha: this.value('lbFecha'), numero: this.value('lbNumero'), descripcion: this.value('lbDescripcion'), entidad: this.value('lbEntidad'), debito: this.value('lbDebito', '0.00'), credito: this.value('lbCredito', '0.00') }];
+    return this.filasDe('lb');
   }
 
   get operacionesBancarias(): OperacionFila[] {
-    const r = this.record;
-    if (!r?.['rbNumero']) return [];
-    return [{ sec: '0001', fecha: this.value('rbFecha'), numero: this.value('rbNumero'), descripcion: this.value('rbDescripcion'), entidad: '', debito: this.value('rbDebito', '0.00'), credito: this.value('rbCredito', '0.00') }];
+    return this.filasDe('rb');
+  }
+
+  /** Las filas de un lado: una por línea de la versión (varias en un grupo) o, sin líneas, la única del registro. */
+  private filasDe(lado: 'lb' | 'rb'): OperacionFila[] {
+    const lineas = this.dato(`${lado}Lineas`) as LineaHistorial[] | undefined;
+    if (lineas?.length) {
+      return lineas.map((l) => ({ sec: l.secuencia.padStart(4, '0'), fecha: l.fecha, numero: l.numero, descripcion: l.descripcion, entidad: lado === 'lb' ? l.entidad : '', debito: l.debito || '0.00', credito: l.credito || '0.00' }));
+    }
+    if (!this.dato(`${lado}Numero`)) return [];
+    return [{ sec: '0001', fecha: this.value(`${lado}Fecha`), numero: this.value(`${lado}Numero`), descripcion: this.value(`${lado}Descripcion`), entidad: lado === 'lb' ? this.value('lbEntidad') : '', debito: this.value(`${lado}Debito`, '0.00'), credito: this.value(`${lado}Credito`, '0.00') }];
   }
 
   /** Suma de una columna de importes de la tabla, con dos decimales. */
@@ -366,7 +451,8 @@ export class ConciliacionHistoryPanelComponent implements OnChanges {
 
   /** Documentos de sustento del registro (un registro manual los trae adjuntos; el taller los guarda en `sustentosJson`). */
   get sustentos(): SustentoFila[] {
-    const crudo = this.record?.['sustentosJson'];
+    const doc = this.documentoActivo;
+    const crudo = doc?.sustentos ? JSON.stringify(doc.sustentos) : this.record?.['sustentosJson'];
     if (!crudo) return [];
     try {
       const lista = JSON.parse(String(crudo)) as { tipo: string; nombre: string; tamano?: string }[];

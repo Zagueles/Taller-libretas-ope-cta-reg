@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 
 import { PermissionService } from '../../../../../core/auth/permission.service';
 import { SolicitudesFacadeService } from '../../../../../core/state/solicitudes-facade.service';
@@ -6,14 +6,16 @@ import { SolicitudesStateService } from '../../../../../core/state/solicitudes-s
 
 import { DocumentsRecordsPageComponent } from '../../../../../shared/components/documents-records-page/documents-records-page.component';
 import type { DocumentsRecordsConfig, DocumentsRecordsRow } from '../../../../../shared/types/documents-records.types';
+import { ConciliacionDiariaApiService } from '../../api/conciliacion-diaria-api.service';
 import { CONCILIACION_DIARIA_CONFIG, REQUEST_ROUTE } from '../../config/conciliacion-diaria.config';
 import {
   CODIGO_DOCUMENTO,
   CUENTAS_CONCILIACION,
   FECHA_CONCILIACION_APROBADA,
+  RegistroConciliado,
   RegistroNoConciliado,
-  conciliarRegistro,
   diaDeOperacion,
+  fechaHoraTexto,
   registrosNoConciliados,
   trazabilidadDeEjemplo,
 } from '../../models/conciliacion-diaria.model';
@@ -67,12 +69,6 @@ const INCONSISTENCIAS = 'Inconsistencias de conciliación diaria';
 /** Cuenta bancaria de los registros de ejemplo. */
 const CUENTA = CUENTAS_CONCILIACION[0];
 
-/** Quién elaboró, verificó y aprobó la conciliación manual (Carla crea y verifica; Luis, otra persona, aprueba). */
-const TRAZA_PERSONAS = {
-  elaboradoPor: 'CARLA MENDOZA RÍOS', elaboradoFecha: TRAZA_MANUAL.elaborado,
-  verificadoPor: 'CARLA MENDOZA RÍOS', verificadoFecha: TRAZA_MANUAL.verificado,
-  aprobadoPor: 'LUIS QUISPE SALAS', aprobadoFecha: TRAZA_MANUAL.aprobado,
-};
 /** Lo que genera el sistema (conciliación automática e inconsistencias) lo elabora SIAF RP al cierre del día. */
 const TRAZA_SISTEMA = { elaboradoPor: 'SIAF RP', elaboradoFecha: CIERRE };
 
@@ -105,17 +101,31 @@ const fila = (r: RegistroNoConciliado, tipo: string, doc: string, number: string
   ...extra,
 });
 
-/** Los registros que Carla concilió a mano en 000001-2026: los mismos que la solicitud aprobada, con su sustento y justificación. */
-const NO_CONCILIADOS = registrosNoConciliados(CREACION_MANUAL);
-const MANUALES = [0, 1].map((i) => {
-  const r = conciliarRegistro(NO_CONCILIADOS[i], '1,000.00');
-  return fila(r, 'Manual', MANUAL, '000001-2026', 'Conciliado', {
-    fechaRegistro: TRAZA_MANUAL.aprobado,
-    sustentosJson: JSON.stringify((r.sustentos ?? []).map((s) => ({ tipo: s.tipo, nombre: s.nombre }))),
-    justificacion: r.justificacion ?? '',
-    ...TRAZA_PERSONAS,
+/**
+ * La fila de un registro conciliado a mano: lleva el documento que lo creó y, en `documentosJson`, todos los que lo
+ * crearon o modificaron (el panel «Historial del registro» los muestra como versiones).
+ */
+export const filaRegistroConciliado = (r: RegistroConciliado): DocumentsRecordsRow => {
+  const [creacion] = r.documentos;
+  const cuenta = CUENTAS_CONCILIACION.find((c) => c.numeroCuenta === r.numeroCuenta) ?? CUENTA;
+  return fila(r, 'Manual', MANUAL, creacion.numero, 'Conciliado', {
+    motivo: '-',
+    fechaRegistro: fechaHoraTexto(creacion.aprobadoFecha),
+    sustentosJson: JSON.stringify((creacion.sustentos ?? []).map((x) => ({ tipo: x.tipo, nombre: x.nombre }))),
+    justificacion: creacion.justificacion ?? '',
+    documentosJson: JSON.stringify(r.documentos),
+    cuentaNumero: cuenta.numeroCuenta,
+    cuentaDenominacion: cuenta.denominacion,
+    cuentaMoneda: cuenta.moneda,
+    cuentaEntidad: cuenta.entidadFinanciera,
+    elaboradoPor: creacion.elaboradoPor, elaboradoFecha: fechaHoraTexto(creacion.elaboradoFecha),
+    verificadoPor: creacion.verificadoPor, verificadoFecha: fechaHoraTexto(creacion.verificadoFecha),
+    aprobadoPor: creacion.aprobadoPor, aprobadoFecha: fechaHoraTexto(creacion.aprobadoFecha),
   });
-});
+};
+
+/** Los registros que quedaron sin conciliar el día D (los que el usuario ajusta a mano al día siguiente). */
+const NO_CONCILIADOS = registrosNoConciliados(CREACION_MANUAL);
 
 /** Registro conciliado por el sistema: la misma operación en libro banco y en el registro de operaciones bancarias. */
 const automatico = (nro: number, hora: string, numero: string, credito: string): DocumentsRecordsRow =>
@@ -128,8 +138,8 @@ const automatico = (nro: number, hora: string, numero: string, credito: string):
     'Automático', AUTO, '000001-2026', 'Conciliado', { fechaRegistro: CIERRE, ...TRAZA_SISTEMA },
   );
 
+/** Lo que genera el sistema: la conciliación automática y las inconsistencias. Los registros manuales llegan del backend. */
 export const REGISTROS_DE_EJEMPLO: DocumentsRecordsRow[] = [
-  ...MANUALES,
   automatico(6, '10:40:06', '02698156', '24,030.00'),
   automatico(5, '10:40:05', '02698155', '26,784.00'),
   automatico(4, '10:30:11', '02698153', '35,000.00'),
@@ -157,8 +167,12 @@ export class ConciliacionDiariaDocumentsComponent implements OnInit {
   private readonly solicitudesState = inject(SolicitudesStateService);
   private readonly solicitudesFacade = inject(SolicitudesFacadeService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly conciliacionApi = inject(ConciliacionDiariaApiService);
+  /** Los registros conciliados a mano, del backend: cada conciliación aprobada suma los suyos y cada modificación aprobada los actualiza. */
+  private readonly manuales = signal<RegistroConciliado[]>([]);
 
   ngOnInit(): void {
+    this.conciliacionApi.listarRegistros().subscribe((registros) => this.manuales.set(registros));
     // Bandeja según el rol (el aprobador además refresca cada 30 s). Se pide completa: la paginación es de la tabla.
     this.solicitudesFacade.iniciarBandeja(this.permissions.currentRole(), this.destroyRef, [CODIGO_DOCUMENTO], { page: 1, limit: 100 });
   }
@@ -172,7 +186,7 @@ export class ConciliacionDiariaDocumentsComponent implements OnInit {
       document: s.tipoDocumento,
       documentId: s.id,
       number: s.numero || '—',
-      actionType: s.tipoAccion === 'creacion' ? 'Creación' : s.tipoAccion,
+      actionType: s.tipoAccion === 'creacion' ? 'Creación' : s.tipoAccion === 'modificacion' ? 'Modificación' : s.tipoAccion,
       status: s.estado,
       system: 'Tesorería',
       date: s.fecha,
@@ -187,7 +201,7 @@ export class ConciliacionDiariaDocumentsComponent implements OnInit {
     return {
       ...CONCILIACION_DIARIA_CONFIG,
       documentRows: [...propios, ...DOCUMENTOS_DEL_SISTEMA],
-      recordRows: REGISTROS_DE_EJEMPLO,
+      recordRows: [...this.manuales().slice().reverse().map(filaRegistroConciliado), ...REGISTROS_DE_EJEMPLO],
     };
   });
 }

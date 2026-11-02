@@ -1,3 +1,4 @@
+import type { ProcesamientoMock } from './procesamiento-conciliacion';
 import type { NotificacionResponse } from '../core/api/notificaciones-api.service';
 import type { HistorialItem, SolicitudResponse } from '../core/api/solicitudes-api.service';
 import type { EstadoDocumento } from '../core/models/documento.model';
@@ -13,7 +14,9 @@ import {
   ConciliacionManualDatos,
   NOMBRE_DOCUMENTO as NOMBRE_CONCILIACION,
   FECHA_CONCILIACION_APROBADA,
+  RegistroConciliado,
   conciliarRegistro,
+  registroConciliadoDeCreacion,
   registrosNoConciliados,
 } from '../modules/tesoreria/conciliacion-diaria/models/conciliacion-diaria.model';
 import { DatosLibretas, datosLibretasIniciales } from './libretas-backend';
@@ -26,7 +29,7 @@ import { USUARIOS_DEMO, UsuarioDemo } from './usuarios-demo';
  */
 
 const CLAVE = 'taller-siaf-rp:datos';
-const VERSION = 12;
+const VERSION = 16;
 
 export interface NotificacionMock extends NotificacionResponse {
   /** Destinatario: un usuario puntual o, si no hay, todos los perfiles con este rol. */
@@ -39,6 +42,10 @@ export interface DatosTaller {
   solicitudes: SolicitudResponse[];
   registros: CuentaBancariaRegistro[];
   notificaciones: NotificacionMock[];
+  /** Procesamiento de las conciliaciones manuales aprobadas (actualización de los sistemas relacionados). */
+  procesamientos: ProcesamientoMock[];
+  /** Registros conciliados a mano (los de las conciliaciones aprobadas), con los documentos que los crearon y modificaron. */
+  registrosConciliacion: RegistroConciliado[];
   correlativoDocumento: number;
   correlativoRegistro: number;
   /** Correlativo de la conciliación manual diaria (se reinicia cada año en el sistema real; en el taller es único). */
@@ -182,6 +189,8 @@ function crearDatosIniciales(): DatosTaller {
     solicitudes: [],
     registros: [],
     notificaciones: [],
+    procesamientos: [],
+    registrosConciliacion: [],
     correlativoDocumento: 0,
     correlativoRegistro: 0,
     correlativoConciliacion: 0,
@@ -317,7 +326,7 @@ function sembrarConciliaciones(datos: DatosTaller, creador: UsuarioDemo, aprobad
     const detalle: ConciliacionManualDatos = {
       numeroCuenta: CUENTAS_CONCILIACION[semilla.cuenta].numeroCuenta,
       // Las operaciones son de la jornada anterior a la creación de la conciliación.
-      registros: semilla.registros.map((i) => conciliarRegistro(registrosNoConciliados(new Date(creada))[i], '1,000.00')),
+      registros: semilla.registros.map((i) => conciliarRegistro(registrosNoConciliados(new Date(creada))[i], '1,000.00', semilla.estado === 'APROBADO')),
     };
     datos.solicitudes.push({
       id,
@@ -338,5 +347,13 @@ function sembrarConciliaciones(datos: DatosTaller, creador: UsuarioDemo, aprobad
       sustentos: [],
       historialEstados: historial,
     });
+    if (semilla.estado === 'APROBADO') {
+      // La conciliación aprobada de ejemplo ya terminó de actualizar los sistemas relacionados.
+      const fin = enFecha(semilla.creada, 11, 2);
+      const nombre = (u: UsuarioDemo): string => `${u.nombres} ${u.apellidoPaterno} ${u.apellidoMaterno}`.toUpperCase();
+      const doc = { documentoId: id, numero, numeroCuenta: detalle.numeroCuenta, elaboradoPor: nombre(creador), elaboradoFecha: creada, verificadoPor: nombre(creador), verificadoFecha: enFecha(semilla.creada, 10, 1), aprobadoPor: nombre(aprobador), aprobadoFecha: fin };
+      for (const r of detalle.registros.filter((x) => x.conciliado)) datos.registrosConciliacion.push(registroConciliadoDeCreacion(r, doc));
+      datos.procesamientos.push({ solicitudId: id, aprobadorId: aprobador.id, iniciadoEn: fin, actualizadoEn: fin, escenario: 'aplicado', estado: 'APLICADO', sistemasConError: [], reintentosAgotados: false, notificado: true });
+    }
   }
 }

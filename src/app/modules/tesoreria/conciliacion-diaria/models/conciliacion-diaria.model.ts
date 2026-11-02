@@ -42,6 +42,39 @@ export interface RegistroNoConciliado {
   /** Documentos de sustento que el creador adjunta al conciliar el registro (el taller guarda solo el nombre del archivo). */
   sustentos?: SustentoRegistro[];
   justificacion?: string;
+  /** Los registros del libro banco (RR) y de operaciones bancarias que concilian este registro: uno por lado, o varios en un grupo. */
+  lbLineas?: LineaConciliacion[];
+  rbLineas?: LineaConciliacion[];
+  /** Bitácora: cada campo corregido con su valor anterior y el nuevo. */
+  ediciones?: EdicionRegistro[];
+  /** En una modificación: el registro conciliado ya se corrigió (sin cambios no se puede verificar). */
+  modificado?: boolean;
+}
+
+/** Los campos de una línea que el usuario puede corregir en el formulario. */
+export interface DatosLinea {
+  fecha: string;
+  numero: string;
+  descripcion: string;
+  entidad: string;
+  debito: string;
+  credito: string;
+  secuencia: string;
+}
+
+/** Un registro de una de las dos fuentes dentro de la conciliación; `original` guarda lo que traía para marcar lo editado. */
+export interface LineaConciliacion extends DatosLinea {
+  id: string;
+  original: DatosLinea;
+}
+
+/** Un campo corregido en la conciliación: qué registro, qué campo, el valor anterior y el nuevo. */
+export interface EdicionRegistro {
+  lado: 'Libro banco' | 'Operaciones bancarias';
+  numero: string;
+  campo: string;
+  antes: string;
+  despues: string;
 }
 
 /** Un documento de sustento del registro, con su tipo («Constancia», «Captura de pantalla»…). */
@@ -58,6 +91,58 @@ export const TIPOS_DOCUMENTO_SUSTENTO = ['Constancia', 'Captura de pantalla', 'C
 export interface ConciliacionManualDatos {
   numeroCuenta: string;
   registros: RegistroNoConciliado[];
+  /** Solo en una modificación: qué se corrige de los registros conciliados. */
+  tipoModificacion?: TipoModificacion;
+}
+
+/** Qué corrige una modificación: los datos del registro (fecha, número, descripción, entidad, secuencia) o sus montos (débito y crédito). */
+export type TipoModificacion = 'Datos' | 'Montos';
+export const TIPOS_MODIFICACION: TipoModificacion[] = ['Datos', 'Montos'];
+
+/** Los campos de una línea que se pueden editar según el tipo de modificación; en una creación, todos. */
+export function camposEditables(tipo: TipoModificacion | null | undefined): (keyof DatosLinea)[] {
+  if (tipo === 'Datos') return ['fecha', 'numero', 'descripcion', 'entidad', 'secuencia'];
+  if (tipo === 'Montos') return ['debito', 'credito'];
+  return ['fecha', 'numero', 'descripcion', 'entidad', 'debito', 'credito', 'secuencia'];
+}
+
+/** Un documento de la vida de un registro conciliado: el que lo creó y los que lo modificaron. */
+/** Los datos del registro tal como los dejó un documento al aprobarse: lo que se ve al elegir esa versión en su historial. */
+export type DatosDeRegistro = Pick<
+  RegistroNoConciliado,
+  'lbFecha' | 'lbNumero' | 'lbDescripcion' | 'lbEntidad' | 'lbDebito' | 'lbCredito' | 'rbFecha' | 'rbNumero' | 'rbDescripcion' | 'rbDebito' | 'rbCredito' | 'lbLineas' | 'rbLineas'
+>;
+
+export const datosDeRegistro = (r: RegistroNoConciliado): DatosDeRegistro => ({
+  lbFecha: r.lbFecha, lbNumero: r.lbNumero, lbDescripcion: r.lbDescripcion, lbEntidad: r.lbEntidad, lbDebito: r.lbDebito, lbCredito: r.lbCredito,
+  rbFecha: r.rbFecha, rbNumero: r.rbNumero, rbDescripcion: r.rbDescripcion, rbDebito: r.rbDebito, rbCredito: r.rbCredito,
+  lbLineas: r.lbLineas, rbLineas: r.rbLineas,
+});
+
+export interface DocumentoDeRegistro {
+  documentoId: string;
+  numero: string;
+  tipoAccion: 'Creación' | 'Modificación';
+  tipoModificacion?: TipoModificacion;
+  /** Quién elaboró, verificó y aprobó el documento y cuándo (ISO); la fecha de la aprobación es la del documento en la vida del registro. */
+  elaboradoPor: string;
+  elaboradoFecha: string;
+  verificadoPor: string;
+  verificadoFecha: string;
+  aprobadoPor: string;
+  aprobadoFecha: string;
+  /** Cómo quedó el registro al aprobarse este documento: la creación guarda lo conciliado; la modificación, lo corregido. */
+  datos: DatosDeRegistro;
+  ediciones?: EdicionRegistro[];
+  /** El sustento y la justificación de ese documento. */
+  sustentos?: SustentoRegistro[];
+  justificacion?: string;
+}
+
+/** Un registro conciliado a mano (activo), con los documentos que lo crearon y modificaron: es lo que lista la pestaña Registros. */
+export interface RegistroConciliado extends RegistroNoConciliado {
+  numeroCuenta: string;
+  documentos: DocumentoDeRegistro[];
 }
 
 /** Un registro está listo para elaborar cuando concilió, tiene débito y crédito en ambas fuentes y al menos un documento de sustento y su justificación. */
@@ -125,30 +210,45 @@ export function registrosNoConciliados(creacion: Date = new Date()): RegistroNoC
 /** Los de hoy: las operaciones son siempre de ayer. */
 export const REGISTROS_NO_CONCILIADOS: RegistroNoConciliado[] = registrosNoConciliados();
 
-/** Un registro que el creador ya concilió a mano: montos completos en ambas fuentes. */
-export function conciliarRegistro(base: RegistroNoConciliado, credito: string): RegistroNoConciliado {
-  const propio = base.lbNumero ? 'lb' : 'rb';
+/**
+ * Un registro que el creador ya concilió a mano: ambas fuentes con el mismo monto. Si la otra fuente traía un monto
+ * distinto («Montos diferentes»), se corrige y queda en la bitácora. El motivo de inconsistencia se conserva hasta que el
+ * documento se aprueba (`aprobado`): entonces pasa a «-».
+ */
+export function conciliarRegistro(base: RegistroNoConciliado, credito: string, aprobado = false): RegistroNoConciliado {
+  const origenLB = !!base.lbNumero;
+  const debitoFinal = (origenLB ? base.lbDebito : base.rbDebito) || '0.00';
+  const creditoFinal = (origenLB ? base.lbCredito : base.rbCredito) || credito;
+  const fecha = base.lbFecha || base.rbFecha;
+  const numero = base.lbNumero || base.rbNumero;
+  const descripcion = base.lbDescripcion || base.rbDescripcion;
+  const ediciones: EdicionRegistro[] = [];
+  const otroCredito = origenLB ? base.rbCredito : base.lbCredito;
+  if (otroCredito && otroCredito !== creditoFinal) {
+    ediciones.push({ lado: origenLB ? 'Operaciones bancarias' : 'Libro banco', numero, campo: 'Crédito', antes: otroCredito, despues: creditoFinal });
+  }
   return {
     ...base,
-    lbFecha: base.lbFecha || base.rbFecha,
-    lbNumero: base.lbNumero || base.rbNumero,
-    lbDescripcion: base.lbDescripcion || base.rbDescripcion,
+    lbFecha: fecha,
+    lbNumero: numero,
+    lbDescripcion: descripcion,
     lbEntidad: base.lbEntidad || 'SUNAT',
-    lbDebito: base.lbDebito || '0.00',
-    lbCredito: base.lbCredito || credito,
-    rbFecha: base.rbFecha || base.lbFecha,
-    rbNumero: base.rbNumero || base.lbNumero,
-    rbDescripcion: base.rbDescripcion || base.lbDescripcion,
-    rbDebito: base.rbDebito || '0.00',
-    rbCredito: base.rbCredito || (propio === 'lb' ? base.lbCredito : credito),
-    motivo: '-',
+    lbDebito: debitoFinal,
+    lbCredito: creditoFinal,
+    rbFecha: base.rbFecha || fecha,
+    rbNumero: base.rbNumero || numero,
+    rbDescripcion: base.rbDescripcion || descripcion,
+    rbDebito: debitoFinal,
+    rbCredito: creditoFinal,
+    motivo: aprobado ? '-' : base.motivo,
     conciliado: true,
     sustentos: [{ tipo: 'Constancia', nombre: `Constancia registro ${base.nro}.pdf` }],
     justificacion: 'La operación bancaria coincide con el registro del libro banco.',
+    ...(ediciones.length ? { ediciones } : {}),
   };
 }
 
-/** Una operación bancaria (o, en el origen contrario, un registro del libro banco) que se puede elegir para conciliar. */
+/** Un registro que se puede elegir para conciliar: una operación bancaria o, en el lado contrario, un RR del libro banco. */
 export interface OperacionConciliable {
   id: string;
   fecha: string;
@@ -156,14 +256,143 @@ export interface OperacionConciliable {
   descripcion: string;
   debito: string;
   credito: string;
+  entidad?: string;
 }
 
-/** Operaciones disponibles en el panel «Seleccionar registro de operaciones bancarias» (Figma 461:28376): las de la jornada anterior a `creacion`. */
+/**
+ * Operaciones del panel «Seleccionar registro de operaciones bancarias» (Figma 461:28376), las de la jornada anterior a
+ * `creacion`: una con el número mal informado (caso 2) y tres que, juntas, cubren dos RR con números distintos (caso 3).
+ */
 export function operacionesConciliables(creacion: Date = new Date()): OperacionConciliable[] {
+  const op = (id: string, hora: string, numero: string, credito: string): OperacionConciliable => ({ id, fecha: fechaDeOperacion(creacion, hora), numero, descripcion: DESCRIPCION, debito: '0.00', credito });
   return [
-    { id: 'op-02698150', fecha: fechaDeOperacion(creacion, '10:10:08'), numero: '02698150', descripcion: 'Reporte de Recaudación', debito: '0.00', credito: '5,068.00' },
-    { id: 'op-02698147', fecha: fechaDeOperacion(creacion, '10:00:13'), numero: '02698147', descripcion: 'Reporte de Recaudación', debito: '0.00', credito: '9,753.00' },
+    op('op-02698145', '10:40:04', '02698145', '1,267.00'),
+    op('op-02698148-a', '10:05:06', '02698148', '20,000.00'),
+    op('op-02698148-b', '10:05:07', '02698148', '8,000.00'),
+    op('op-02698157', '10:05:08', '02698157', '6,490.00'),
   ];
 }
 
 export const OPERACIONES_CONCILIABLES: OperacionConciliable[] = operacionesConciliables();
+
+/** RR del libro banco que se pueden elegir cuando el registro nace de una operación bancaria: uno con la fecha de un día antes (caso 2) y otro para el grupo (caso 3). */
+export function libroBancoConciliable(creacion: Date = new Date()): OperacionConciliable[] {
+  const antes = new Date(creacion);
+  antes.setDate(antes.getDate() - 1);
+  const rr = (id: string, creada: Date, hora: string, numero: string, credito: string): OperacionConciliable => ({ id, fecha: fechaDeOperacion(creada, hora), numero, descripcion: DESCRIPCION, debito: '0.00', credito, entidad: 'SUNAT' });
+  return [rr('rr-02698147', antes, '10:00:13', '02698147', '9,753.00'), rr('rr-02698149', creacion, '10:20:00', '02698149', '3,245.00')];
+}
+
+export const LIBRO_BANCO_CONCILIABLE: OperacionConciliable[] = libroBancoConciliable();
+
+/** Un documento aprobado de creación o modificación, tal como queda en la vida del registro. */
+export type DocumentoAprobado = Pick<DocumentoDeRegistro, 'documentoId' | 'numero' | 'elaboradoPor' | 'elaboradoFecha' | 'verificadoPor' | 'verificadoFecha' | 'aprobadoPor' | 'aprobadoFecha'> & { numeroCuenta: string };
+
+/** «dd/mm/aaaa hh:mm:ss» de una fecha ISO. */
+export function fechaHoraTexto(iso: string): string {
+  const d = new Date(iso);
+  return `${aTexto(d)} ${dos(d.getHours())}:${dos(d.getMinutes())}:${dos(d.getSeconds())}`;
+}
+
+const documentoDe = ({ numeroCuenta: _cuenta, ...doc }: DocumentoAprobado): Omit<DocumentoDeRegistro, 'tipoAccion' | 'datos'> => doc;
+
+/** Al aprobar una creación: el registro conciliado pasa a Registros con su primer documento. */
+export function registroConciliadoDeCreacion(r: RegistroNoConciliado, doc: DocumentoAprobado): RegistroConciliado {
+  const { modificado: _modificado, ...registro } = r;
+  return {
+    ...registro,
+    id: `rc-${doc.documentoId}-${r.id}`,
+    motivo: '-',
+    numeroCuenta: doc.numeroCuenta,
+    documentos: [{ ...documentoDe(doc), tipoAccion: 'Creación', datos: datosDeRegistro(r), ediciones: r.ediciones, sustentos: r.sustentos, justificacion: r.justificacion }],
+  };
+}
+
+/** Al aprobar una modificación: el registro toma sus datos nuevos y su historial suma el documento de modificación (trazabilidad). */
+export function aplicarModificacion(actual: RegistroConciliado, modificado: RegistroNoConciliado, tipo: TipoModificacion, doc: DocumentoAprobado): RegistroConciliado {
+  return {
+    ...actual,
+    lbFecha: modificado.lbFecha,
+    lbNumero: modificado.lbNumero,
+    lbDescripcion: modificado.lbDescripcion,
+    lbEntidad: modificado.lbEntidad,
+    lbDebito: modificado.lbDebito,
+    lbCredito: modificado.lbCredito,
+    rbFecha: modificado.rbFecha,
+    rbNumero: modificado.rbNumero,
+    rbDescripcion: modificado.rbDescripcion,
+    rbDebito: modificado.rbDebito,
+    rbCredito: modificado.rbCredito,
+    lbLineas: modificado.lbLineas,
+    rbLineas: modificado.rbLineas,
+    ediciones: [...(actual.ediciones ?? []), ...(modificado.ediciones ?? [])],
+    documentos: [
+      ...actual.documentos,
+      { ...documentoDe(doc), tipoAccion: 'Modificación', tipoModificacion: tipo, datos: datosDeRegistro(modificado), ediciones: modificado.ediciones, sustentos: modificado.sustentos, justificacion: modificado.justificacion },
+    ],
+  };
+}
+
+// ─── Procesamiento posterior a la aprobación ─────────────────────────
+
+/** El estado del documento (Aprobado) y el del procesamiento son datos distintos: una falla externa no reabre el documento. */
+export type EstadoProcesamiento = 'EN_PROCESO' | 'APLICADO' | 'CON_INCIDENCIAS';
+
+export interface SistemaConError {
+  codigo: string;
+  nombre: string;
+}
+
+/** `GET /conciliaciones-manuales/{id}/procesamiento`. */
+export interface ProcesamientoConciliacion {
+  estado: EstadoProcesamiento;
+  actualizadoEn: string;
+  sistemasConError: SistemaConError[];
+  reintentosAgotados: boolean;
+}
+
+/** `POST /conciliaciones-manuales/{id}/aprobar`. */
+export interface AprobacionConciliacion {
+  estadoDocumento: 'APROBADO';
+  procesamiento: EstadoProcesamiento;
+}
+
+/** Los sistemas de un error en lenguaje corrido: «Contabilidad» o «Libretas y Contabilidad». */
+export function listaDeSistemas(sistemas: SistemaConError[]): string {
+  const nombres = sistemas.map((x) => x.nombre);
+  return nombres.length > 1 ? `${nombres.slice(0, -1).join(', ')} y ${nombres[nombres.length - 1]}` : (nombres[0] ?? '');
+}
+
+/** Cómo se avisa que el procesamiento falló: «No se pudo actualizar Contabilidad» o «No se pudo actualizar 2 sistemas: Libretas y Contabilidad.». */
+export function tituloDeIncidencia(sistemas: SistemaConError[]): string {
+  return sistemas.length > 1 ? `No se pudo actualizar ${sistemas.length} sistemas: ${listaDeSistemas(sistemas)}.` : `No se pudo actualizar ${listaDeSistemas(sistemas)}`;
+}
+
+/** El banner que va bajo la cabecera del documento aprobado; sin procesamiento, no hay banner. */
+export interface BannerProcesamiento {
+  tono: 'info' | 'success' | 'error';
+  titulo: string;
+  mensaje: string;
+  /** En proceso o con error no se cierra; el aplicado, sí. */
+  cerrable: boolean;
+}
+
+export function bannerDeProcesamiento(p: ProcesamientoConciliacion | null, numero: string): BannerProcesamiento | null {
+  if (!p) return null;
+  switch (p.estado) {
+    case 'EN_PROCESO':
+      return { tono: 'info', cerrable: false, titulo: 'Procesando la conciliación', mensaje: 'Se están actualizando los sistemas relacionados. Puedes salir de esta pantalla; te avisaremos al terminar.' };
+    case 'APLICADO':
+      return { tono: 'success', cerrable: true, titulo: 'Conciliación aplicada', mensaje: 'Los sistemas relacionados se actualizaron correctamente.' };
+    case 'CON_INCIDENCIAS':
+      return {
+        tono: 'error',
+        cerrable: false,
+        titulo: tituloDeIncidencia(p.sistemasConError),
+        mensaje: p.reintentosAgotados
+          ? `El documento sigue aprobado. Comunícate con la mesa de ayuda e indica el documento ${numero}.`
+          : 'El documento sigue aprobado. El sistema volverá a intentarlo automáticamente.',
+      };
+  }
+}
+

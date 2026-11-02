@@ -8,7 +8,8 @@ export type AlertTone = 'neutral' | 'info' | 'success' | 'warning' | 'error';
  * Mensaje de feedback en línea, con tono (neutral/info/éxito/advertencia/error), ícono y cierre opcional.
  * El título, el ícono y la × se apagan por separado (`title` vacío, `leadingIcon`, `showClose`); con varias líneas
  * de texto, el ícono y la × quedan arriba, a la altura del título. La descripción respeta los saltos de línea (`\n`):
- * sirve para listar varios motivos en un solo aviso.
+ * sirve para listar varios motivos en un solo aviso. Con `live="status"` el aviso se anuncia con cortesía, sin
+ * interrumpir, en vez de como `alert`. La espera de un proceso va aparte, con `siaf-loader-overlay`.
  *
  * Usarlo para avisos fijos dentro de una pantalla o formulario. Para confirmaciones de acciones de
  * solicitud (aprobar, observar, rechazar) el canónico es `siaf-request-approval-modals` con su snackbar.
@@ -33,7 +34,8 @@ export type AlertTone = 'neutral' | 'info' | 'success' | 'warning' | 'error';
  * - **Enter / Espacio**: la × emite `closed` (botón nativo); quien retira el aviso es el padre.
  * @accesibilidad
  * - **4.1.3 Mensajes de estado (AA)**: el contenedor es `role="alert"` en todos los tonos: al insertarse se
- *   anuncia de inmediato, también los neutrales, informativos y de éxito.
+ *   anuncia de inmediato, también los neutrales, informativos y de éxito. Con `live="status"` pasa a `role="status"` y
+ *   `aria-live="polite"`: usarlo en lo informativo o de éxito que no exige atención inmediata (un proceso en curso).
  * - **1.1.1 Contenido no textual (A)**: el ícono del tono va con `aria-hidden`; el tipo de aviso tiene que quedar
  *   dicho en `title` o `description`.
  * - **1.4.1 Uso del color (A)**: cada tono cambia de color y de ícono, salvo neutral y éxito, que comparten
@@ -56,7 +58,8 @@ export type AlertTone = 'neutral' | 'info' | 'success' | 'warning' | 'error';
     <div
       class="flex w-full min-w-0 items-center rounded-siaf-md p-siaf-md"
       [class]="containerClass"
-      role="alert"
+      [attr.role]="live === 'status' ? 'status' : 'alert'"
+      [attr.aria-live]="live === 'status' ? 'polite' : null"
     >
       <!-- Ícono y textos (Figma «Box»): con varias líneas, el ícono queda arriba, a la altura del título. -->
       <div class="flex min-w-0 flex-1 items-start gap-siaf-xs">
@@ -104,6 +107,8 @@ export class AlertComponent {
   @Input() description = '';
   @Input() showClose = false;
   @Input() leadingIcon = true;
+  /** `status` lo anuncia con cortesía (`role="status"`); `alert`, de inmediato. */
+  @Input() live: 'alert' | 'status' = 'alert';
 
   @Output() closed = new EventEmitter<void>();
 

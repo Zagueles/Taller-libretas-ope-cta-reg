@@ -11,7 +11,11 @@ import {
   CODIGO_DOCUMENTO as CODIGO_CONCILIACION,
   CUENTAS_CONCILIACION,
   ConciliacionManualDatos,
+  TIPOS_MODIFICACION,
+  aplicarModificacion,
   registroCompleto,
+  registroConciliadoDeCreacion,
+  tituloDeIncidencia,
 } from '../modules/tesoreria/conciliacion-diaria/models/conciliacion-diaria.model';
 import type { CuentaBancariaDatos } from '../modules/tesoreria/cuentas-bancarias/models/cuenta-bancaria.model';
 import {
@@ -29,6 +33,7 @@ import {
   numeroDocumento,
 } from './mock-db';
 import { cuentasRegistro, detalleDocumento, detalleMovimiento, filtrarMovimientos, listarDocumentos, saldosCuentasBancarias } from './libretas-backend';
+import { avanzarProcesamiento, iniciarProcesamiento, respuestaProcesamiento } from './procesamiento-conciliacion';
 import { CONTRASENA_DEMO, USUARIOS_DEMO, UsuarioDemo, buscarUsuarioPorPerfil } from './usuarios-demo';
 
 /**
@@ -154,7 +159,7 @@ const tiposDocumento: Manejador = () => ok([
     ...TIPO_DOCUMENTO_CONCILIACION,
     modulo: 'tesoreria',
     esActivo: true,
-    accionesPermitidas: [{ tipoAccion: 'creacion' }],
+    accionesPermitidas: [{ tipoAccion: 'creacion' }, { tipoAccion: 'modificacion' }],
     proceso: { codigo: 'conciliacion-diaria', nombre: 'Conciliación diaria', modulo: 'tesoreria' },
   },
 ]);
@@ -167,9 +172,18 @@ function visibles(datos: DatosTaller, sesion: Sesion): NotificacionMock[] {
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
-const notificaciones: Manejador = ({ datos, sesion }) => ok(sesion ? visibles(datos, sesion).slice(0, 20) : []);
-const historialNotificaciones: Manejador = ({ datos, sesion }) => ok(sesion ? visibles(datos, sesion) : []);
-const contadorNotificaciones: Manejador = ({ datos, sesion }) => ok({ total: sesion ? visibles(datos, sesion).filter((n) => !n.leida).length : 0 });
+const notificaciones: Manejador = ({ datos, sesion }) => {
+  resolverProcesamientos(datos);
+  return ok(sesion ? visibles(datos, sesion).slice(0, 20) : []);
+};
+const historialNotificaciones: Manejador = ({ datos, sesion }) => {
+  resolverProcesamientos(datos);
+  return ok(sesion ? visibles(datos, sesion) : []);
+};
+const contadorNotificaciones: Manejador = ({ datos, sesion }) => {
+  resolverProcesamientos(datos);
+  return ok({ total: sesion ? visibles(datos, sesion).filter((n) => !n.leida).length : 0 });
+};
 
 const marcarLeidas: Manejador = ({ datos, sesion }) => {
   if (sesion) {
@@ -210,6 +224,41 @@ function notificar(datos: DatosTaller, s: SolicitudResponse, estado: EstadoDocum
     documento: { id: s.id, numero: s.numero, catDocumento: { ...TIPO_DOCUMENTO, ...s.catDocumento } },
     ...destino,
   });
+}
+
+/**
+ * Avanza los procesamientos de conciliación que ya cumplieron su tiempo y, al terminar (aplicado o con incidencias), avisa
+ * al elaborador y al aprobador. «En proceso» no genera notificación. Se llama al consultar el procesamiento y las
+ * notificaciones, que es cuando el backend real ya lo habría hecho por su cuenta.
+ */
+function resolverProcesamientos(datos: DatosTaller): void {
+  let cambio = false;
+  for (const p of datos.procesamientos) {
+    if (avanzarProcesamiento(p)) cambio = true;
+    if (p.estado === 'EN_PROCESO' || p.notificado) continue;
+    const s = buscarSolicitud(datos, p.solicitudId);
+    if (!s) continue;
+    p.notificado = true;
+    cambio = true;
+    const aplicado = p.estado === 'APLICADO';
+    const texto = aplicado
+      ? { titulo: `Conciliación ${s.numero} aplicada`, mensaje: 'Los sistemas relacionados se actualizaron.', tipo: 'CONCILIACION_APLICADA' }
+      : { titulo: `Conciliación ${s.numero}: ${tituloDeIncidencia(p.sistemasConError).replace(/\.$/, '').replace('No se pudo', 'no se pudo')}`, mensaje: 'El documento sigue aprobado.', tipo: 'CONCILIACION_CON_INCIDENCIAS' };
+    for (const usuarioId of new Set([s.creador?.id, p.aprobadorId].filter((x): x is string => !!x))) {
+      datos.notificaciones.push({
+        id: nuevoId(datos, 'not'),
+        tipo: texto.tipo,
+        titulo: texto.titulo,
+        mensaje: texto.mensaje,
+        leida: false,
+        leidaEn: null,
+        createdAt: new Date().toISOString(),
+        documento: { id: s.id, numero: s.numero, catDocumento: { ...TIPO_DOCUMENTO, ...s.catDocumento } },
+        paraUsuarioId: usuarioId,
+      });
+    }
+  }
+  if (cambio) guardarDatos(datos);
 }
 
 // ─── Solicitudes ───────────────────────────────────────────────────
@@ -334,7 +383,12 @@ const guardarConciliacionManual: Manejador = ({ req, datos, params }) => {
   if (!registros.filter((r) => r.conciliado).every(registroCompleto)) {
     return error(400, 'Complete el débito, el crédito, el documento y la justificación de sustento de cada registro para conciliarlo.');
   }
-  s.detalleConciliacionManual = { documentoId: s.id, numeroCuenta: detalle.numeroCuenta!, registros };
+  // Una modificación corrige registros que ya están conciliados: elige qué corrige y cuáles registros.
+  if (s.tipoAccion === 'modificacion') {
+    if (!detalle.tipoModificacion || !TIPOS_MODIFICACION.includes(detalle.tipoModificacion)) return error(400, 'Seleccione el tipo de modificación.');
+    if (!registros.every((r) => datos.registrosConciliacion.some((x) => x.id === r.id))) return error(400, 'Solo se pueden modificar registros conciliados.');
+  }
+  s.detalleConciliacionManual = { documentoId: s.id, numeroCuenta: detalle.numeroCuenta!, registros, ...(detalle.tipoModificacion ? { tipoModificacion: detalle.tipoModificacion } : {}) };
   s.updatedAt = new Date().toISOString();
   guardarDatos(datos);
   return ok({ message: 'Conciliación guardada' });
@@ -407,6 +461,10 @@ const cambiarEstado: Manejador = ({ req, datos, params, sesion }) => {
   if (nuevo === 'ELABORADO') {
     if (esConciliacion) {
       if (!s.detalleConciliacionManual) return error(400, 'Registre la cuenta a conciliar.');
+      if (s.tipoAccion === 'modificacion') {
+        const registros = s.detalleConciliacionManual.registros;
+        if (!registros.length || !registros.every((r) => r.modificado)) return error(400, 'Modifique cada registro conciliado antes de elaborar el documento.');
+      }
     } else {
       if (!s.detalleCuentaBancaria) return error(400, 'Registre los datos de la cuenta bancaria.');
       if (!(s.sustentos ?? []).length) return error(400, 'Adjunte el documento de sustento.');
@@ -453,6 +511,60 @@ const cambiarEstado: Manejador = ({ req, datos, params, sesion }) => {
   notificar(datos, s, nuevo, comentario || null);
   guardarDatos(datos);
   return ok({ message: 'Estado actualizado', numero: s.numero });
+};
+
+// ─── Aprobación de la conciliación manual y su procesamiento ──────
+
+/** Al aprobar: una creación suma sus registros conciliados a Registros; una modificación actualiza los suyos y deja el documento en su historial. */
+function aplicarAprobacion(datos: DatosTaller, s: SolicitudResponse, aprobador: UsuarioDemo): void {
+  const detalle = s.detalleConciliacionManual;
+  if (!detalle) return;
+  const paso = (estado: EstadoDocumento) => [...(s.historialEstados ?? [])].reverse().find((h) => h.estadoNuevo === estado);
+  const quien = (h?: { creador: { nombres: string; apellidoPaterno: string; apellidoMaterno: string } | null }): string => (h?.creador ? nombreCompleto(h.creador).toUpperCase() : '');
+  const ahora = new Date().toISOString();
+  const doc = {
+    documentoId: s.id,
+    numero: s.numero ?? '',
+    numeroCuenta: detalle.numeroCuenta,
+    elaboradoPor: quien(paso('ELABORADO')),
+    elaboradoFecha: paso('ELABORADO')?.createdAt ?? ahora,
+    verificadoPor: quien(paso('VERIFICADO')),
+    verificadoFecha: paso('VERIFICADO')?.createdAt ?? ahora,
+    aprobadoPor: nombreCompleto(aprobador).toUpperCase(),
+    aprobadoFecha: ahora,
+  };
+  if (s.tipoAccion === 'modificacion' && detalle.tipoModificacion) {
+    datos.registrosConciliacion = datos.registrosConciliacion.map((actual) => {
+      const nuevo = detalle.registros.find((r) => r.id === actual.id);
+      return nuevo ? aplicarModificacion(actual, nuevo, detalle.tipoModificacion!, doc) : actual;
+    });
+    return;
+  }
+  for (const r of detalle.registros.filter((x) => x.conciliado)) datos.registrosConciliacion.push(registroConciliadoDeCreacion(r, doc));
+}
+
+const registrosConciliacion: Manejador = ({ datos, query }) => {
+  const cuenta = query.get('cuenta');
+  return ok(datos.registrosConciliacion.filter((r) => !cuenta || r.numeroCuenta === cuenta));
+};
+
+/** Aprueba (síncrono: el documento queda Aprobado) y deja el procesamiento de los sistemas relacionados «en proceso». */
+const aprobarConciliacion: Manejador = (ctx) => {
+  const s = buscarSolicitud(ctx.datos, ctx.params[0]);
+  if (s && s.catDocumento?.codigo !== CODIGO_CONCILIACION) return error(400, 'El documento no es una conciliación manual.');
+  const respuesta = cambiarEstado({ ...ctx, req: ctx.req.clone({ body: { estadoNuevo: 'APROBADO' } }) });
+  if (respuesta.status >= 400 || !s || !ctx.sesion) return respuesta;
+  aplicarAprobacion(ctx.datos, s, ctx.sesion.usuario);
+  ctx.datos.procesamientos = ctx.datos.procesamientos.filter((p) => p.solicitudId !== s.id);
+  ctx.datos.procesamientos.push(iniciarProcesamiento(s.id, ctx.sesion.usuario.id));
+  guardarDatos(ctx.datos);
+  return ok({ estadoDocumento: 'APROBADO', procesamiento: 'EN_PROCESO' });
+};
+
+const procesamientoConciliacion: Manejador = ({ datos, params }) => {
+  resolverProcesamientos(datos);
+  const p = datos.procesamientos.find((x) => x.solicitudId === params[0]);
+  return p ? ok(respuestaProcesamiento(p)) : error(404, 'La conciliación no tiene procesamiento.');
 };
 
 // ─── Proceso de ejemplo ────────────────────────────────────────────
@@ -516,6 +628,9 @@ const RUTAS: [string, RegExp, Manejador][] = [
   ['GET', /^\/solicitudes\/bandeja-aprobador$/, bandejaAprobador],
   ['POST', /^\/solicitudes$/, crearSolicitud],
   ['PATCH', /^\/solicitudes\/([^/]+)\/estado$/, cambiarEstado],
+  ['GET', /^\/conciliaciones-manuales\/registros$/, registrosConciliacion],
+  ['POST', /^\/conciliaciones-manuales\/([^/]+)\/aprobar$/, aprobarConciliacion],
+  ['GET', /^\/conciliaciones-manuales\/([^/]+)\/procesamiento$/, procesamientoConciliacion],
   ['POST', /^\/solicitudes\/([^/]+)\/cuenta-bancaria$/, guardarCuentaBancaria],
   ['POST', /^\/solicitudes\/([^/]+)\/conciliacion-manual$/, guardarConciliacionManual],
   ['POST', /^\/solicitudes\/([^/]+)\/sustentos$/, subirSustento],

@@ -306,6 +306,7 @@ const MODAL_PRESETS: Record<Exclude<ModalVariant, "custom">, ModalPreset> = {
                 <siaf-button
                   [variant]="confirmVariant"
                   [disabled]="resolvedConfirmDisabled"
+                  [loading]="confirmLoading"
                   (click)="confirmed.emit()"
                 >
                   {{ resolvedConfirmLabel }}
@@ -329,6 +330,8 @@ export class ModalComponent implements OnChanges {
   @Input() cancelLabel = "Cancelar";
   @Input() confirmLabel = "";
   @Input() confirmDisabled: boolean | null = null;
+  /** El botón de confirmar muestra el giro y queda deshabilitado mientras la acción se envía. */
+  @Input() confirmLoading = false;
   /** Variante del botón de confirmar (las de `siaf-button`). */
   @Input() confirmVariant: ButtonVariant = "primary";
   @Input() reasonPlaceholder = "Motivo";

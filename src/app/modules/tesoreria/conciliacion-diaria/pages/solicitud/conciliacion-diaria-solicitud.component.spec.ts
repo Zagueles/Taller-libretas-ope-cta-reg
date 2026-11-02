@@ -63,4 +63,53 @@ describe('ConciliacionDiariaSolicitudComponent', () => {
     c.onVerificar();
     expect(c.modalVerificar()).toBeTrue();
   });
+
+  describe('aprobación', () => {
+    it('el modal de aprobar dice cuántos registros quedan conciliados', () => {
+      const c = crear();
+      c.registrosElegidos.set([REGISTROS_NO_CONCILIADOS[0], REGISTROS_NO_CONCILIADOS[1]]);
+      expect(c.descripcionAprobar()).toBe('La solicitud será aprobada, los 2 registros quedarán conciliados. Esto puede tardar unos segundos.');
+    });
+
+    it('el banner sigue al procesamiento y se puede cerrar solo cuando terminó', () => {
+      const c = crear();
+      expect(c.banner()).toBeNull();
+
+      c.procesamiento.set({ estado: 'EN_PROCESO', actualizadoEn: '', sistemasConError: [], reintentosAgotados: false });
+      expect(c.banner()).toEqual(jasmine.objectContaining({ tono: 'info', cerrable: false }));
+
+      c.procesamiento.set({ estado: 'APLICADO', actualizadoEn: '', sistemasConError: [], reintentosAgotados: false });
+      expect(c.banner()?.tono).toBe('success');
+      c.cerrarBanner();
+      expect(c.banner()).toBeNull();
+    });
+
+    it('el loader de pantalla solo aparece tras aprobar y mientras siga en proceso', () => {
+      const c = crear();
+      c.procesamiento.set({ estado: 'EN_PROCESO', actualizadoEn: '', sistemasConError: [], reintentosAgotados: false });
+      expect(c.mostrarLoader()).withContext('abrir un documento ya en proceso no tapa la pantalla').toBeFalse();
+    });
+  });
+
+  describe('modificación de registros conciliados', () => {
+    it('cambian los textos y se exige el tipo de modificación para grabar', () => {
+      const c = crear();
+      c.tipoAccion.set('modificacion');
+      expect(c.textoAccion()).toBe('Modificación');
+      expect(c.tituloRegistros()).toBe('Registros conciliados');
+      expect(c.descripcionAprobar()).toContain('quedarán modificados');
+
+      c.registrosElegidos.set([REGISTROS_NO_CONCILIADOS[0]]);
+      expect(c.descripcionAprobar()).toBe('La solicitud será aprobada, el registro quedará modificado. Esto puede tardar unos segundos.');
+      expect(c.formValido()).withContext('sin cuenta ni tipo').toBeFalse();
+    });
+
+    it('en una creación se mantienen los textos de siempre', () => {
+      const c = crear();
+      expect(c.textoAccion()).toBe('Creación');
+      expect(c.tituloRegistros()).toBe('Registros no conciliados');
+      expect(c.descripcionAprobar()).toContain('quedarán conciliados');
+    });
+  });
 });
+
