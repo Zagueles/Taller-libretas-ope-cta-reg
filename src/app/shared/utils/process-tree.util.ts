@@ -24,7 +24,7 @@ export interface ProcessMenuNode {
   actionTypeOptions?: string[];
   /**
    * Marca un nodo como módulo planificado pero aún no implementado.
-   * El menú lo renderiza con texto atenuado y badge "Próximamente",
+   * El menú lo renderiza deshabilitado (texto atenuado) con el tooltip «Próximamente»,
    * y el click no navega (solo expande si tiene hijos).
    */
   comingSoon?: boolean;
@@ -74,9 +74,9 @@ export const DEFAULT_PROCESS_TREE: ProcessMenuNode[] = [
                     createRoute: '/procesos/conciliacion-diaria/solicitud',
                     documentOptions: ['Conciliación manual diaria'],
                     documentCreateOptions: [
-                      { label: 'Conciliación manual diaria', route: '/procesos/conciliacion-diaria/solicitud', actionTypes: ['Creación'] },
+                      { label: 'Conciliación manual diaria', route: '/procesos/conciliacion-diaria/solicitud', actionTypes: ['Creación', 'Modificación'] },
                     ],
-                    actionTypeOptions: ['Creación'],
+                    actionTypeOptions: ['Creación', 'Modificación'],
                   },
                   {
                     id: 'conciliacion-diaria-consultas',

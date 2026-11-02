@@ -62,3 +62,43 @@ describe('ProcessMenuTreeComponent — búsqueda', () => {
     ]);
   });
 });
+
+describe('ProcessMenuTreeComponent — procesos «Próximamente»', () => {
+  let fixture: ComponentFixture<ProcessMenuTreeComponent>;
+  const el = (): HTMLElement => fixture.nativeElement;
+  const boton = (texto: string): HTMLButtonElement => Array.from(el().querySelectorAll<HTMLButtonElement>('button')).find((b) => b.textContent!.includes(texto))!;
+
+  const nodos: ProcessMenuNode[] = [
+    { id: 'listo', label: 'Documentos de conciliación', moduleRoute: '/a' },
+    { id: 'pendiente', label: 'Gestión de pagos', comingSoon: true },
+  ];
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [ProcessMenuTreeComponent] }).compileComponents();
+    fixture = TestBed.createComponent(ProcessMenuTreeComponent);
+    fixture.componentRef.setInput('nodes', nodos);
+    fixture.detectChanges();
+  });
+
+  it('el proceso pendiente va deshabilitado y el disponible, no', () => {
+    expect(boton('Gestión de pagos').getAttribute('aria-disabled')).toBe('true');
+    expect(boton('Gestión de pagos').className).toContain('cursor-not-allowed');
+    expect(boton('Documentos de conciliación').getAttribute('aria-disabled')).toBeNull();
+  });
+
+  it('al pasar el mouse por un proceso pendiente aparece «Próximamente»', () => {
+    boton('Gestión de pagos').dispatchEvent(new Event('mouseenter'));
+    fixture.detectChanges();
+    expect(document.body.textContent).toContain('Próximamente');
+    boton('Gestión de pagos').dispatchEvent(new Event('mouseleave'));
+  });
+
+  it('un proceso disponible no muestra ese tooltip y uno pendiente no emite la selección', () => {
+    const emitidos: string[] = [];
+    fixture.componentInstance.nodeSelected.subscribe((n) => emitidos.push(n.id));
+    boton('Gestión de pagos').click();
+    boton('Documentos de conciliación').click();
+    expect(emitidos).toEqual(['listo']);
+  });
+});
+
