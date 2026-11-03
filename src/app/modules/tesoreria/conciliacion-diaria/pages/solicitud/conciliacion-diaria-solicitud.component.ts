@@ -241,8 +241,13 @@ export class ConciliacionDiariaSolicitudComponent implements OnInit {
 
   readonly registrosFiltrados = computed(() => {
     const q = normalizar(this.busquedaRegistro());
-    return this.fuenteRegistros().filter((r) => !q || normalizar(Object.values(r).join(' ')).includes(q));
+    const absorbidos = this.absorbidos();
+    return this.fuenteRegistros().filter((r) => !absorbidos.has(r.id) && (!q || normalizar(Object.values(r).join(' ')).includes(q)));
   });
+  /** Los registros cuyas líneas ya viajan dentro de otro registro del documento (varios RR con varias OBO): no se eligen aparte. */
+  private readonly absorbidos = computed(() => new Set(this.registrosElegidos().flatMap((r) => r.agrupa ?? [])));
+  /** Los que no se pueden sumar al registro en edición: los absorbidos y los que ya se concilió por su cuenta. */
+  readonly noDisponiblesEdicion = computed(() => [...this.absorbidos(), ...this.registrosElegidos().filter((r) => r.conciliado && r.id !== this.registroEnEdicion()?.id).map((r) => r.id)]);
   private readonly fuenteRegistros = computed(() => (this.esModificacion() ? this.registrosConciliados() : REGISTROS_NO_CONCILIADOS));
   readonly todosMarcados = computed(() => this.registrosFiltrados().length > 0 && this.registrosFiltrados().every((r) => this.registrosTemporales().includes(r.id)));
 
@@ -430,7 +435,9 @@ export class ConciliacionDiariaSolicitudComponent implements OnInit {
   }
 
   aceptarEdicion(actualizado: RegistroNoConciliado): void {
-    this.registrosElegidos.update((lista) => lista.map((r) => (r.id === actualizado.id ? actualizado : r)));
+    // Los registros cuyas líneas se sumaron a este viajan dentro de él: dejan de ir por separado en el documento.
+    const absorbidos = new Set(actualizado.agrupa ?? []);
+    this.registrosElegidos.update((lista) => lista.filter((r) => !absorbidos.has(r.id)).map((r) => (r.id === actualizado.id ? actualizado : r)));
     this.registroEnEdicion.set(null);
     this.marcados.set([]);
   }

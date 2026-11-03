@@ -52,19 +52,15 @@
         <siaf-solicitude-info-card [fields]="camposEntidad()" [captureOpenDate]="true" />
       }
 
-      <!-- ── Información de conciliación ── -->
-      <siaf-solicitude-form-card title="Información de conciliación">
-        @if (soloLectura()) {
-          <div class="grid gap-siaf-lg md:grid-cols-2 xl:grid-cols-4">
-            <readonly-field caption="Tipo de conciliación" value="Manual" />
-            @if (esModificacion()) {
+      <!-- ── Tipo de modificación (solo al modificar registros conciliados) ── -->
+      @if (esModificacion()) {
+        <siaf-solicitude-form-card title="Tipo de modificación">
+          @if (soloLectura()) {
+            <div class="grid gap-siaf-lg md:grid-cols-2 xl:grid-cols-4">
               <readonly-field caption="Tipo de modificación" [value]="tipoModificacion()" />
-            }
-          </div>
-        } @else {
-          <div class="grid gap-siaf-lg md:grid-cols-2 xl:grid-cols-4">
-            <siaf-input label="Tipo de conciliación" value="Manual" [disabled]="true" />
-            @if (esModificacion()) {
+            </div>
+          } @else {
+            <div class="grid gap-siaf-lg md:grid-cols-2 xl:grid-cols-4">
               <siaf-input
                 label="Tipo de modificación"
                 type="select"
@@ -72,10 +68,20 @@
                 [options]="tiposModificacion"
                 [value]="tipoModificacion()"
                 [disabled]="registrosElegidos().length > 0"
-                hint="Datos corrige fecha, número, descripción, entidad y secuencia; Montos, el débito y el crédito."
                 (valueChange)="tipoModificacion.set($any($event))"
               />
-            }
+            </div>
+          }
+        </siaf-solicitude-form-card>
+      }
+
+      <!-- ── Información de conciliación ── -->
+      <siaf-solicitude-form-card title="Información de conciliación">
+        @if (soloLectura()) {
+          <readonly-field caption="Tipo de conciliación" value="Manual" />
+        } @else {
+          <div class="grid gap-siaf-lg md:grid-cols-2 xl:grid-cols-4">
+            <siaf-input label="Tipo de conciliación" value="Manual" [disabled]="true" />
           </div>
         }
       </siaf-solicitude-form-card>
@@ -94,7 +100,7 @@
 
       <!-- ── Registros no conciliados (o su edición) ── -->
       @if (registroEnEdicion(); as r) {
-        <siaf-conciliacion-registro-edicion [registro]="r" [tipoModificacion]="esModificacion() ? (tipoModificacion() || null) : null" (cancelled)="registroEnEdicion.set(null)" (accepted)="aceptarEdicion($event)" />
+        <siaf-conciliacion-registro-edicion [registro]="r" [noDisponibles]="noDisponiblesEdicion()" [tipoModificacion]="esModificacion() ? (tipoModificacion() || null) : null" (cancelled)="registroEnEdicion.set(null)" (accepted)="aceptarEdicion($event)" />
       } @else {
         <siaf-solicitude-form-card [title]="tituloRegistros()">
           @if (!soloLectura()) {

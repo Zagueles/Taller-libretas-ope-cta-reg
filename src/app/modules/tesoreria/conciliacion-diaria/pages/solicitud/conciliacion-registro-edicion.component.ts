@@ -22,6 +22,7 @@ import {
   TIPOS_DOCUMENTO_SUSTENTO,
   TipoModificacion,
   camposEditables,
+  lineasDeOtrosRegistros,
 } from '../../models/conciliacion-diaria.model';
 
 /** Un sustento en edición: si se cargó en esta sesión conserva su archivo (para descargarlo). */
@@ -280,6 +281,8 @@ const linea = (id: string, datos: DatosLinea): LineaConciliacion => ({ id, ...da
 })
 export class ConciliacionRegistroEdicionComponent implements OnChanges {
   @Input({ required: true }) registro!: RegistroNoConciliado;
+  /** Ids de registros no conciliados que ya no se pueden sumar (los que ya concilió otro registro del documento). */
+  @Input() noDisponibles: string[] = [];
   /** En una modificación (registro ya conciliado) solo se corrige lo que dice el tipo: «Datos» o «Montos»; no se agregan ni quitan registros. */
   @Input() set tipoModificacion(valor: TipoModificacion | null) {
     this.tipoModificacionActual.set(valor);
@@ -303,6 +306,7 @@ export class ConciliacionRegistroEdicionComponent implements OnChanges {
   readonly paginaOperaciones = signal(1);
 
   readonly columnasOperacion: SelectionColumn<OperacionConciliable>[] = [
+    { key: 'registro', label: 'Registro', widthClass: 'w-[90px]' },
     { key: 'fecha', label: 'F. operación', widthClass: 'w-[200px]' },
     { key: 'numero', label: 'Número', widthClass: 'w-[130px]' },
     { key: 'descripcion', label: 'Descripción' },
@@ -313,11 +317,18 @@ export class ConciliacionRegistroEdicionComponent implements OnChanges {
   /** Siempre en el mismo orden, sea cual sea el origen del registro: libro banco y, debajo, operaciones bancarias. */
   readonly ladosEnOrden: Lado[] = ['lb', 'rb'];
 
-  /** Lo que ofrece la lupa: RR del libro banco, u operaciones bancarias; sin los que ya están en alguna tabla. */
+  /** Lo que ofrece la lupa: los RR u operaciones de ejemplo y las líneas de los demás registros no conciliados; sin lo que ya está en alguna tabla. */
+  private fuenteDe(lado: Lado): OperacionConciliable[] {
+    const ejemplos = (lado === 'lb' ? LIBRO_BANCO_CONCILIABLE : OPERACIONES_CONCILIABLES).map((o) => ({ ...o, registro: '—' }));
+    const sueltas = this.esModificacion() ? [] : lineasDeOtrosRegistros(lado, this.registro.id).filter((o) => !this.noDisponibles.includes(o.id.slice(3)));
+    return [...sueltas, ...ejemplos];
+  }
+  /** Se mueve al abrir la lupa: `registro` y `noDisponibles` son entradas planas y el cómputo no las vería cambiar. */
+  private readonly aperturas = signal(0);
   private readonly operacionesDisponibles = computed(() => {
+    this.aperturas();
     const usadas = new Set([...this.lineasLB(), ...this.lineasRB()].map((l) => l.id));
-    const fuente = this.ladoBusqueda() === 'lb' ? LIBRO_BANCO_CONCILIABLE : OPERACIONES_CONCILIABLES;
-    return fuente.filter((o) => !usadas.has(o.id));
+    return this.fuenteDe(this.ladoBusqueda()).filter((o) => !usadas.has(o.id));
   });
   readonly operacionesFiltradas = computed(() => {
     const q = this.busqueda().trim().toLowerCase();
@@ -484,6 +495,7 @@ export class ConciliacionRegistroEdicionComponent implements OnChanges {
   }
 
   abrirBusqueda(lado: Lado): void {
+    this.aperturas.update((n) => n + 1);
     this.ladoBusqueda.set(lado);
     this.seleccion.set([]);
     this.busqueda.set('');
@@ -494,8 +506,7 @@ export class ConciliacionRegistroEdicionComponent implements OnChanges {
   /** «Aceptar» del panel: suma los registros elegidos al lado de la lupa, con sus datos y la siguiente secuencia. */
   aceptarOperaciones(): void {
     const lado = this.ladoBusqueda();
-    const fuente = lado === 'lb' ? LIBRO_BANCO_CONCILIABLE : OPERACIONES_CONCILIABLES;
-    const elegidas = fuente.filter((o) => this.seleccion().includes(o.id));
+    const elegidas = this.fuenteDe(lado).filter((o) => this.seleccion().includes(o.id));
     (lado === 'lb' ? this.lineasLB : this.lineasRB).update((lista) => [
       ...lista,
       ...elegidas.map((o, i) =>
@@ -590,6 +601,7 @@ export class ConciliacionRegistroEdicionComponent implements OnChanges {
       rbLineas: rb,
       ediciones,
       ...(this.esModificacion() ? { modificado: true } : {}),
+      agrupa: [...this.lineasLB(), ...this.lineasRB()].filter((l) => l.id.startsWith('nc:')).map((l) => l.id.slice(3)),
     });
   }
 }

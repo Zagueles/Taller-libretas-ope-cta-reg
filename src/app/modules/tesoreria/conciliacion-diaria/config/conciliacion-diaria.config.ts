@@ -9,14 +9,14 @@ export const PROCESS_ID = 'conciliacion-diaria-documentos';
 export const REQUEST_SEGMENT = 'solicitud';
 export const REQUEST_ROUTE = `${PROCESS_ROUTE}/${REQUEST_SEGMENT}`;
 
-/** «Crear documento» del proceso: es la única hoja del árbol de creación . */
+/** «Crear documento» del proceso: es la única hoja del árbol de creación; ofrece crear o modificar. */
 export const CREATE_CONCILIACION_DIARIA_OPTION: CreateDocumentProcessOption = {
   id: 'conciliacion-diaria',
   label: 'Conciliación diaria',
   route: REQUEST_ROUTE,
   documents: ['Conciliación manual diaria'],
-  documentOptions: [{ label: 'Conciliación manual diaria', route: REQUEST_ROUTE, actionTypes: ['Creación'] }],
-  actionTypes: ['Creación'],
+  documentOptions: [{ label: 'Conciliación manual diaria', route: REQUEST_ROUTE, actionTypes: ['Creación', 'Modificación'] }],
+  actionTypes: ['Creación', 'Modificación'],
 };
 
 /** Los estados del flujo de la solicitud y los de los documentos que genera el sistema. */

@@ -3,6 +3,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
+import { CREATE_CONCILIACION_DIARIA_OPTION } from '../../config/conciliacion-diaria.config';
 import { REGISTROS_NO_CONCILIADOS } from '../../models/conciliacion-diaria.model';
 import { ConciliacionDiariaSolicitudComponent } from './conciliacion-diaria-solicitud.component';
 
@@ -22,7 +23,7 @@ describe('ConciliacionDiariaSolicitudComponent', () => {
 
     c.eliminarSeleccionados();
 
-    expect(c.registrosElegidos().map((r) => r.id)).toEqual([REGISTROS_NO_CONCILIADOS[2].id, REGISTROS_NO_CONCILIADOS[3].id]);
+    expect(c.registrosElegidos().map((r) => r.id)).toEqual(REGISTROS_NO_CONCILIADOS.slice(2).map((r) => r.id));
     expect(c.marcados()).toEqual([]);
   });
 
@@ -43,7 +44,7 @@ describe('ConciliacionDiariaSolicitudComponent', () => {
 
   it('«Verificar» con registros sin conciliar informa con una alerta de error y no abre la confirmación', () => {
     const c = crear();
-    c.registrosElegidos.set(REGISTROS_NO_CONCILIADOS.map((r) => ({ ...r })));
+    c.registrosElegidos.set(REGISTROS_NO_CONCILIADOS.slice(0, 4).map((r) => ({ ...r })));
 
     c.onVerificar();
 
@@ -110,6 +111,56 @@ describe('ConciliacionDiariaSolicitudComponent', () => {
       expect(c.tituloRegistros()).toBe('Registros no conciliados');
       expect(c.descripcionAprobar()).toContain('quedarán conciliados');
     });
+  });
+
+  describe('varios RR con varias OBO en registros distintos (casuística 4)', () => {
+    const grupo = () => {
+      const base = REGISTROS_NO_CONCILIADOS.find((r) => r.id === 'nc-5')!;
+      return { ...base, conciliado: true, agrupa: ['nc-6', 'nc-7', 'nc-8', 'nc-9'] };
+    };
+
+    it('los registros cuyas líneas se sumaron a otro dejan de ir por separado en el documento', () => {
+      const c = crear();
+      c.registrosElegidos.set(['nc-5', 'nc-6', 'nc-7', 'nc-1'].map((id) => ({ ...REGISTROS_NO_CONCILIADOS.find((r) => r.id === id)! })));
+
+      c.aceptarEdicion(grupo());
+
+      expect(c.registrosElegidos().map((r) => r.id)).toEqual(['nc-5', 'nc-1']);
+      expect(c.registrosElegidos()[0].agrupa).toEqual(['nc-6', 'nc-7', 'nc-8', 'nc-9']);
+    });
+
+    it('los absorbidos no se ofrecen para elegir aparte ni para sumar a otro registro', () => {
+      const c = crear();
+      c.cuentaTemporal.set('11040103570200000000');
+      c.aceptarCuenta();
+      c.registrosElegidos.set([grupo()]);
+      c.abrirRegistros();
+
+      const ofrecidos = c.registrosFiltrados().map((r) => r.id);
+      expect(ofrecidos).toContain('nc-5');
+      expect(ofrecidos).not.toContain('nc-6');
+      expect(ofrecidos).not.toContain('nc-9');
+      expect(c.noDisponiblesEdicion()).toEqual(jasmine.arrayContaining(['nc-6', 'nc-7', 'nc-8', 'nc-9']));
+    });
+  });
+
+  it('«Crear documento» de la conciliación ofrece las acciones Creación y Modificación', () => {
+    expect(CREATE_CONCILIACION_DIARIA_OPTION.actionTypes).toEqual(['Creación', 'Modificación']);
+    expect(CREATE_CONCILIACION_DIARIA_OPTION.documentOptions?.[0].actionTypes).toEqual(['Creación', 'Modificación']);
+  });
+
+  it('en una modificación, «Tipo de modificación» es una sección propia arriba de «Información de conciliación»', () => {
+    TestBed.configureTestingModule({ providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()] });
+    const fixture = TestBed.createComponent(ConciliacionDiariaSolicitudComponent);
+    fixture.componentInstance.tipoAccion.set('modificacion');
+    fixture.detectChanges();
+    const titulos = Array.from(fixture.nativeElement.querySelectorAll('siaf-solicitude-form-card h2, siaf-solicitude-form-card h3')).map((h) => (h as HTMLElement).textContent!.trim());
+    expect(titulos.indexOf('Tipo de modificación')).toBeGreaterThanOrEqual(0);
+    expect(titulos.indexOf('Tipo de modificación')).toBeLessThan(titulos.indexOf('Información de conciliación'));
+
+    const fixtureCreacion = TestBed.createComponent(ConciliacionDiariaSolicitudComponent);
+    fixtureCreacion.detectChanges();
+    expect(fixtureCreacion.nativeElement.textContent).not.toContain('Tipo de modificación');
   });
 });
 

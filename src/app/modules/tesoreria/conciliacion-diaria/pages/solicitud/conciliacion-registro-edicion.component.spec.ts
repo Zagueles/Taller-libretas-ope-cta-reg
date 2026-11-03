@@ -218,12 +218,12 @@ describe('ConciliacionRegistroEdicionComponent', () => {
   });
 
   describe('panel de búsqueda', () => {
-    it('cada lupa ofrece lo suyo (RR u operaciones), sin lo que ya está en alguna tabla', () => {
+    it('cada lupa ofrece las líneas de los demás registros no conciliados y los ejemplos, sin lo que ya está en alguna tabla', () => {
       const { c } = crear(0);
       c.abrirBusqueda('rb');
-      expect(c.operacionesFiltradas().map((o) => o.id)).toEqual(['op-02698145', 'op-02698148-a', 'op-02698148-b', 'op-02698157']);
+      expect(c.operacionesFiltradas().map((o) => o.id)).toEqual(['nc:nc-1', 'nc:nc-7', 'nc:nc-8', 'nc:nc-9', 'op-02698145', 'op-02698148-a', 'op-02698148-b', 'op-02698157']);
       c.abrirBusqueda('lb');
-      expect(c.operacionesFiltradas().map((o) => o.id)).toEqual(['rr-02698147', 'rr-02698149']);
+      expect(c.operacionesFiltradas().map((o) => o.id)).toEqual(['nc:nc-2', 'nc:nc-5', 'nc:nc-6', 'rr-02698147', 'rr-02698149']);
 
       agregar(c, 'rb', 'op-02698145');
       c.abrirBusqueda('rb');
@@ -326,6 +326,51 @@ describe('ConciliacionRegistroEdicionComponent', () => {
     expect(titulos(0)).toEqual(esperado);
     expect(titulos(1)).toEqual(esperado);
     expect(titulos(3)).toEqual(esperado);
+  });
+
+  describe('varios RR con varias OBO en registros distintos (casuística 4)', () => {
+    const abrirNc5 = (noDisponibles: string[] = []) => {
+      const fixture = TestBed.createComponent(ConciliacionRegistroEdicionComponent);
+      fixture.componentRef.setInput('registro', REGISTROS_NO_CONCILIADOS.find((r) => r.id === 'nc-5'));
+      fixture.componentRef.setInput('noDisponibles', noDisponibles);
+      fixture.detectChanges();
+      return fixture.componentInstance;
+    };
+
+    it('los dos RR (600 + 400) y las tres OBO (300 + 300 + 400) de registros distintos cuadran a S/ 1,000.00', () => {
+      const c = abrirNc5();
+      agregar(c, 'lb', 'nc:nc-6');
+      agregar(c, 'rb', 'nc:nc-7', 'nc:nc-8', 'nc:nc-9');
+      expect(c.lineasLB().map((l) => l.credito)).toEqual(['600.00', '400.00']);
+      expect(c.lineasRB().map((l) => [l.numero, l.credito, l.secuencia])).toEqual([['02698170', '300.00', '1'], ['02698171', '300.00', '2'], ['02698172', '400.00', '3']]);
+      expect(c.cuadra()).toBeTrue();
+      expect(c.banner()?.titulo).toBe('Varios RR y operaciones en un mismo registro');
+    });
+
+    it('con el mismo número en todos, el sustento y la justificación se acepta e indica qué registros agrupa', () => {
+      const c = abrirNc5();
+      agregar(c, 'lb', 'nc:nc-6');
+      agregar(c, 'rb', 'nc:nc-7', 'nc:nc-8', 'nc:nc-9');
+      sustentar(c);
+      expect(c.puedeAceptar()).withContext('números distintos').toBeFalse();
+      for (const [lado, id] of [['lb', 'nc:nc-6'], ['rb', 'nc:nc-7'], ['rb', 'nc:nc-8'], ['rb', 'nc:nc-9']] as const) c.cambiar(lado, id, 'numero', '02698160');
+      expect(c.puedeAceptar()).toBeTrue();
+
+      let emitido!: RegistroNoConciliado;
+      c.accepted.subscribe((r) => (emitido = r));
+      c.aceptar();
+      expect(emitido.agrupa).toEqual(['nc-6', 'nc-7', 'nc-8', 'nc-9']);
+      expect(emitido).toEqual(jasmine.objectContaining({ lbCredito: '1,000.00', rbCredito: '1,000.00', conciliado: true }));
+    });
+
+    it('no ofrece los registros que otro registro del documento ya concilió o absorbió', () => {
+      const c = abrirNc5(['nc-6', 'nc-7']);
+      c.abrirBusqueda('lb');
+      expect(c.operacionesFiltradas().map((o) => o.id)).not.toContain('nc:nc-6');
+      c.abrirBusqueda('rb');
+      expect(c.operacionesFiltradas().map((o) => o.id)).toEqual(jasmine.arrayContaining(['nc:nc-8', 'nc:nc-9']));
+      expect(c.operacionesFiltradas().map((o) => o.id)).not.toContain('nc:nc-7');
+    });
   });
 });
 

@@ -49,6 +49,8 @@ export interface RegistroNoConciliado {
   ediciones?: EdicionRegistro[];
   /** En una modificación: el registro conciliado ya se corrigió (sin cambios no se puede verificar). */
   modificado?: boolean;
+  /** Ids de otros registros no conciliados cuyas líneas se sumaron a este (varios RR con varias OBO): viajan dentro de este registro. */
+  agrupa?: string[];
 }
 
 /** Los campos de una línea que el usuario puede corregir en el formulario. */
@@ -204,6 +206,16 @@ export function registrosNoConciliados(creacion: Date = new Date()): RegistroNoC
     { id: 'nc-3', nro: '3', lbFecha: f('10:10:08'), lbNumero: '02698150', lbDescripcion: DESCRIPCION, lbEntidad: 'SUNAT', lbDebito: '0.00', lbCredito: '5,068.80', rbFecha: f('10:10:08'), rbNumero: '02698150', rbDescripcion: DESCRIPCION, rbDebito: '0.00', rbCredito: '5,068.00', motivo: 'Montos diferentes' },
     { id: 'nc-2', nro: '2', lbFecha: f('10:05:06'), lbNumero: '02698148', lbDescripcion: DESCRIPCION, lbEntidad: 'SUNAT', lbDebito: '0.00', lbCredito: '31,245.00', rbFecha: '', rbNumero: '', rbDescripcion: '', rbDebito: '', rbCredito: '', motivo: 'No existe OBO' },
     { id: 'nc-1', nro: '1', lbFecha: '', lbNumero: '', lbDescripcion: '', lbEntidad: '', lbDebito: '', lbCredito: '', rbFecha: f('10:00:13'), rbNumero: '02698147', rbDescripcion: DESCRIPCION, rbDebito: '0.00', rbCredito: '9,753.00', motivo: 'No existe RR' },
+    // Varios RR con varias OBO (casuística 4): dos RR (600 + 400) y tres OBO (300 + 300 + 400) en registros distintos que suman S/ 1,000.00 a cada lado.
+    ...[
+      ['5', '10:50:01', '02698160', '600.00'],
+      ['6', '10:50:02', '02698161', '400.00'],
+    ].map(([nro, hora, numero, credito]): RegistroNoConciliado => ({ id: `nc-${nro}`, nro, lbFecha: f(hora), lbNumero: numero, lbDescripcion: DESCRIPCION, lbEntidad: 'SUNAT', lbDebito: '0.00', lbCredito: credito, rbFecha: '', rbNumero: '', rbDescripcion: '', rbDebito: '', rbCredito: '', motivo: 'No existe OBO' })),
+    ...[
+      ['7', '10:51:01', '02698170', '300.00'],
+      ['8', '10:51:02', '02698171', '300.00'],
+      ['9', '10:51:03', '02698172', '400.00'],
+    ].map(([nro, hora, numero, credito]): RegistroNoConciliado => ({ id: `nc-${nro}`, nro, lbFecha: '', lbNumero: '', lbDescripcion: '', lbEntidad: '', lbDebito: '', lbCredito: '', rbFecha: f(hora), rbNumero: numero, rbDescripcion: DESCRIPCION, rbDebito: '0.00', rbCredito: credito, motivo: 'No existe RR' })),
   ];
 }
 
@@ -257,6 +269,8 @@ export interface OperacionConciliable {
   debito: string;
   credito: string;
   entidad?: string;
+  /** Si es la línea de otro registro no conciliado: su número («5»). */
+  registro?: string;
 }
 
 /**
@@ -394,5 +408,19 @@ export function bannerDeProcesamiento(p: ProcesamientoConciliacion | null, numer
           : 'El documento sigue aprobado. El sistema volverá a intentarlo automáticamente.',
       };
   }
+}
+
+/**
+ * Las líneas de los demás registros no conciliados que se pueden sumar al que se edita (casuística 4: varios RR con varias
+ * OBO en registros distintos). Solo los que tienen un lado (los que ya traen su par no se reparten) y aún no conciliados.
+ */
+export function lineasDeOtrosRegistros(lado: 'lb' | 'rb', actualId: string, registros: RegistroNoConciliado[] = REGISTROS_NO_CONCILIADOS): OperacionConciliable[] {
+  return registros
+    .filter((r) => r.id !== actualId && !r.conciliado && !!r.lbNumero !== !!r.rbNumero && (lado === 'lb' ? !!r.lbNumero : !!r.rbNumero))
+    .map((r) =>
+      lado === 'lb'
+        ? { id: `nc:${r.id}`, fecha: r.lbFecha, numero: r.lbNumero, descripcion: r.lbDescripcion, debito: r.lbDebito, credito: r.lbCredito, entidad: r.lbEntidad, registro: r.nro }
+        : { id: `nc:${r.id}`, fecha: r.rbFecha, numero: r.rbNumero, descripcion: r.rbDescripcion, debito: r.rbDebito, credito: r.rbCredito, registro: r.nro },
+    );
 }
 
