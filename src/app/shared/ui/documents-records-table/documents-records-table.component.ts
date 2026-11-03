@@ -94,10 +94,10 @@ function anchoDeClase(clase?: string): number {
   imports: [FlowStatusTagComponent, IconComponent, NgClass, NgTemplateOutlet, RecordStatusTagComponent, RouterLink, StatusTagComponent, TooltipDirective],
   template: `
     <div #scroll class="siaf-table-scroll group/tabla min-w-0" (scroll)="medirScroll()">
-      <!-- Título de una columna: texto, o botón que ordena si la columna es sortable (flecha en la columna ordenada). -->
+      <!-- Título de una columna: texto, o botón que ordena si la columna es sortable (flecha en la columna ordenada; en las de montos, a la izquierda del título). -->
       <ng-template #titulo let-column>
         @if (column.sortable) {
-          <button class="group -mr-4 inline-flex max-w-[calc(100%+1rem)] items-center bg-transparent p-0 font-[inherit] uppercase text-inherit" type="button" title="Ordenar" [attr.aria-label]="'Ordenar por ' + (column.panelLabel || column.label)" (click)="ordenar(column.key)">
+          <button class="group inline-flex items-center bg-transparent p-0 font-[inherit] uppercase text-inherit" [class.-mr-4]="column.align !== 'right'" [class.max-w-[calc(100%+1rem)]]="column.align !== 'right'" [class.max-w-full]="column.align === 'right'" [class.flex-row-reverse]="column.align === 'right'" type="button" title="Ordenar" [attr.aria-label]="'Ordenar por ' + (column.panelLabel || column.label)" (click)="ordenar(column.key)">
             <span class="truncate">{{ column.label }}</span>
             <siaf-icon
               class="shrink-0 transition-opacity"
@@ -138,7 +138,7 @@ function anchoDeClase(clase?: string): number {
                   [attr.colspan]="celda.colspan > 1 ? celda.colspan : null"
                   [attr.rowspan]="celda.rowspan > 1 ? celda.rowspan : null"
                   [attr.aria-sort]="celda.column?.sortable ? ariaSort(celda.column!.key) : null"
-                  [ngClass]="[primera && mostrarCasilla ? 'border-l border-[var(--sys-color-divider-strong)]' : '', celda.fija ? claseFijaCabecera : '', celda.rowspan === 2 ? (celda.column?.widthClass || 'w-[180px]') : 'text-center', celda.column?.align === 'right' ? 'text-right' : celda.rowspan === 2 ? 'text-left' : '', celda.grupo && !celda.ultima && !celda.fija ? 'border-r border-[var(--sys-color-divider-strong)]' : '', !celda.grupo && celda.column?.borderRight ? 'border-r border-[var(--sys-color-divider-strong)]' : '']"
+                  [ngClass]="[primera && mostrarCasilla ? 'border-l border-[var(--sys-color-divider-strong)]' : '', celda.fija ? claseFijaCabecera : '', celda.rowspan === 2 ? (celda.column?.widthClass || 'w-[180px]') : 'text-center', celda.column?.align === 'right' ? 'text-right' : celda.rowspan === 2 ? 'text-left' : '', celda.grupo && !celda.ultima && !celda.fija ? 'border-r border-[var(--sys-color-divider-strong)]' : '', celda.bordeIzq ? 'border-l border-[var(--sys-color-divider-strong)]' : '', !celda.grupo && celda.column?.borderRight ? 'border-r border-[var(--sys-color-divider-strong)]' : '']"
                 >
                   @if (celda.column) {
                     <ng-container *ngTemplateOutlet="titulo; context: { $implicit: celda.column }" />
@@ -162,7 +162,7 @@ function anchoDeClase(clase?: string): number {
                   class="truncate px-siaf-md py-0"
                   siafTooltip
                   [attr.aria-sort]="column.sortable ? ariaSort(column.key) : null"
-                  [ngClass]="[i === 0 && mostrarCasilla && columns[0]?.headerGroup ? 'border-l border-[var(--sys-color-divider-strong)]' : '', column.fixed ? claseFijaCabecera : '', column.widthClass || 'w-[180px]', column.align === 'right' ? 'text-right' : 'text-left', finDeGrupo(i) && !column.fixed && i < columnasConGrupo.length - 1 ? 'border-r border-[var(--sys-color-divider-strong)]' : '']"
+                  [ngClass]="[i === 0 && mostrarCasilla && columns[0]?.headerGroup ? 'border-l border-[var(--sys-color-divider-strong)]' : '', column.fixed ? claseFijaCabecera : '', column.widthClass || 'w-[180px]', column.align === 'right' ? 'text-right' : 'text-left', bordeDerGrupo(column, i) ? 'border-r border-[var(--sys-color-divider-strong)]' : '', bordeIzqGrupo(column) ? 'border-l border-[var(--sys-color-divider-strong)]' : '']"
                 ><ng-container *ngTemplateOutlet="titulo; context: { $implicit: column }" /></th>
               }
             </tr>
@@ -319,17 +319,33 @@ export class DocumentsRecordsTableComponent implements AfterViewChecked {
     return indice === columnas.length - 1 || columnas[indice].headerGroup !== columnas[indice + 1].headerGroup;
   }
 
-  get filaSuperior(): { label: string; colspan: number; rowspan: 1 | 2; column?: DocumentsRecordsColumn; grupo: boolean; ultima: boolean; fija: boolean }[] {
-    const celdas: { label: string; colspan: number; rowspan: 1 | 2; column?: DocumentsRecordsColumn; grupo: boolean; ultima: boolean; fija: boolean }[] = [];
+  /**
+   * Con grupos de cabecera, cada grupo lleva una división con lo que tiene a los lados (columnas sueltas u otros grupos), en las
+   * dos filas: a la derecha en el final del grupo (salvo que sea la última columna, que ya lleva la de la columna de acciones) y
+   * a la izquierda cuando lo que lo antecede es una columna suelta. Las columnas fijas llevan su sombra y no estas líneas.
+   */
+  bordeDerGrupo(column: DocumentsRecordsColumn, indice: number): boolean {
+    const ultimaColumna = this.columns[this.columns.length - 1];
+    return this.finDeGrupo(indice) && !column.fixed && ultimaColumna.headerGroup !== column.headerGroup;
+  }
+
+  bordeIzqGrupo(column: DocumentsRecordsColumn): boolean {
+    const i = this.columns.indexOf(column);
+    const previa = this.columns[i - 1];
+    return !!previa && !previa.headerGroup && previa.headerGroup !== column.headerGroup && !column.fixed;
+  }
+
+  get filaSuperior(): { label: string; colspan: number; rowspan: 1 | 2; column?: DocumentsRecordsColumn; grupo: boolean; ultima: boolean; fija: boolean; bordeIzq: boolean }[] {
+    const celdas: { label: string; colspan: number; rowspan: 1 | 2; column?: DocumentsRecordsColumn; grupo: boolean; ultima: boolean; fija: boolean; bordeIzq: boolean }[] = [];
     for (let i = 0; i < this.columns.length; i++) {
       const columna = this.columns[i];
       if (!columna.headerGroup) {
-        celdas.push({ label: columna.label, colspan: 1, rowspan: 2, column: columna, grupo: false, ultima: false, fija: !!columna.fixed });
+        celdas.push({ label: columna.label, colspan: 1, rowspan: 2, column: columna, grupo: false, ultima: false, fija: !!columna.fixed, bordeIzq: false });
         continue;
       }
       let fin = i;
       while (fin + 1 < this.columns.length && this.columns[fin + 1].headerGroup === columna.headerGroup) fin++;
-      celdas.push({ label: columna.headerGroup, colspan: fin - i + 1, rowspan: 1, grupo: true, ultima: fin === this.columns.length - 1, fija: this.columns.slice(i, fin + 1).some((c) => c.fixed) });
+      celdas.push({ label: columna.headerGroup, colspan: fin - i + 1, rowspan: 1, grupo: true, ultima: fin === this.columns.length - 1, fija: this.columns.slice(i, fin + 1).some((c) => c.fixed), bordeIzq: celdas.length > 0 && !celdas[celdas.length - 1].grupo });
       i = fin;
     }
     return celdas;

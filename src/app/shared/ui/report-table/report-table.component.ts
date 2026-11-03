@@ -86,10 +86,10 @@ interface CeldaCabecera {
   imports: [IconComponent, NgTemplateOutlet, TooltipDirective],
   host: { class: 'block min-w-0' },
   template: `
-      <!-- Título de una columna: texto, o botón que ordena (flecha en la columna ordenada) cuando la tabla es sortable. -->
-      <ng-template #titulo let-label="label" let-key="key" let-tooltip="tooltip">
+      <!-- Título de una columna: texto, o botón que ordena (flecha en la columna ordenada, a la izquierda del título en las de montos) cuando la tabla es sortable. -->
+      <ng-template #titulo let-label="label" let-key="key" let-tooltip="tooltip" let-derecha="derecha">
         @if (sortable && key) {
-          <button class="group -mr-4 inline-flex max-w-[calc(100%+1rem)] items-center bg-transparent p-0 font-[inherit] uppercase text-inherit" type="button" title="Ordenar" [attr.aria-label]="'Ordenar por ' + label" (click)="ordenar(key)">
+          <button class="group inline-flex items-center bg-transparent p-0 font-[inherit] uppercase text-inherit" [class.-mr-4]="!derecha" [class.max-w-[calc(100%+1rem)]]="!derecha" [class.max-w-full]="derecha" [class.flex-row-reverse]="derecha" type="button" title="Ordenar" [attr.aria-label]="'Ordenar por ' + label" (click)="ordenar(key)">
             <span class="truncate" [siafTooltip]="tooltip ?? null">{{ label }}</span>
             <siaf-icon class="shrink-0 transition-opacity" [class]="claseFlecha(key)" [name]="sort?.key === key && sort?.direction === 'desc' ? 'arrow_downward' : 'arrow_upward'" [size]="16" />
           </button>
@@ -132,7 +132,7 @@ interface CeldaCabecera {
                 [style.min-width.px]="celda.width"
                 data-cabecera-superior
               >
-                <ng-container *ngTemplateOutlet="titulo; context: { label: celda.label, key: celda.key, tooltip: celda.tooltip }" />
+                <ng-container *ngTemplateOutlet="titulo; context: { label: celda.label, key: celda.key, tooltip: celda.tooltip, derecha: celda.align === 'right' }" />
               </th>
             }
           </tr>
@@ -151,7 +151,7 @@ interface CeldaCabecera {
                   [style.min-width.px]="columna.width ?? null"
                   data-cabecera-columna
                 >
-                  <ng-container *ngTemplateOutlet="titulo; context: { label: columna.label, key: columna.key, tooltip: tooltipColumna(columna) }" />
+                  <ng-container *ngTemplateOutlet="titulo; context: { label: columna.label, key: columna.key, tooltip: tooltipColumna(columna), derecha: columna.align === 'right' }" />
                 </th>
               }
             </tr>

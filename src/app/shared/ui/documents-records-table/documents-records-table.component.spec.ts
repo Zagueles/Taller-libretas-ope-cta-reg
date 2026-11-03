@@ -117,10 +117,50 @@ describe('DocumentsRecordsTableComponent — orden', () => {
   };
   const botones = (f: ReturnType<typeof crear>) => Array.from<HTMLButtonElement>((f.nativeElement as HTMLElement).querySelectorAll('thead th button'));
 
+  it('con grupos de cabecera, cada grupo tiene una división con lo que lo rodea, en sus dos filas', () => {
+    TestBed.configureTestingModule({ providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()] });
+    const f = TestBed.createComponent(DocumentsRecordsTableComponent);
+    f.componentRef.setInput('activeTab', 'records');
+    f.componentRef.setInput('columns', [
+      { key: 'nro', label: 'Nro', visibility: 'visible', group: 'default' },
+      { key: 'a', label: 'Fecha', headerGroup: 'Documento', visibility: 'visible', group: 'default' },
+      { key: 'b', label: 'Número', headerGroup: 'Documento', visibility: 'visible', group: 'default' },
+      { key: 'estado', label: 'Estado', visibility: 'visible', group: 'default' },
+    ] as DocumentsRecordsColumn[]);
+    f.componentRef.setInput('rows', []);
+    f.detectChanges();
+    const filas = Array.from<HTMLTableRowElement>((f.nativeElement as HTMLElement).querySelectorAll('thead tr'));
+    const celda = (fila: number, texto: string): HTMLElement => Array.from(filas[fila].children).find((c) => c.textContent!.includes(texto)) as HTMLElement;
+
+    // Fila de los grupos: el grupo se separa de la columna suelta de su izquierda y de la de su derecha.
+    expect(celda(0, 'Documento').classList).toContain('border-l');
+    expect(celda(0, 'Documento').classList).toContain('border-r');
+    // Fila de las columnas: la primera del grupo lleva la división izquierda y la última, la derecha.
+    expect(celda(1, 'Fecha').classList).toContain('border-l');
+    expect(celda(1, 'Fecha').classList).not.toContain('border-r');
+    expect(celda(1, 'Número').classList).toContain('border-r');
+    expect(celda(1, 'Número').classList).not.toContain('border-l');
+  });
+
   it('solo las columnas sortable llevan botón en su título, sean de un grupo o sueltas', () => {
     const f = crear();
     expect(botones(f).map((b) => b.textContent!.replace(/arrow_\w+/, '').trim())).toEqual(['Tipo', 'Sec.']);
     expect(botones(f).map((b) => b.getAttribute('aria-label'))).toEqual(['Ordenar por Tipo', 'Ordenar por Sec.']);
+  });
+
+  it('en las columnas de montos (alineadas a la derecha) la flecha de orden va a la izquierda del título', () => {
+    TestBed.configureTestingModule({ providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()] });
+    const f = TestBed.createComponent(DocumentsRecordsTableComponent);
+    f.componentRef.setInput('activeTab', 'records');
+    f.componentRef.setInput('columns', [
+      { key: 'tipo', label: 'Tipo', visibility: 'visible', group: 'default', sortable: true },
+      { key: 'monto', label: 'Crédito (S/)', visibility: 'visible', group: 'default', sortable: true, align: 'right' },
+    ] as DocumentsRecordsColumn[]);
+    f.componentRef.setInput('rows', []);
+    f.detectChanges();
+    const [tipo, monto] = Array.from<HTMLButtonElement>((f.nativeElement as HTMLElement).querySelectorAll('thead th button'));
+    expect(getComputedStyle(tipo).flexDirection).toBe('row');
+    expect(getComputedStyle(monto).flexDirection).toBe('row-reverse');
   });
 
   it('marca aria-sort en la columna ordenada y emite el siguiente orden al pulsar', () => {

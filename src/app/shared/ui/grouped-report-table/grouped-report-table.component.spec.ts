@@ -42,6 +42,19 @@ describe('GroupedReportTableComponent — orden del detalle de cada grupo', () =
   const detalle = (fixture: ReturnType<typeof TestBed.createComponent<GroupedReportTableComponent>>): string[] =>
     fixture.componentInstance.nodos.filter((n) => n.tipo === 'detalle').map((n) => (n as { fila: Record<string, string> }).fila['sec']);
 
+  it('la flecha de orden de la columna de montos va a la izquierda del título', () => {
+    const fixture = TestBed.createComponent(GroupedReportTableComponent);
+    fixture.componentRef.setInput('columns', columnas);
+    fixture.componentRef.setInput('rows', filas);
+    fixture.componentRef.setInput('levels', [{ key: 'entidad', label: 'Entidad' }]);
+    fixture.componentRef.setInput('sortable', true);
+    fixture.detectChanges();
+    const boton = (nombre: string): HTMLButtonElement =>
+      Array.from<HTMLButtonElement>((fixture.nativeElement as HTMLElement).querySelectorAll('thead button')).find((b) => b.getAttribute('aria-label') === `Ordenar por ${nombre}`)!;
+    expect(getComputedStyle(boton('Sec.')).flexDirection).toBe('row');
+    expect(getComputedStyle(boton('Monto')).flexDirection).toBe('row-reverse');
+  });
+
   it('ordena el detalle dentro de cada grupo (importes como número) y conserva el orden de los grupos', () => {
     const fixture = TestBed.createComponent(GroupedReportTableComponent);
     fixture.componentRef.setInput('columns', columnas);

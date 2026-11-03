@@ -129,6 +129,16 @@ describe('ReportTableComponent', () => {
     expect(emitidos[1]).toEqual({ key: 'operacion', direction: 'desc' });
   });
 
+  it('la flecha de orden de una columna de importes (a la derecha) va a la izquierda del título', () => {
+    montar(columnas, filas);
+    fixture.componentRef.setInput('sortable', true);
+    fixture.detectChanges();
+    const boton = (nombre: string): HTMLButtonElement =>
+      Array.from(el().querySelectorAll<HTMLButtonElement>('thead button')).find((b) => b.getAttribute('aria-label') === `Ordenar por ${nombre}`)!;
+    expect(getComputedStyle(boton('Tipo de operación')).flexDirection).toBe('row');
+    expect(getComputedStyle(boton('Saldo final')).flexDirection).toBe('row-reverse');
+  });
+
   it('sin sortable los títulos son texto y no hay aria-sort', () => {
     montar(columnas, filas);
     expect(el().querySelectorAll('thead button').length).toBe(0);
