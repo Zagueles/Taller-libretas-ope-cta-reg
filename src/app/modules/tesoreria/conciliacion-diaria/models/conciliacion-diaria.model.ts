@@ -97,15 +97,15 @@ export interface ConciliacionManualDatos {
   tipoModificacion?: TipoModificacion;
 }
 
-/** Qué corrige una modificación: los datos del registro (fecha, número, descripción, entidad, secuencia) o sus montos (débito y crédito). */
+/** Qué corrige una modificación: los datos del registro (fecha, número, descripción y entidad) o sus montos (débito y crédito). */
 export type TipoModificacion = 'Datos' | 'Montos';
 export const TIPOS_MODIFICACION: TipoModificacion[] = ['Datos', 'Montos'];
 
-/** Los campos de una línea que se pueden editar según el tipo de modificación; en una creación, todos. */
+/** Los campos de una línea que se pueden editar según el tipo de modificación; en una creación, todos menos la secuencia, que la genera la aprobación. */
 export function camposEditables(tipo: TipoModificacion | null | undefined): (keyof DatosLinea)[] {
-  if (tipo === 'Datos') return ['fecha', 'numero', 'descripcion', 'entidad', 'secuencia'];
+  if (tipo === 'Datos') return ['fecha', 'numero', 'descripcion', 'entidad'];
   if (tipo === 'Montos') return ['debito', 'credito'];
-  return ['fecha', 'numero', 'descripcion', 'entidad', 'debito', 'credito', 'secuencia'];
+  return ['fecha', 'numero', 'descripcion', 'entidad', 'debito', 'credito'];
 }
 
 /** Un documento de la vida de un registro conciliado: el que lo creó y los que lo modificaron. */
@@ -310,20 +310,28 @@ export function fechaHoraTexto(iso: string): string {
 
 const documentoDe = ({ numeroCuenta: _cuenta, ...doc }: DocumentoAprobado): Omit<DocumentoDeRegistro, 'tipoAccion' | 'datos'> => doc;
 
+/** La secuencia de cada línea de un lado la genera la aprobación: 1, 2, 3… en orden (las que ya la tienen, la conservan). */
+export function asignarSecuencias(lineas: LineaConciliacion[] | undefined): LineaConciliacion[] | undefined {
+  return lineas?.map((l, i) => ({ ...l, secuencia: l.secuencia || String(i + 1) }));
+}
+
 /** Al aprobar una creación: el registro conciliado pasa a Registros con su primer documento. */
 export function registroConciliadoDeCreacion(r: RegistroNoConciliado, doc: DocumentoAprobado): RegistroConciliado {
   const { modificado: _modificado, ...registro } = r;
+  // La aprobación genera la secuencia de cada línea.
+  const secuenciado: RegistroNoConciliado = { ...registro, ...(r.lbLineas ? { lbLineas: asignarSecuencias(r.lbLineas) } : {}), ...(r.rbLineas ? { rbLineas: asignarSecuencias(r.rbLineas) } : {}) };
   return {
-    ...registro,
+    ...secuenciado,
     id: `rc-${doc.documentoId}-${r.id}`,
     motivo: '-',
     numeroCuenta: doc.numeroCuenta,
-    documentos: [{ ...documentoDe(doc), tipoAccion: 'Creación', datos: datosDeRegistro(r), ediciones: r.ediciones, sustentos: r.sustentos, justificacion: r.justificacion }],
+    documentos: [{ ...documentoDe(doc), tipoAccion: 'Creación', datos: datosDeRegistro(secuenciado), ediciones: r.ediciones, sustentos: r.sustentos, justificacion: r.justificacion }],
   };
 }
 
 /** Al aprobar una modificación: el registro toma sus datos nuevos y su historial suma el documento de modificación (trazabilidad). */
-export function aplicarModificacion(actual: RegistroConciliado, modificado: RegistroNoConciliado, tipo: TipoModificacion, doc: DocumentoAprobado): RegistroConciliado {
+export function aplicarModificacion(actual: RegistroConciliado, modificadoSinSecuencia: RegistroNoConciliado, tipo: TipoModificacion, doc: DocumentoAprobado): RegistroConciliado {
+  const modificado: RegistroNoConciliado = { ...modificadoSinSecuencia, lbLineas: asignarSecuencias(modificadoSinSecuencia.lbLineas), rbLineas: asignarSecuencias(modificadoSinSecuencia.rbLineas) };
   return {
     ...actual,
     lbFecha: modificado.lbFecha,

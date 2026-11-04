@@ -327,6 +327,25 @@ describe('mockBackendInterceptor', () => {
       expect(modificado.ediciones?.some((e) => e.despues === '1,300.00')).toBeTrue();
     }));
 
+    it('al aprobar una creación con varios registros por lado, la aprobación genera la secuencia 1, 2, 3…', fakeAsync(() => {
+      Object.assign(DEMO_PROCESAMIENTO, { escenario: 'aplicado', duracionMs: 60_000 });
+      const carla = entrar('creador');
+      const luis = entrar('aprobador');
+      const id = esperar(http.post<SolicitudResponse>(`${API}/solicitudes`, { tipoDocumentoId: 'td-scmd', tipoAccion: 'creacion', organoLinea: 'DGTP', justificacion: 'Prueba' }, { headers: carla })).valor!.id;
+      const linea = (n: string, credito: string) => ({ id: `l${n}`, fecha: '17/08/2026 10:00:00', numero: '02698160', descripcion: 'RR', entidad: 'SUNAT', debito: '0.00', credito, secuencia: '', original: { fecha: '17/08/2026 10:00:00', numero: '02698160', descripcion: 'RR', entidad: 'SUNAT', debito: '0.00', credito, secuencia: '' } });
+      const grupo = { ...REGISTROS_NO_CONCILIADOS[0], lbDebito: '0.00', lbCredito: '1,000.00', rbDebito: '0.00', rbCredito: '1,000.00', conciliado: true, sustentos: [{ tipo: 'Constancia', nombre: 'c.pdf' }], justificacion: 'Coincide.', lbLineas: [linea('1', '1,000.00')], rbLineas: [linea('2', '300.00'), linea('3', '300.00'), linea('4', '400.00')] };
+      esperar(http.post(`${API}/solicitudes/${id}/conciliacion-manual`, { numeroCuenta: CUENTAS_CONCILIACION[0].numeroCuenta, registros: [grupo] }, { headers: carla }));
+      esperar(http.patch(`${API}/solicitudes/${id}/estado`, { estadoNuevo: 'ELABORADO' }, { headers: carla }));
+      esperar(http.patch(`${API}/solicitudes/${id}/estado`, { estadoNuevo: 'VERIFICADO' }, { headers: carla }));
+      expect(leerDatos().solicitudes.find((x) => x.id === id)!.detalleConciliacionManual!.registros[0].rbLineas!.map((l) => l.secuencia)).withContext('antes de aprobar').toEqual(['', '', '']);
+
+      esperar(http.post(`${API}/conciliaciones-manuales/${id}/aprobar`, {}, { headers: luis }));
+      const nuevo = registros(luis).find((r) => r.documentos[0].documentoId === id)!;
+      expect(nuevo.lbLineas!.map((l) => l.secuencia)).toEqual(['1']);
+      expect(nuevo.rbLineas!.map((l) => l.secuencia)).toEqual(['1', '2', '3']);
+      expect(nuevo.documentos[0].datos.rbLineas!.map((l) => l.secuencia)).toEqual(['1', '2', '3']);
+    }));
+
     it('una creación aprobada suma sus registros conciliados a la lista', fakeAsync(() => {
       Object.assign(DEMO_PROCESAMIENTO, { escenario: 'aplicado', duracionMs: 60_000 });
       const carla = entrar('creador');

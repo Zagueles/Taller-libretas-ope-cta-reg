@@ -69,7 +69,7 @@ const linea = (id: string, datos: DatosLinea): LineaConciliacion => ({ id, ...da
  * registros con todos sus campos editables («Antes: …» marca lo corregido): un par uno a uno (montos distintos,
  * o fecha o número mal informados) o un grupo cuando alguno de los dos lados tiene varios registros. Cada lado tiene su
  * lupa, siempre en el mismo orden (libro banco, operaciones bancarias); el registro de origen no se puede quitar. Con varios registros un banner explica qué hacer. «Aceptar» exige que la
- * suma de ambos lados cuadre, que todos tengan el mismo número y día, secuencias seguidas y, con el sustento y la justificación, emite el registro ya conciliado con su bitácora.
+ * suma de ambos lados cuadre, que todos tengan el mismo número y día y, con el sustento y la justificación, emite el registro ya conciliado con su bitácora.
  */
 @Component({
   selector: 'siaf-conciliacion-registro-edicion',
@@ -373,17 +373,12 @@ export class ConciliacionRegistroEdicionComponent implements OnChanges {
   });
   /** Todos los registros que se concilian juntos llevan el mismo número. */
   private readonly numerosCoinciden = computed(() => new Set([...this.lineasLB(), ...this.lineasRB()].map((l) => l.numero.trim())).size === 1);
-  /** Con varios registros en un lado, sus secuencias son 1, 2, 3… sin huecos ni repetidas. */
-  private readonly secuenciasValidas = computed(() =>
-    [this.lineasLB(), this.lineasRB()].every((ls) => ls.length < 2 || ls.map((l) => Number(l.secuencia)).sort((a, b) => a - b).every((n, i) => n === i + 1)),
-  );
-
   /** El aviso de varios registros: qué hacer con el número y la secuencia, o con el monto si el motivo es «Montos diferentes». */
   readonly banner = computed<{ titulo: string; descripcion: string } | null>(() => {
     if (!this.esGrupo() || this.esModificacion()) return null;
     return this.registro.motivo === 'Montos diferentes'
-      ? { titulo: 'Montos diferentes con varios registros', descripcion: 'Agregue los RR u operaciones que completan la diferencia. Escriba el mismo número en todos los registros que se concilian juntos y numere la secuencia en cada tabla: 1, 2, 3…' }
-      : { titulo: 'Varios RR y operaciones en un mismo registro', descripcion: 'Escriba el mismo número en todos los RR y operaciones que se concilian juntos. Luego numere la secuencia en cada tabla: 1, 2, 3…' };
+      ? { titulo: 'Montos diferentes con varios registros', descripcion: 'Agregue los RR u operaciones que completan la diferencia. Escriba el mismo número en todos los registros que se concilian juntos. La secuencia se genera sola al aprobar.' }
+      : { titulo: 'Varios RR y operaciones en un mismo registro', descripcion: 'Escriba el mismo número en todos los RR y operaciones que se concilian juntos. La secuencia se genera sola al aprobar.' };
   });
 
   /** Alguna línea difiere de lo que traía: en una modificación sin cambios no hay nada que aceptar. */
@@ -398,7 +393,6 @@ export class ConciliacionRegistroEdicionComponent implements OnChanges {
       this.mismoDia() &&
       this.cuadra() &&
       this.numerosCoinciden() &&
-      this.secuenciasValidas() &&
       (!this.esModificacion() || this.hayEdiciones()) &&
       this.sustentos().length > 0 &&
       cumpleMinimoTextoLibre(this.justificacion()),
@@ -413,8 +407,8 @@ export class ConciliacionRegistroEdicionComponent implements OnChanges {
       this.lineasLB.set(copiar(r.lbLineas));
       this.lineasRB.set(copiar(r.rbLineas));
     } else {
-      const propiaLB: DatosLinea = { fecha: r.lbFecha, numero: r.lbNumero, descripcion: r.lbDescripcion, entidad: r.lbEntidad, debito: r.lbDebito, credito: r.lbCredito, secuencia: '1' };
-      const propiaRB: DatosLinea = { fecha: r.rbFecha, numero: r.rbNumero, descripcion: r.rbDescripcion, entidad: '', debito: r.rbDebito, credito: r.rbCredito, secuencia: '1' };
+      const propiaLB: DatosLinea = { fecha: r.lbFecha, numero: r.lbNumero, descripcion: r.lbDescripcion, entidad: r.lbEntidad, debito: r.lbDebito, credito: r.lbCredito, secuencia: '' };
+      const propiaRB: DatosLinea = { fecha: r.rbFecha, numero: r.rbNumero, descripcion: r.rbDescripcion, entidad: '', debito: r.rbDebito, credito: r.rbCredito, secuencia: '' };
       // «Montos diferentes»: la otra fuente ya existe y viene precargada; si falta (no existe OBO o RR) arranca vacía.
       this.lineasLB.set(this.origenLB ? [linea('origen', propiaLB)] : []);
       this.lineasRB.set(this.origenLB ? (r.rbNumero ? [linea('rb0', propiaRB)] : []) : [linea('origen', propiaRB)]);
@@ -431,8 +425,9 @@ export class ConciliacionRegistroEdicionComponent implements OnChanges {
     this.tocados.set(new Set());
   }
 
-  /** Si el campo se puede corregir: todos en una creación; en una modificación, los del tipo elegido. */
+  /** Si el campo se puede corregir: los del tipo elegido en una modificación y casi todos en una creación; la secuencia la genera la aprobación, nunca se edita. */
   editable(campo: Campo): boolean {
+    if (campo === 'secuencia') return false;
     return camposEditables(this.tipoModificacionActual()).includes(campo);
   }
 
@@ -471,7 +466,7 @@ export class ConciliacionRegistroEdicionComponent implements OnChanges {
       case 'fecha': return fechaValida(v) ? '' : 'Fecha no válida';
       case 'debito':
       case 'credito': return valido(v) ? '' : 'Este campo es obligatorio.';
-      case 'secuencia': return /^\d+$/.test(v.trim()) && Number(v) > 0 ? '' : 'Ingrese una secuencia válida.';
+      case 'secuencia': return '';
       case 'entidad': return lado === 'lb' && !v.trim() ? 'Este campo es obligatorio.' : '';
       default: return v.trim() ? '' : 'Este campo es obligatorio.';
     }
@@ -503,14 +498,14 @@ export class ConciliacionRegistroEdicionComponent implements OnChanges {
     this.busquedaAbierta.set(true);
   }
 
-  /** «Aceptar» del panel: suma los registros elegidos al lado de la lupa, con sus datos y la siguiente secuencia. */
+  /** «Aceptar» del panel: suma los registros elegidos al lado de la lupa, con sus datos; la secuencia la genera la aprobación. */
   aceptarOperaciones(): void {
     const lado = this.ladoBusqueda();
     const elegidas = this.fuenteDe(lado).filter((o) => this.seleccion().includes(o.id));
     (lado === 'lb' ? this.lineasLB : this.lineasRB).update((lista) => [
       ...lista,
       ...elegidas.map((o, i) =>
-        linea(o.id, { fecha: o.fecha, numero: o.numero, descripcion: o.descripcion, entidad: lado === 'lb' ? (o.entidad ?? 'SUNAT') : '', debito: o.debito, credito: o.credito, secuencia: String(lista.length + i + 1) }),
+        linea(o.id, { fecha: o.fecha, numero: o.numero, descripcion: o.descripcion, entidad: lado === 'lb' ? (o.entidad ?? 'SUNAT') : '', debito: o.debito, credito: o.credito, secuencia: '' }),
       ),
     ]);
     this.busquedaAbierta.set(false);

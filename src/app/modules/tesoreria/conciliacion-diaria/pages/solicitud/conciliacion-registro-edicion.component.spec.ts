@@ -106,18 +106,20 @@ describe('ConciliacionRegistroEdicionComponent', () => {
       const { c } = armarGrupo();
       expect(c.esGrupo()).toBeTrue();
       expect(c.cuadra()).toBeTrue();
-      expect(c.lineasRB().map((l) => l.secuencia)).toEqual(['1', '2', '3']);
+      expect(c.lineasRB().map((l) => l.secuencia)).withContext('la secuencia la genera la aprobación').toEqual(['', '', '']);
       sustentar(c);
       expect(c.puedeAceptar()).toBeTrue();
     });
 
-    it('exige secuencias seguidas y sin repetir en el lado con varios registros', () => {
-      const { c } = armarGrupo();
+    it('la secuencia va deshabilitada y vacía: no se edita ni se exige, la genera la aprobación', () => {
+      const { c, fixture } = armarGrupo();
       sustentar(c);
-      c.cambiar('rb', 'op-02698148-b', 'secuencia', '1');
-      expect(c.puedeAceptar()).toBeFalse();
-      c.cambiar('rb', 'op-02698148-b', 'secuencia', '2');
+      expect(c.editable('secuencia')).toBeFalse();
       expect(c.puedeAceptar()).toBeTrue();
+      fixture.detectChanges();
+      const sec = Array.from<HTMLInputElement>(fixture.nativeElement.querySelectorAll('tbody tr td:first-child input'));
+      expect(sec.length).toBe(5);
+      expect(sec.every((i) => i.disabled && i.value === '')).toBeTrue();
     });
 
     it('con una suma distinta no cuadra, y con números distintos tampoco', () => {
@@ -233,7 +235,7 @@ describe('ConciliacionRegistroEdicionComponent', () => {
     it('trae la fecha, el número, la descripción y los montos del registro elegido', () => {
       const { c } = crear(0);
       agregar(c, 'rb', 'op-02698148-a');
-      expect(c.lineasRB().map((l) => [l.numero, l.debito, l.credito, l.secuencia])).toEqual([['02698148', '0.00', '20,000.00', '1']]);
+      expect(c.lineasRB().map((l) => [l.numero, l.debito, l.credito, l.secuencia])).toEqual([['02698148', '0.00', '20,000.00', '']]);
     });
 
     it('filtra por la búsqueda y no suma nada si se cancela', () => {
@@ -272,9 +274,9 @@ describe('ConciliacionRegistroEdicionComponent', () => {
       expect((['fecha', 'numero', 'descripcion', 'entidad', 'secuencia', 'debito', 'credito'] as const).filter((x) => c.editable(x))).toEqual(['debito', 'credito']);
     });
 
-    it('«Datos» deja corregir fecha, número, descripción, entidad y secuencia, pero no los montos', () => {
+    it('«Datos» deja corregir fecha, número, descripción y entidad, pero no los montos (ni la secuencia)', () => {
       const { c } = abrir('Datos');
-      expect((['fecha', 'numero', 'descripcion', 'entidad', 'secuencia', 'debito', 'credito'] as const).filter((x) => c.editable(x))).toEqual(['fecha', 'numero', 'descripcion', 'entidad', 'secuencia']);
+      expect((['fecha', 'numero', 'descripcion', 'entidad', 'secuencia', 'debito', 'credito'] as const).filter((x) => c.editable(x))).toEqual(['fecha', 'numero', 'descripcion', 'entidad']);
     });
 
     it('sin cambios no se acepta; con la corrección, el sustento y la justificación emite el registro modificado con su «Antes»', () => {
@@ -342,7 +344,7 @@ describe('ConciliacionRegistroEdicionComponent', () => {
       agregar(c, 'lb', 'nc:nc-6');
       agregar(c, 'rb', 'nc:nc-7', 'nc:nc-8', 'nc:nc-9');
       expect(c.lineasLB().map((l) => l.credito)).toEqual(['600.00', '400.00']);
-      expect(c.lineasRB().map((l) => [l.numero, l.credito, l.secuencia])).toEqual([['02698170', '300.00', '1'], ['02698171', '300.00', '2'], ['02698172', '400.00', '3']]);
+      expect(c.lineasRB().map((l) => [l.numero, l.credito, l.secuencia])).toEqual([['02698170', '300.00', ''], ['02698171', '300.00', ''], ['02698172', '400.00', '']]);
       expect(c.cuadra()).toBeTrue();
       expect(c.banner()?.titulo).toBe('Varios RR y operaciones en un mismo registro');
     });
