@@ -422,7 +422,7 @@ export class CreateDocumentComponent implements OnChanges {
       return 'border-2 border-[var(--sys-color-border-feedback-success)]';
     }
 
-    return 'border border-[var(--sys-color-border-states-enabled)] hover:border-2 hover:border-[var(--sys-color-border-states-hover)]';
+    return 'border border-[var(--sys-color-border-states-enabled)] hover:border-[var(--sys-color-border-states-hover)] hover:shadow-[inset_0_0_0_1px_var(--sys-color-border-states-hover)]';
   }
 
   private get defaultProcess(): CreateDocumentProcessOption | null {

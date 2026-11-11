@@ -197,10 +197,10 @@ export class TextAreaControlComponent implements OnChanges {
     }
 
     if (this.focused) {
-      return 'border-2 border-[var(--sys-color-border-states-focus)] bg-surface';
+      return 'border-[var(--sys-color-border-states-focus)] bg-surface shadow-[inset_0_0_0_1px_var(--sys-color-border-states-focus)]';
     }
 
-    return 'border-[var(--sys-color-border-states-enabled)] bg-surface hover:border-2 hover:border-[var(--sys-color-border-states-hover)]';
+    return 'border-[var(--sys-color-border-states-enabled)] bg-surface hover:border-[var(--sys-color-border-states-hover)] hover:shadow-[inset_0_0_0_1px_var(--sys-color-border-states-hover)]';
   }
 
   onFocus(): void {

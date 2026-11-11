@@ -431,7 +431,8 @@ export class TextFieldComponent implements OnChanges, ControlValueAccessor {
       return 'border-2 border-[var(--sys-color-border-feedback-success)] bg-surface hover:border-[var(--sys-color-border-feedback-success)] focus:border-[var(--sys-color-border-states-focus)] focus-within:border-[var(--sys-color-border-states-focus)] focus:ring-0';
     }
 
-    return 'border border-[var(--sys-color-border-states-enabled)] bg-surface hover:border-2 hover:border-[var(--sys-color-border-states-hover)] focus:border-2 focus:border-[var(--sys-color-border-states-focus)] focus-within:border-2 focus-within:border-[var(--sys-color-border-states-focus)] focus:ring-0';
+    // Hover y foco engrosan el borde a 2 px con una sombra interior de 1 px: el borde real sigue en 1 px y el campo no cambia de tamaño ni empuja a los demás.
+    return 'border border-[var(--sys-color-border-states-enabled)] bg-surface hover:border-[var(--sys-color-border-states-hover)] hover:shadow-[inset_0_0_0_1px_var(--sys-color-border-states-hover)] focus:border-[var(--sys-color-border-states-focus)] focus:shadow-[inset_0_0_0_1px_var(--sys-color-border-states-focus)] focus-within:border-[var(--sys-color-border-states-focus)] focus-within:shadow-[inset_0_0_0_1px_var(--sys-color-border-states-focus)] focus:ring-0';
   }
 
   get labelClass(): string {

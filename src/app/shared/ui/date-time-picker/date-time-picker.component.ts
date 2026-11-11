@@ -499,8 +499,8 @@ export class DateTimePickerComponent implements OnChanges, OnInit {
     }
 
     return this.pickerOpen
-      ? 'border-2 border-[var(--sys-color-border-states-focus)]'
-      : 'border-[var(--sys-color-border-states-enabled)] hover:border-2 hover:border-[var(--sys-color-border-states-hover)] focus-within:border-2 focus-within:border-[var(--sys-color-border-states-focus)]';
+      ? 'border-[var(--sys-color-border-states-focus)] shadow-[inset_0_0_0_1px_var(--sys-color-border-states-focus)]'
+      : 'border-[var(--sys-color-border-states-enabled)] hover:border-[var(--sys-color-border-states-hover)] hover:shadow-[inset_0_0_0_1px_var(--sys-color-border-states-hover)] focus-within:border-[var(--sys-color-border-states-focus)] focus-within:shadow-[inset_0_0_0_1px_var(--sys-color-border-states-focus)]';
   }
 
   get labelClass(): string {
