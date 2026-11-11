@@ -4,7 +4,6 @@ import { Router, RouterLink } from '@angular/router';
 import { AlertComponent } from '../../shared/ui/alert/alert.component';
 import { ButtonComponent } from '../../shared/ui/button/button.component';
 import { ListComponent, ListItem } from '../../shared/ui/list/list.component';
-import { MessageBoxComponent } from '../../shared/ui/message-box/message-box.component';
 import { TabItem, TabsComponent } from '../../shared/ui/tabs/tabs.component';
 import { TextFieldComponent } from '../../shared/ui/text-field/text-field.component';
 import { AuthService } from '../../core/auth/auth.service';
@@ -16,7 +15,7 @@ type LoginTab = 'entidades' | 'proveedores';
 @Component({
   selector: 'siaf-login',
   standalone: true,
-  imports: [AlertComponent, ButtonComponent, ListComponent, MessageBoxComponent, RouterLink, TabsComponent, TextFieldComponent],
+  imports: [AlertComponent, ButtonComponent, ListComponent, RouterLink, TabsComponent, TextFieldComponent],
   template: `
     <main class="flex min-h-screen bg-[var(--sys-color-bg-surfaces-surface)] text-text lg:h-screen lg:overflow-hidden">
       <section class="hidden h-screen flex-[0_0_50%] overflow-hidden lg:block" aria-hidden="true">
@@ -135,7 +134,6 @@ type LoginTab = 'entidades' | 'proveedores';
                 [selectedId]="usuarioElegido()"
                 (selectedIdChange)="elegirUsuario($event)"
               />
-              <message-box [text]="'Elija un usuario para llenar el DNI. La contraseña de todos es ' + contrasenaDemo + '.'" />
               @if (datosReiniciados()) {
                 <siaf-alert
                   tone="success"
@@ -236,7 +234,6 @@ export class LoginComponent {
   readonly jnePopover = signal(false);
 
   // ── Taller: usuarios de demostración (src/app/mock/usuarios-demo.ts) ──
-  readonly contrasenaDemo = CONTRASENA_DEMO;
   readonly usuariosDemo: ListItem[] = USUARIOS_DEMO.map((u) => ({
     id: u.dni,
     title: `${u.nombres} ${u.apellidoPaterno} ${u.apellidoMaterno}`,
