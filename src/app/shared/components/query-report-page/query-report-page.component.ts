@@ -610,10 +610,10 @@ let siguienteId = 0;
     />
 
     <!-- Aviso al agregar un favorito (Figma 6741:38737): «Ver favoritos» abre el panel; se cierra solo. -->
-    <div class="pointer-events-none fixed bottom-siaf-lg left-1/2 z-50 w-[min(430px,calc(100vw-32px))] -translate-x-1/2">
+    <div class="pointer-events-none fixed bottom-siaf-lg left-1/2 z-50 w-max max-w-[calc(100vw-32px)] -translate-x-1/2 [&_.siaf-snackbar-anim]:max-w-none [&_p]:whitespace-nowrap">
       <div class="pointer-events-auto">
         <siaf-snackbar [open]="avisoFavoritoAbierto()" tone="success" actionLabel="Ver favoritos" (action)="verFavoritosDesdeAviso()" (closed)="cerrarAvisoFavorito()">
-          <strong class="font-bold">{{ favoritoAgregado() }}</strong> se agregó a favoritos.
+          <strong class="inline-block max-w-[360px] truncate align-bottom font-bold">{{ favoritoAgregado() }}</strong> se agregó.
         </siaf-snackbar>
       </div>
     </div>
