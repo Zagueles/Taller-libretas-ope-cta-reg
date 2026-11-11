@@ -25,34 +25,29 @@ Abrir <http://127.0.0.1:4200>. Otro puerto: `npm start -- --port 4300`.
 La contraseña de todos es **`Taller2026*`**. En el login, el panel «Usuarios de demostración» llena el DNI y la
 contraseña con un clic.
 
-Hay **dos usuarios** de demostración, porque quien aprueba una solicitud no puede ser quien la creó. Carla cambia entre sus
-dos perfiles desde su menú de usuario (Perfil); Luis entra aparte para aprobar:
+Hay **un solo usuario** de demostración, que consulta:
 
 | Usuario | DNI | Perfil | Qué puede hacer |
 | --- | --- | --- | --- |
-| Carla Mendoza Ríos | `33333333` | Creador | Crear, grabar, editar, verificar y eliminar solicitudes |
-| | | Visualizador de consultas | Solo consulta documentos, registros y reportes (sin «Crear» ni acciones) |
-| Luis Quispe Salas | `44444444` | Aprobador | Aprobar, observar (con comentario) o rechazar lo verificado |
+| Carla Mendoza Ríos | `33333333` | Visualizador de consultas | Solo consulta documentos, registros y reportes (sin «Crear» ni acciones) |
+
+Los perfiles **Creador** y **Aprobador** (y el usuario Luis Quispe Salas, `44444444`) ya no entran a la demo. El backend
+simulado conserva su flujo completo —crear, verificar, aprobar, observar, rechazar, modificar— y los tests lo prueban con
+Carla (creadora) y Luis (aprobador) definidos aparte en `USUARIOS_PRUEBA` (`src/app/mock/usuarios-demo.ts`). Los documentos
+de ejemplo siguen mostrando a Carla y a Luis en su historial.
 
 «Olvidé mi contraseña» también funciona: con el correo de un usuario (`carla.mendoza@taller.pe`) el código de
 verificación es `123456`.
 
 ## Recorrido sugerido para la clase
 
-1. **Login** como Carla (perfil Creador). El escritorio virtual muestra la bandeja, los contadores y sus notificaciones.
-2. **Procesos → Gestión de tesorería → Registro de cuentas bancarias → Documentos y registros**. La pestaña Documentos
-   es la bandeja; Registros, las cuentas ya aprobadas (con el historial de la solicitud que las creó).
-3. **Crear documento → Solicitud de Registro de Cuenta Bancaria**: llenar el formulario, adjuntar un PDF de sustento
-   y **Grabar**. La solicitud recibe su número (`PCB-SRCB-00013-2026-MEF-DGTP`) y queda Elaborada; luego **Verificar**.
-4. **Cambiar de perfil** a Aprobador desde el menú del usuario: tiene la notificación «Solicitud por aprobar». Abrir la solicitud y
-   **Aprobar** (la cuenta aparece en Registros con el código `CB-0009`), **Observar** o **Rechazar** (piden comentario).
-5. Volver al perfil Creador: le llega el aviso. Una solicitud observada se corrige y se vuelve a verificar, pero ya no
-   se puede eliminar.
-6. Cambiar de perfil desde el menú del usuario: el avatar pasa de «CR» a «AP» y a «VD» (visualizador de consultas) y
-   cambian la bandeja, los botones y las notificaciones.
-7. **Consultas y reportes**: elegir el rango de fechas de apertura y consultar. Probar los filtros, la **vista de
+1. **Login** como Carla (Visualizador de consultas). El escritorio virtual muestra la bandeja y los contadores.
+2. **Procesos → Gestión de tesorería → Gestión de liquidez → Conciliación bancaria**: los procesos todavía no habilitados van
+   deshabilitados con el tooltip «Próximamente».
+3. **Registro de operaciones en las libretas de las cuentas de registro**: Documentos (con el historial de cada uno) y Registros.
+4. **Consultas y reportes**: elegir el rango de fechas de apertura y consultar. Probar los filtros, la **vista de
    gráficas** (KPI, barras, dona y línea) y **Exportar** a Excel, CSV o PDF.
-8. **Catálogo de componentes** en `/ui-kit` (enlace «Ver componentes» del login): cada componente con su ficha, sus
+5. **Catálogo de componentes** en `/ui-kit` (enlace «Ver componentes» del login): cada componente con su ficha, sus
    entradas y su ejemplo.
 
 Para empezar de cero: **Reiniciar datos** en el login (o borrar el almacenamiento del sitio).

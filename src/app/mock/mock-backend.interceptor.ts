@@ -34,7 +34,7 @@ import {
 } from './mock-db';
 import { cuentasRegistro, detalleDocumento, detalleMovimiento, filtrarMovimientos, listarDocumentos, saldosCuentasBancarias } from './libretas-backend';
 import { avanzarProcesamiento, iniciarProcesamiento, respuestaProcesamiento } from './procesamiento-conciliacion';
-import { CONTRASENA_DEMO, USUARIOS_DEMO, UsuarioDemo, buscarUsuarioPorPerfil } from './usuarios-demo';
+import { CONTRASENA_DEMO, UsuarioDemo, buscarUsuarioPorPerfil, usuariosDelBackend } from './usuarios-demo';
 
 /**
  * Backend simulado del taller.
@@ -112,7 +112,7 @@ function respuestaLogin(usuario: UsuarioDemo): LoginResponse {
 
 const login: Manejador = ({ req }) => {
   const { dni, password } = (req.body ?? {}) as { dni?: string; password?: string };
-  const usuario = USUARIOS_DEMO.find((u) => u.dni === dni?.trim());
+  const usuario = usuariosDelBackend().find((u) => u.dni === dni?.trim());
   if (!usuario || password !== CONTRASENA_DEMO) return error(401, 'DNI o contraseña incorrectos.');
   return ok(respuestaLogin(usuario));
 };
@@ -134,12 +134,12 @@ const cambiarPerfil: Manejador = ({ req, sesion }) => {
 
 const solicitarOtp: Manejador = ({ req }) => {
   const { email } = (req.body ?? {}) as { email?: string };
-  return USUARIOS_DEMO.some((u) => u.email === email?.trim()) ? ok(null, 204) : error(404, 'El correo no está registrado.');
+  return usuariosDelBackend().some((u) => u.email === email?.trim()) ? ok(null, 204) : error(404, 'El correo no está registrado.');
 };
 
 const verificarOtp: Manejador = ({ req }) => {
   const { email, codigo } = (req.body ?? {}) as { email?: string; codigo?: string };
-  const usuario = USUARIOS_DEMO.find((u) => u.email === email?.trim());
+  const usuario = usuariosDelBackend().find((u) => u.email === email?.trim());
   if (!usuario) return error(404, 'El correo no está registrado.');
   if (codigo !== '123456') return error(400, 'El código no es válido. En el taller es 123456.');
   return ok(respuestaLogin(usuario));

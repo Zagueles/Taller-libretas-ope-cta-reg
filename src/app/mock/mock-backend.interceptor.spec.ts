@@ -11,7 +11,7 @@ import type { DetalleDocumentoLibreta, DetalleMovimientoLibreta, DocumentoLibret
 import { mockBackendInterceptor } from './mock-backend.interceptor';
 import { leerDatos, reiniciarDatosDemo } from './mock-db';
 import { DEMO_PROCESAMIENTO } from './procesamiento-conciliacion';
-import { CONTRASENA_DEMO } from './usuarios-demo';
+import { CONTRASENA_DEMO, USUARIOS_DEMO, activarUsuariosDePrueba } from './usuarios-demo';
 
 /**
  * El backend simulado sigue las reglas del flujo de una solicitud. Si una clase cambia una regla, este spec dice
@@ -57,6 +57,8 @@ describe('mockBackendInterceptor', () => {
   }
 
   beforeEach(() => {
+    // El flujo completo (crear, verificar, aprobar) se prueba con Carla y Luis; la demo solo tiene al visualizador.
+    activarUsuariosDePrueba(true);
     reiniciarDatosDemo();
     TestBed.configureTestingModule({
       providers: [provideHttpClient(withInterceptors([mockBackendInterceptor])), provideHttpClientTesting()],
@@ -66,9 +68,38 @@ describe('mockBackendInterceptor', () => {
   });
 
   // Ninguna llamada a la API sale a la red: las responde el simulador.
-  afterEach(() => red.verify());
+  afterEach(() => {
+    red.verify();
+    activarUsuariosDePrueba(false);
+  });
 
   afterAll(() => reiniciarDatosDemo());
+
+  describe('usuarios de la demo', () => {
+    beforeEach(() => activarUsuariosDePrueba(false));
+
+    it('solo hay un usuario, con el perfil «Visualizador de consultas»', fakeAsync(() => {
+      expect(USUARIOS_DEMO.length).toBe(1);
+      const { valor } = esperar(http.post<LoginResponse>(`${API}/auth/login`, { dni: '33333333', password: CONTRASENA_DEMO }));
+
+      expect(valor?.perfilesDisponibles.map((p) => [p.rolCodigo, p.rol])).toEqual([['VISUALIZADOR', 'Visualizador de consultas']]);
+      expect(valor?.perfilActivo.rolCodigo).toBe('VISUALIZADOR');
+    }));
+
+    it('no existen el aprobador ni el perfil de creador: no entran ni se pueden elegir', fakeAsync(() => {
+      expect(esperar(http.post(`${API}/auth/login`, { dni: '44444444', password: CONTRASENA_DEMO })).error?.status).toBe(401);
+
+      const { valor } = esperar(http.post<LoginResponse>(`${API}/auth/login`, { dni: '33333333', password: CONTRASENA_DEMO }));
+      const headers = new HttpHeaders({ Authorization: `Bearer ${valor!.accessToken}` });
+      expect(esperar(http.patch(`${API}/auth/cambiar-perfil`, { perfilId: 'perfil-demo-creador' }, { headers })).error?.status).toBe(404);
+    }));
+
+    it('los documentos de ejemplo conservan en su historial a quienes los crearon y aprobaron', () => {
+      const aprobada = leerDatos().solicitudes.find((x) => x.estado === 'APROBADO');
+      const quien = (estado: string): string => aprobada!.historialEstados!.find((h) => h.estadoNuevo === estado)!.creador!.nombres;
+      expect([quien('ELABORADO'), quien('APROBADO')]).toEqual(['Carla', 'Luis']);
+    });
+  });
 
   it('rechaza una contraseña incorrecta con el mensaje que muestra el login', fakeAsync(() => {
     const { error } = esperar(http.post(`${API}/auth/login`, { dni: '33333333', password: 'otra' }));

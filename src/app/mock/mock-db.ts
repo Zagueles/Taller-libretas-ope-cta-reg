@@ -21,7 +21,7 @@ import {
 } from '../modules/tesoreria/conciliacion-diaria/models/conciliacion-diaria.model';
 import { DatosLibretas, datosLibretasIniciales } from './libretas-backend';
 import type { QueryReportFavorite } from '../shared/types/query-report.types';
-import { USUARIOS_DEMO, UsuarioDemo } from './usuarios-demo';
+import { USUARIOS_PRUEBA, UsuarioDemo } from './usuarios-demo';
 
 /**
  * «Base de datos» del backend simulado: vive en el `localStorage` del navegador, así lo que hace un usuario lo ve
@@ -198,9 +198,10 @@ function crearDatosIniciales(): DatosTaller {
     libretas: datosLibretasIniciales(),
     favoritos: {},
   };
-  // Las solicitudes iniciales las crea y verifica Carla (creador) y las resuelve Luis (aprobador): nunca la misma persona.
-  const ana = USUARIOS_DEMO[0];
-  const luis = USUARIOS_DEMO[1];
+  // Las solicitudes iniciales las crea y verifica Carla (creador) y las resuelve Luis (aprobador): nunca la misma persona. Aparecen
+  // en su historial aunque en la demo solo entre el visualizador.
+  const ana = USUARIOS_PRUEBA[0];
+  const luis = USUARIOS_PRUEBA[1];
 
   for (const semilla of SEMILLAS) {
     const id = nuevoId(datos, 'sol');
