@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { ProcessMenuNode } from '../../shared/utils/process-tree.util';
+import { DEFAULT_PROCESS_TREE, ProcessMenuNode, findProcessPathById } from '../../shared/utils/process-tree.util';
 import { ProcessMenuTreeComponent } from './process-menu-tree.component';
 
 describe('ProcessMenuTreeComponent — búsqueda', () => {
@@ -99,6 +99,58 @@ describe('ProcessMenuTreeComponent — procesos «Próximamente»', () => {
     boton('Gestión de pagos').click();
     boton('Documentos de conciliación').click();
     expect(emitidos).toEqual(['listo']);
+  });
+});
+
+describe('ProcessMenuTreeComponent — proceso pendiente con hojas', () => {
+  let fixture: ComponentFixture<ProcessMenuTreeComponent>;
+  const el = (): HTMLElement => fixture.nativeElement;
+  const textos = (): string[] => Array.from(el().querySelectorAll('button')).map((b) => b.textContent!.replace(/\s+/g, ' ').trim());
+
+  const nodos: ProcessMenuNode[] = [
+    {
+      id: 'conciliacion',
+      label: 'Conciliación diaria',
+      comingSoon: true,
+      children: [{ id: 'docs', label: 'Documentos de conciliación diaria', moduleRoute: '/procesos/conciliacion-diaria' }],
+    },
+    { id: 'libretas', label: 'Registro de libretas', moduleRoute: '/procesos/libretas' },
+  ];
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [ProcessMenuTreeComponent] }).compileComponents();
+    fixture = TestBed.createComponent(ProcessMenuTreeComponent);
+    fixture.componentRef.setInput('nodes', nodos);
+    fixture.detectChanges();
+  });
+
+  it('va deshabilitado, sin flecha de rama, y ni abre ni muestra sus hojas', () => {
+    const boton = Array.from(el().querySelectorAll<HTMLButtonElement>('button')).find((b) => b.textContent!.includes('Conciliación diaria'))!;
+    expect(boton.getAttribute('aria-disabled')).toBe('true');
+    expect(boton.getAttribute('aria-expanded')).toBeNull();
+    boton.click();
+    fixture.detectChanges();
+    expect(textos().some((t) => t.includes('Documentos de conciliación diaria'))).toBeFalse();
+  });
+
+  it('no emite la selección y sus hojas no aparecen ni al buscarlas', () => {
+    const emitidos: string[] = [];
+    fixture.componentInstance.nodeSelected.subscribe((n) => emitidos.push(n.id));
+    Array.from(el().querySelectorAll<HTMLButtonElement>('button')).find((b) => b.textContent!.includes('Conciliación diaria'))!.click();
+    expect(emitidos).toEqual([]);
+
+    fixture.componentInstance.onQuery('documentos');
+    fixture.detectChanges();
+    expect(textos().some((t) => t.includes('Documentos de conciliación diaria'))).toBeFalse();
+    expect(el().querySelector('[data-sin-resultados]')).not.toBeNull();
+  });
+
+  it('en el árbol del taller, la Conciliación diaria está pendiente pero sus hojas siguen resolviendo las migas de pan', () => {
+    const [raiz, , , proceso] = findProcessPathById('conciliacion-diaria-documentos', DEFAULT_PROCESS_TREE);
+    expect(raiz).toBeDefined();
+    expect(findProcessPathById('conciliacion-diaria', DEFAULT_PROCESS_TREE).at(-1)?.comingSoon).toBeTrue();
+    expect(proceso?.id).toBe('conciliacion-diaria-documentos');
+    expect(findProcessPathById('registro-libretas-cuentas-registro', DEFAULT_PROCESS_TREE).at(-1)?.comingSoon).toBeFalsy();
   });
 });
 
