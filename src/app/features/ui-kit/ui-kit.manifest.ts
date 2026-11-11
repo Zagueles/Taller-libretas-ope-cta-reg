@@ -5576,7 +5576,8 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "token": "--sys-gap-base-lg",
         "via": [
           "bottom-siaf-lg",
-          "p-siaf-lg"
+          "p-siaf-lg",
+          "px-siaf-lg"
         ]
       },
       {
@@ -5593,6 +5594,12 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "via": [
           "gap-siaf-sm",
           "pt-siaf-sm"
+        ]
+      },
+      {
+        "token": "--sys-gap-base-xl",
+        "via": [
+          "py-siaf-xl"
         ]
       },
       {
@@ -5642,6 +5649,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       "siaf-date-range-filter-pill",
       "siaf-document-history-panel",
       "siaf-documents-records-table",
+      "siaf-empty-state",
       "siaf-filter-pill",
       "siaf-icon",
       "siaf-icon-dropdown-menu",

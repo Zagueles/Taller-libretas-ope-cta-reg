@@ -1,5 +1,6 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { ChangeDetectorRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
@@ -79,6 +80,51 @@ describe('DocumentsRecordsPageComponent', () => {
 
       // La paginación superior ya no es parte del estándar: solo queda el contador de abajo.
       expect(contadores()).toEqual(['1-10 de 12']);
+    });
+  });
+
+  describe('estado vacío sin resultados', () => {
+    const vacio = (): HTMLElement | null => el().querySelector('[data-sin-resultados]');
+    const texto = (): string => vacio()!.textContent!.replace(/\s+/g, ' ').trim();
+    /** El componente es OnPush: tras cambiar un filtro o la búsqueda directo en la instancia hay que marcarlo. */
+    const refrescar = (): void => {
+      fixture.debugElement.injector.get(ChangeDetectorRef).markForCheck();
+      fixture.detectChanges();
+    };
+
+    it('con una búsqueda sin coincidencias muestra el estado vacío con «la búsqueda ingresada»', () => {
+      configurar({ ...BANDEJA_CONFIG_DE_MUESTRA, documentRows: filas(3) });
+      pagina.searchTerm = 'zzzz-no-existe';
+      refrescar();
+
+      expect(texto()).toContain('No se encontraron resultados');
+      expect(texto()).toContain('No pudimos hallar coincidencias con la búsqueda ingresada');
+      expect(vacio()!.querySelector('siaf-empty-state')).not.toBeNull();
+      // Sin filas no hay nada que paginar: ni «Filas por página» ni «0-0 de 0».
+      expect(el().querySelector('siaf-pagination')).toBeNull();
+    });
+
+    it('con filtros sin coincidencias dice «los filtros ingresados», también si además hay búsqueda', () => {
+      configurar({ ...BANDEJA_CONFIG_DE_MUESTRA, documentRows: filas(3) });
+      pagina.selectedDocumentFilter1 = 'Aprobado';
+      refrescar();
+      expect(texto()).toContain('No pudimos hallar coincidencias con los filtros ingresados');
+      expect(el().querySelector('siaf-pagination')).toBeNull();
+
+      pagina.searchTerm = 'zzzz';
+      refrescar();
+      expect(texto()).toContain('con los filtros ingresados');
+    });
+
+    it('con coincidencias no hay estado vacío, y una lista vacía sin filtros ni búsqueda conserva su aviso de siempre', () => {
+      configurar({ ...BANDEJA_CONFIG_DE_MUESTRA, documentRows: filas(3) });
+      expect(vacio()).toBeNull();
+      expect(el().querySelector('siaf-pagination')).not.toBeNull();
+
+      configurar({ ...BANDEJA_CONFIG_DE_MUESTRA, documentRows: [] });
+      expect(vacio()).toBeNull();
+      expect(el().textContent).toContain('Aún no se encontraron resultados.');
+      expect(el().querySelector('siaf-pagination')).not.toBeNull();
     });
   });
 

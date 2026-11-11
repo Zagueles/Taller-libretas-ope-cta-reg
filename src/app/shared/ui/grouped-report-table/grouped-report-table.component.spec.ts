@@ -74,15 +74,22 @@ describe('GroupedReportTableComponent — orden del detalle de cada grupo', () =
     expect(detalle(fixture)).toEqual(['000001', '000002', '000003']);
   });
 
-  it('suma al ancho de la primera columna la sangría de sus niveles para que su valor no se parta', () => {
+  it('el detalle va alineado a la izquierda, bajo su cabecera: la primera columna no se sangra', () => {
     const fixture = TestBed.createComponent(GroupedReportTableComponent);
     fixture.componentRef.setInput('columns', columnas);
     fixture.componentRef.setInput('rows', filas);
     fixture.componentRef.setInput('levels', [{ key: 'entidad', label: 'Entidad' }]);
     fixture.detectChanges();
-    const cols = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('col')).map((c) => c.style.width);
-    // «entidad» es nivel y se oculta: la primera visible es «sec» (80 px) con 40 px de sangría (un nivel + el detalle).
-    expect(cols[0]).toBe('120px');
-    expect(fixture.componentInstance.anchoTabla).toBe(80 + 100 + 40);
+    const el = fixture.nativeElement as HTMLElement;
+
+    const cols = Array.from(el.querySelectorAll<HTMLElement>('col')).map((c) => c.style.width);
+    // «entidad» es nivel y se oculta: las visibles son «sec» (80 px) y «monto» (100 px), sin ancho de más.
+    expect(cols).toEqual(['80px', '100px']);
+    expect(fixture.componentInstance.anchoTabla).toBe(80 + 100);
+
+    // Cada celda de la primera columna del detalle usa el relleno normal: sin sangría propia.
+    const celdasSec = Array.from(el.querySelectorAll<HTMLElement>('tbody td')).filter((td) => /^00000\d$/.test(td.textContent!.trim()));
+    expect(celdasSec.length).toBe(3);
+    expect(celdasSec.every((td) => td.style.paddingLeft === '')).toBeTrue();
   });
 });

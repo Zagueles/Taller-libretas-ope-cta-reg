@@ -1,3 +1,4 @@
+import { EmptyStateComponent } from '../../ui/empty-state/empty-state.component';
 import { MessageBoxComponent } from '../../ui/message-box/message-box.component';
 import { fechaDeHoy } from '../../utils/fecha.util';
 import { TableSort, ordenarFilas, valorOrdenable } from '../../utils/table-sort.util';
@@ -106,7 +107,7 @@ type DocumentsRecordsRoleMode = 'creator' | 'approver' | 'readOnly';
   standalone: true,
   imports: [ReportColumnsPanelComponent, FocoDirective, 
     AccountHistoryPanelComponent, AsientoHistoryPanelComponent, BreadcrumbComponent, ConciliacionHistoryPanelComponent, ButtonComponent, ColumnVisibilityPanelComponent,
-    CreateDocumentComponent, CustomFilterComponent, DateRangeFilterPillComponent, DocumentHistoryPanelComponent,
+    CreateDocumentComponent, CustomFilterComponent, DateRangeFilterPillComponent, DocumentHistoryPanelComponent, EmptyStateComponent,
     DocumentsRecordsTableComponent, FilterPillComponent, IconComponent, IconDropdownMenuComponent,
     MessageBoxComponent, ModalComponent, PaginationComponent, RecordsSearchToolbarComponent, RecordsTabsComponent,
     SnackbarComponent, TableControlsComponent, TableSkeletonComponent,
@@ -400,24 +401,34 @@ type DocumentsRecordsRoleMode = 'creator' | 'approver' | 'readOnly';
                   (rowOpened)="abrirDetalleRegistro($event)"
                 />
                 @if (paginatedRows.length === 0) {
-                  <message-box text="Aún no se encontraron resultados." />
+                  @if (descripcionSinResultados; as descripcion) {
+                    <!-- Con filtros o búsqueda, el mismo estado vacío de Consultas y reportes. -->
+                    <section class="flex min-h-[320px] flex-col justify-center px-siaf-lg py-siaf-xl" data-sin-resultados>
+                      <siaf-empty-state illustration="no-records" title="No se encontraron resultados" [description]="descripcion" />
+                    </section>
+                  } @else {
+                    <message-box text="Aún no se encontraron resultados." />
+                  }
                 }
               }
 
-              <siaf-pagination
-                navigation="Activate"
-                position="Bottom"
-                [rowPage]="true"
-                [page]="page"
-                [pageSize]="rowsPerPage"
-                [totalItems]="totalItemsPaginador"
-                [totalPages]="totalPages"
-                [rowsPerPage]="rowsPerPage"
-                [rowsPerPageOptions]="rowsPerPageOptions"
-                (previous)="onPreviousPage()"
-                (next)="onNextPage()"
-                (rowsPerPageChange)="onRowsPerPageChange($event)"
-              />
+              <!-- Sin coincidencias con los filtros o la búsqueda, el estado vacío va solo: sin paginador de «0-0 de 0». -->
+              @if (!sinCoincidencias) {
+                <siaf-pagination
+                  navigation="Activate"
+                  position="Bottom"
+                  [rowPage]="true"
+                  [page]="page"
+                  [pageSize]="rowsPerPage"
+                  [totalItems]="totalItemsPaginador"
+                  [totalPages]="totalPages"
+                  [rowsPerPage]="rowsPerPage"
+                  [rowsPerPageOptions]="rowsPerPageOptions"
+                  (previous)="onPreviousPage()"
+                  (next)="onNextPage()"
+                  (rowsPerPageChange)="onRowsPerPageChange($event)"
+                />
+              }
             </article>
 
             @if (customFilterOpen) {
@@ -722,6 +733,29 @@ export class DocumentsRecordsPageComponent implements OnChanges {
       const matchesCustomFilters = this.appliedCustomFilters.every((filter) => this.matchesCustomFilter(row, filter));
       return matchesSearch && matchesFilter1 && matchesFilter2 && matchesCustomFilters;
     });
+  }
+
+  /** Hay filtros de la pestaña activa aplicados (los de las pastillas, el período o los personalizados). */
+  get hayFiltrosAplicados(): boolean {
+    const pastillas = this.activeTab === 'records'
+      ? !!this.selectedRecordFilter1 || !!this.selectedRecordFilter2
+      : !!this.selectedDocumentFilter1 || !!this.selectedDocumentFilter2 || !!this.selectedDocumentDateRange;
+    return pastillas || this.appliedCustomFilters.length > 0;
+  }
+
+  /**
+   * Por qué no hay filas cuando se filtró o se buscó: «filtros» si hay filtros aplicados (con o sin búsqueda) y «búsqueda» si
+   * solo se buscó. Sin filtros ni búsqueda es una lista vacía y no hay descripción.
+   */
+  get descripcionSinResultados(): string {
+    if (this.hayFiltrosAplicados) return 'No pudimos hallar coincidencias con los filtros ingresados';
+    if (this.searchTerm.trim()) return 'No pudimos hallar coincidencias con la búsqueda ingresada';
+    return '';
+  }
+
+  /** No hay filas porque los filtros o la búsqueda no encontraron nada: se muestra el estado vacío y no el paginador. */
+  get sinCoincidencias(): boolean {
+    return this.paginatedRows.length === 0 && !!this.descripcionSinResultados;
   }
 
   get visibleRows(): DocumentsRecordsRow[] {

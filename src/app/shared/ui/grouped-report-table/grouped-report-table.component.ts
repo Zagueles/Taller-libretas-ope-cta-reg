@@ -116,8 +116,8 @@ let siguienteId = 0;
       <!-- Bordes separados y ancho fijo por columna (como Documentos y registros): abrir o cerrar grupos no mueve los anchos. -->
       <table class="w-full min-w-full table-fixed border-separate border-spacing-0 text-left text-sm" [style.width.px]="anchoTabla" [attr.aria-label]="ariaLabel">
         <colgroup>
-          @for (columna of columnasVisibles; track columna.key; let primera = $first) {
-            <col [style.width.px]="anchoColumna(columna) + (primera ? sangriaDetalle : 0)" />
+          @for (columna of columnasVisibles; track columna.key) {
+            <col [style.width.px]="anchoColumna(columna)" />
           }
         </colgroup>
         <!-- Sin borde propio en el thead: cada celda de la cabecera ya trae su línea inferior y el del thead sumaba 1 px a la última fila. -->
@@ -200,13 +200,12 @@ let siguienteId = 0;
               }
               @case ('detalle') {
                 <tr class="bg-surface [&>td]:border-b [&>td]:border-[var(--sys-color-divider-default)]">
-                  @for (columna of columnasVisibles; track columna.key; let primero = $first) {
+                  @for (columna of columnasVisibles; track columna.key) {
                     <td
                       class="h-12 px-siaf-md py-siaf-sm align-middle text-sm text-text"
                       [class.text-right]="columna.align === 'right'"
                       [class.whitespace-nowrap]="columna.align === 'right'"
                       [class]="columna.fixed ? claseFija + ' z-[1] bg-surface' : ''"
-                      [style.paddingLeft.px]="primero ? 16 + (nodo.nivel + 1) * 20 : null"
                     >
                       @if (columna.kind === 'link' && nodo.fila[columna.key]) {
                         <button
@@ -318,20 +317,12 @@ export class GroupedReportTableComponent implements OnChanges, AfterViewInit, On
 
   /** Suma de los anchos de las columnas visibles: con `table-fixed` la tabla mide exactamente eso. */
   get anchoTabla(): number {
-    return this.columnasVisibles.reduce((suma, c) => suma + this.anchoColumna(c), 0) + this.sangriaDetalle;
+    return this.columnasVisibles.reduce((suma, c) => suma + this.anchoColumna(c), 0);
   }
 
   /** Ancho de la columna: el configurado, o el que necesita su título (con la flecha de orden) si es mayor. */
   anchoColumna(c: ReportTableColumn): number {
     return anchoDeColumna(c.label, c.width);
-  }
-
-  /**
-   * Las filas de detalle se sangran 20 px por cada nivel (más 20 px del propio detalle) en la primera columna: ese espacio
-   * se suma a su ancho para que su valor (la secuencia, por ejemplo) no se parta en varias líneas.
-   */
-  get sangriaDetalle(): number {
-    return this.columnasVisibles.length && this.levels.length ? (this.levels.length + 1) * 20 : 0;
   }
 
   columnasVisibles: ReportTableColumn[] = [];
