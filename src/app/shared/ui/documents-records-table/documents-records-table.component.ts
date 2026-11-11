@@ -138,7 +138,7 @@ function anchoDeClase(clase?: string): number {
                   [attr.colspan]="celda.colspan > 1 ? celda.colspan : null"
                   [attr.rowspan]="celda.rowspan > 1 ? celda.rowspan : null"
                   [attr.aria-sort]="celda.column?.sortable ? ariaSort(celda.column!.key) : null"
-                  [ngClass]="[primera && mostrarCasilla ? 'border-l border-[var(--sys-color-divider-strong)]' : '', celda.fija ? claseFijaCabecera : '', celda.rowspan === 2 ? (celda.column?.widthClass || 'w-[180px]') : 'text-center', celda.column?.align === 'right' ? 'text-right' : celda.rowspan === 2 ? 'text-left' : '', celda.grupo && !celda.ultima && !celda.fija ? 'border-r border-[var(--sys-color-divider-strong)]' : '', celda.bordeIzq ? 'border-l border-[var(--sys-color-divider-strong)]' : '', !celda.grupo && celda.column?.borderRight ? 'border-r border-[var(--sys-color-divider-strong)]' : '']"
+                  [ngClass]="[primera && mostrarCasilla ? 'border-l border-[var(--sys-color-divider-strong)]' : '', celda.fija ? claseFijaCabecera : '', celda.rowspan === 2 ? (celda.column?.widthClass || 'w-[180px]') : 'text-center', celda.column?.align === 'right' ? 'text-right' : celda.rowspan === 2 ? 'text-left' : '', celda.grupo && !celda.ultima && !celda.fija ? 'border-r border-[var(--sys-color-divider-strong)]' : '', celda.bordeIzq ? 'border-l border-[var(--sys-color-divider-strong)]' : '', !celda.grupo && celda.bordeDer ? 'border-r border-[var(--sys-color-divider-strong)]' : '']"
                 >
                   @if (celda.column) {
                     <ng-container *ngTemplateOutlet="titulo; context: { $implicit: celda.column }" />
@@ -326,7 +326,7 @@ export class DocumentsRecordsTableComponent implements AfterViewChecked {
    */
   bordeDerGrupo(column: DocumentsRecordsColumn, indice: number): boolean {
     const ultimaColumna = this.columns[this.columns.length - 1];
-    return this.finDeGrupo(indice) && !column.fixed && ultimaColumna.headerGroup !== column.headerGroup;
+    return this.finDeGrupo(indice) && !column.fixed && column !== ultimaColumna;
   }
 
   bordeIzqGrupo(column: DocumentsRecordsColumn): boolean {
@@ -335,17 +335,17 @@ export class DocumentsRecordsTableComponent implements AfterViewChecked {
     return !!previa && !previa.headerGroup && previa.headerGroup !== column.headerGroup && !column.fixed;
   }
 
-  get filaSuperior(): { label: string; colspan: number; rowspan: 1 | 2; column?: DocumentsRecordsColumn; grupo: boolean; ultima: boolean; fija: boolean; bordeIzq: boolean }[] {
-    const celdas: { label: string; colspan: number; rowspan: 1 | 2; column?: DocumentsRecordsColumn; grupo: boolean; ultima: boolean; fija: boolean; bordeIzq: boolean }[] = [];
+  get filaSuperior(): { label: string; colspan: number; rowspan: 1 | 2; column?: DocumentsRecordsColumn; grupo: boolean; ultima: boolean; fija: boolean; bordeIzq: boolean; bordeDer: boolean }[] {
+    const celdas: { label: string; colspan: number; rowspan: 1 | 2; column?: DocumentsRecordsColumn; grupo: boolean; ultima: boolean; fija: boolean; bordeIzq: boolean; bordeDer: boolean }[] = [];
     for (let i = 0; i < this.columns.length; i++) {
       const columna = this.columns[i];
       if (!columna.headerGroup) {
-        celdas.push({ label: columna.label, colspan: 1, rowspan: 2, column: columna, grupo: false, ultima: false, fija: !!columna.fixed, bordeIzq: false });
+        celdas.push({ label: columna.label, colspan: 1, rowspan: 2, column: columna, grupo: false, ultima: false, fija: !!columna.fixed, bordeIzq: false, bordeDer: !!columna.borderRight && !this.columns[i + 1]?.headerGroup });
         continue;
       }
       let fin = i;
       while (fin + 1 < this.columns.length && this.columns[fin + 1].headerGroup === columna.headerGroup) fin++;
-      celdas.push({ label: columna.headerGroup, colspan: fin - i + 1, rowspan: 1, grupo: true, ultima: fin === this.columns.length - 1, fija: this.columns.slice(i, fin + 1).some((c) => c.fixed), bordeIzq: celdas.length > 0 && !celdas[celdas.length - 1].grupo });
+      celdas.push({ label: columna.headerGroup, colspan: fin - i + 1, rowspan: 1, grupo: true, ultima: fin === this.columns.length - 1, fija: this.columns.slice(i, fin + 1).some((c) => c.fixed), bordeIzq: celdas.length > 0 && !celdas[celdas.length - 1].grupo, bordeDer: false });
       i = fin;
     }
     return celdas;
