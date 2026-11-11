@@ -23,6 +23,15 @@ const documentColumns: DocumentsRecordsColumn[] = [
   { key: 'system', label: 'Sistema', visibility: 'visible', group: 'default', widthClass: ANCHO_LISTADO_DOCUMENTOS.sistema, sortable: true },
   { key: 'date', label: 'Fecha de registro', visibility: 'visible', group: 'default', widthClass: ANCHO_LISTADO_DOCUMENTOS.fechaRegistro, sortable: true, sortType: 'date' },
   { key: 'entity', label: 'Entidad', visibility: 'visible', group: 'default', widthClass: ANCHO_LISTADO_DOCUMENTOS.entidad, sortable: true },
+  { key: 'creador', label: 'Creador', visibility: 'hidden', group: 'more', widthClass: 'w-[178px]', sortable: true },
+  { key: 'asuntoMotivo', label: 'Asunto/ Motivo', visibility: 'hidden', group: 'more', widthClass: 'w-[200px]', sortable: true },
+  { key: 'unidadOrganizacional', label: 'Unidad organizacional', visibility: 'hidden', group: 'more', widthClass: 'w-[250px]', sortable: true },
+  { key: 'enteRector', label: 'Ente rector', visibility: 'hidden', group: 'more', widthClass: 'w-[250px]', sortable: true },
+  { key: 'expediente', label: 'Expediente', visibility: 'hidden', group: 'more', widthClass: 'w-[249px]', sortable: true },
+  { key: 'fechaEvaluacion', label: 'Fecha de evaluación', visibility: 'hidden', group: 'more', widthClass: 'w-[186px]', sortable: true, sortType: 'date' },
+  { key: 'usuarioEvaluador', label: 'Usuario de evaluador', visibility: 'hidden', group: 'more', widthClass: 'w-[190px]', sortable: true },
+  { key: 'fechaAprobacion', label: 'Fecha de aprobación', visibility: 'hidden', group: 'more', widthClass: 'w-[186px]', sortable: true, sortType: 'date' },
+  { key: 'usuarioAprobacion', label: 'Usuario de aprobación', visibility: 'hidden', group: 'more', widthClass: 'w-[190px]', sortable: true },
 ];
 
 const recordColumns: DocumentsRecordsColumn[] = [
