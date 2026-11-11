@@ -142,7 +142,7 @@ const COLUMNAS_DOCUMENTO: ReportTableColumn[] = (() => {
         </siaf-solicitude-form-card>
 
         <siaf-solicitude-form-card title="Información de la cuenta bancaria">
-          <div class="grid gap-siaf-lg md:grid-cols-2 lg:grid-cols-3" role="radiogroup" aria-label="Cuenta bancaria del documento">
+          <div class="grid gap-siaf-xs md:grid-cols-2 lg:grid-cols-3" role="radiogroup" aria-label="Cuenta bancaria del documento">
             @for (cuenta of cuentasDelDocumento(); track cuenta.id) {
               <button
                 class="relative flex flex-col gap-siaf-xs rounded-siaf-md border p-siaf-md text-left transition focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sys-color-border-states-focus)]"
