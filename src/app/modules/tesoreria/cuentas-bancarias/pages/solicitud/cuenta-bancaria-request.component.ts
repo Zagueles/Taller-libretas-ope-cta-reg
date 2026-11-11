@@ -112,7 +112,8 @@ export class CuentaBancariaRequestComponent implements OnInit {
   private readonly cuentasApi = inject(CuentasBancariasApiService);
 
   readonly heading = NOMBRE_DOCUMENTO;
-  readonly breadcrumbs: BreadcrumbItem[] = buildProcessBreadcrumbs(PROCESS_ID, PROCESS_ROUTE, NOMBRE_DOCUMENTO);
+  /** Con el número del documento cuando ya lo tiene. */
+  readonly breadcrumbs = computed<BreadcrumbItem[]>(() => buildProcessBreadcrumbs(PROCESS_ID, PROCESS_ROUTE, this.numeroDocumento() ? `${NOMBRE_DOCUMENTO} ${this.numeroDocumento()}` : NOMBRE_DOCUMENTO));
   readonly minCaracteresTexto = MIN_CARACTERES_TEXTO_LIBRE;
 
   readonly bancos = BANCOS;

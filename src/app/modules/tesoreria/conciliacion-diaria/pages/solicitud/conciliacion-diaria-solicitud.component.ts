@@ -130,7 +130,8 @@ export class ConciliacionDiariaSolicitudComponent implements OnInit {
   private readonly notificaciones = inject(NotificationsStateService);
 
   readonly heading = NOMBRE_DOCUMENTO;
-  readonly breadcrumbs: BreadcrumbItem[] = buildProcessBreadcrumbs(PROCESS_ID, PROCESS_ROUTE, NOMBRE_DOCUMENTO);
+  /** Documentos de conciliación › «Conciliación manual diaria 000002-2026»: con el número cuando el documento ya lo tiene. */
+  readonly breadcrumbs = computed<BreadcrumbItem[]>(() => buildProcessBreadcrumbs(PROCESS_ID, PROCESS_ROUTE, this.numeroDocumento() ? `${NOMBRE_DOCUMENTO} ${this.numeroDocumento()}` : NOMBRE_DOCUMENTO));
 
   readonly columnasCuenta: SelectionColumn<CuentaBancariaConciliacion>[] = [
     { key: 'numeroCuenta', label: 'Número de cuenta' },

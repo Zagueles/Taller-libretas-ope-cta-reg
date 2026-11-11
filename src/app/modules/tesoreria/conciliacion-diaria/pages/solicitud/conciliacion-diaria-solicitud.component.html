@@ -1,7 +1,7 @@
 <div class="min-h-[calc(100vh-56px)] bg-[var(--sys-color-bg-surfaces-surface-lowest)] text-text">
   <!-- La cabecera (migas, título, estado y botones según rol y estado) la pinta el layout de solicitudes. -->
   <siaf-solicitude-page-layout
-    [breadcrumbs]="breadcrumbs"
+    [breadcrumbs]="breadcrumbs()"
     [role]="headerRole()"
     [state]="headerState()"
     [loading]="cargando()"

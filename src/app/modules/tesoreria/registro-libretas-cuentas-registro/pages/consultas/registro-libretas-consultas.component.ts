@@ -143,7 +143,8 @@ export class RegistroLibretasConsultasComponent {
 
   readonly config = signal<QueryReportConfig>({
     title: TITULO,
-    breadcrumbs: buildProcessBreadcrumbs(CONSULTAS_PROCESS_ID, CONSULTAS_ROUTE, TITULO),
+    // La hoja del árbol ya es esta pantalla: sin una hoja propia, que repetía su nombre.
+    breadcrumbs: buildProcessBreadcrumbs(CONSULTAS_PROCESS_ID, CONSULTAS_ROUTE),
     parameterFields: [
       { key: 'desde', label: 'Fecha desde', type: 'date', required: true, icon: 'calendar_today', rangeEnd: 'hasta', rangeLabel: 'Fecha', noFuture: true, minDate: FECHA_MINIMA_CONSULTA },
       { key: 'hasta', label: 'Fecha hasta', type: 'date', required: true, icon: 'event', noFuture: true, minDate: FECHA_MINIMA_CONSULTA, minDateFrom: 'desde' },

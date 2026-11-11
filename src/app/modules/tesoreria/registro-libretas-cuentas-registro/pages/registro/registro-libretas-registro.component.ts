@@ -1,6 +1,8 @@
 import { Location } from '@angular/common';
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
+import { map } from 'rxjs/operators';
 
 import { SolicitudePageLayoutComponent } from '../../../../../shared/components/solicitude-page-layout/solicitude-page-layout.component';
 import { SolicitudeFormCardComponent } from '../../../../../shared/components/solicitude-form-card/solicitude-form-card.component';
@@ -23,7 +25,7 @@ import { construirDetalleRegistro, DetalleRegistro } from '../../utils/registro-
   imports: [ReadonlyFieldComponent, RecordStatusTagComponent, SolicitudeFormCardComponent, SolicitudePageLayoutComponent],
   template: `
     <siaf-solicitude-page-layout
-      [breadcrumbs]="breadcrumbs"
+      [breadcrumbs]="breadcrumbs()"
       heading="Detalle de registro de operaciones en las libretas de las cuentas de registro"
       [showReturn]="true"
       [showTag]="false"
@@ -124,9 +126,10 @@ export class RegistroLibretasRegistroComponent implements OnInit {
   private readonly location = inject(Location);
   private readonly router = inject(Router);
 
-  readonly breadcrumbs = buildProcessBreadcrumbs(PROCESS_ID, PROCESS_ROUTE);
-
   readonly registro = signal<DetalleRegistro | null>(null);
+  private readonly idDeRuta = toSignal(this.ruta.paramMap.pipe(map((p) => p.get('id') ?? '')), { initialValue: this.ruta.snapshot.paramMap.get('id') ?? '' });
+  /** Documentos de operaciones › «Registro 000123»: la miga del registro abierto, con su secuencia cuando ya cargó. */
+  readonly breadcrumbs = computed(() => buildProcessBreadcrumbs(PROCESS_ID, PROCESS_ROUTE, `Registro ${this.registro()?.sec || this.idDeRuta()}`.trim()));
 
   ngOnInit(): void {
     const id = this.ruta.snapshot.paramMap.get('id') ?? '';

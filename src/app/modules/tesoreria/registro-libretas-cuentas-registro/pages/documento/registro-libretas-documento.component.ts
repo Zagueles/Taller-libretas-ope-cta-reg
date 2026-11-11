@@ -1,6 +1,8 @@
 import { Location } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
+import { map } from 'rxjs/operators';
 
 import { DetailHistoryEntry, DetailHistoryTabsComponent } from '../../../../../shared/components/detail-history-tabs/detail-history-tabs.component';
 import { FormTableSearchComponent } from '../../../../../shared/components/form-table-search/form-table-search.component';
@@ -104,7 +106,7 @@ const COLUMNAS_DOCUMENTO: ReportTableColumn[] = (() => {
   ],
   template: `
     <siaf-solicitude-page-layout
-      [breadcrumbs]="breadcrumbs"
+      [breadcrumbs]="breadcrumbs()"
       heading="Registro de operaciones en las libretas de las cuentas de registro"
       secondaryText="Creación"
       [showReturn]="true"
@@ -269,7 +271,9 @@ export class RegistroLibretasDocumentoComponent implements OnInit {
   private readonly location = inject(Location);
   private readonly router = inject(Router);
 
-  readonly breadcrumbs = buildProcessBreadcrumbs(PROCESS_ID, PROCESS_ROUTE);
+  /** Documentos de operaciones › «Documento 000015-2026»: la miga del documento abierto sigue a la ruta. */
+  private readonly numeroDeRuta = toSignal(this.ruta.paramMap.pipe(map((p) => p.get('numero') ?? '')), { initialValue: this.ruta.snapshot.paramMap.get('numero') ?? '' });
+  readonly breadcrumbs = computed(() => buildProcessBreadcrumbs(PROCESS_ID, PROCESS_ROUTE, this.numeroDeRuta() ? `Documento ${this.numeroDeRuta()}` : undefined));
   readonly cuentas = CUENTAS;
 
   // ── Columnas visibles (mismo panel que Consultas y reportes) ──

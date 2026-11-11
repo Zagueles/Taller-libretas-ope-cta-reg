@@ -162,5 +162,16 @@ describe('ConciliacionDiariaSolicitudComponent', () => {
     fixtureCreacion.detectChanges();
     expect(fixtureCreacion.nativeElement.textContent).not.toContain('Tipo de modificación');
   });
+
+  it('la última miga lleva el nombre del documento y, cuando ya tiene número, también el número', () => {
+    const c = crear();
+    const ultima = () => c.breadcrumbs().at(-1)!.label;
+    expect(ultima()).toBe('Conciliación manual diaria');
+
+    (c as unknown as { solicitud: { set(v: unknown): void } }).solicitud.set({ numero: '000002-2026', estado: 'ELABORADO' });
+    expect(ultima()).toBe('Conciliación manual diaria 000002-2026');
+    // Las migas de arriba no cambian: llevan al proceso.
+    expect(c.breadcrumbs()[0]).toEqual({ label: 'Inicio', href: '/panel' });
+  });
 });
 
