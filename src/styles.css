@@ -6,6 +6,11 @@
 @import "./styles/tokens/generated/tailwind.tokens.css";
 @import "./styles/tokens/themes/index.css";
 
+/* El rebote elástico del scroll (macOS, tabletas) movía el navbar y la cabecera fijos de la página: sin rebote al llegar al borde. */
+html {
+  overscroll-behavior-y: none;
+}
+
 @theme {
   --font-sans: var(--sys-typography-font-family-base);
 

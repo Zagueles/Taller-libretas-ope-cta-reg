@@ -30,7 +30,7 @@ import { SolicitudeHeaderComponent, SolicitudeHeaderRole, SolicitudeHeaderState 
  *   header arriba; las tarjetas proyectadas siguen con `h2` (`siaf-solicitude-form-card`). No agrega landmarks: vive
  *   dentro del `main` del shell.
  * - **2.4.3 Orden del foco (A)**: el DOM sigue el orden visual: breadcrumb, Regresar, acciones del header y contenido.
- * - **Pendiente · 2.4.11 Foco no oculto (AA)**: en escritorio la cabecera es `sticky` bajo el navbar y no hay
+ * - **Pendiente · 2.4.11 Foco no oculto (AA)**: desde tableta (768 px) la cabecera es `sticky` bajo el navbar y no hay
  *   `scroll-padding`: al volver con Shift + Tab, un campo puede quedar tapado. En móvil, `pb-24` solo evita que la
  *   barra fija del header tape el final del contenido.
  * - **Pendiente · 4.1.3 Mensajes de estado (AA)**: con `loading` el esqueleto del header no se anuncia (hereda de
@@ -46,13 +46,13 @@ import { SolicitudeHeaderComponent, SolicitudeHeaderRole, SolicitudeHeaderState 
       [class.lg:pl-[434px]]="trayMenuOpen || floatingPanelOpen"
     >
       <!--
-        Cabecera fija en escritorio: los botones de acción (Grabar, Editar,
+        Cabecera fija desde tableta (md, 768 px): los botones de acción (Grabar, Editar,
         Verificar, Aprobar) quedan siempre a la vista sin volver al tope.
         top-14 = alto del navbar, que ya es sticky. El z-10 la deja por
         debajo del navbar (z-30) y de los overlays de procesos/bandeja (z-20).
-        En móvil no se fija: la cabecera se apila y se comería el viewport.
+        En móvil (menos de 768 px) no se fija: la cabecera se apila y se comería el viewport.
       -->
-      <section class="border-b border-[var(--sys-color-divider-default)] bg-surface lg:sticky lg:top-14 lg:z-10">
+      <section class="border-b border-[var(--sys-color-divider-default)] bg-surface md:sticky md:top-14 md:z-10">
         <siaf-breadcrumb class="block" [items]="breadcrumbs" />
         <siaf-solicitude-header
           [role]="role"

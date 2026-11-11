@@ -183,13 +183,13 @@ type DocumentsRecordsRoleMode = 'creator' | 'approver' | 'readOnly';
 
         <section class="min-w-0">
           <!--
-            Cabecera fija en escritorio (breadcrumb + título + Crear documento
+            Cabecera fija desde tableta (md, 768 px: breadcrumb + título + Crear documento
             + tabs). El borde inferior lo aporta siaf-records-tabs.
             Mismo criterio que siaf-solicitude-page-layout: top-14 por el
             navbar sticky y z-10 para quedar bajo navbar (z-30) y overlays
             (z-20). La barra de la grilla scrollea normal, a propósito.
           -->
-          <section class="bg-surface lg:sticky lg:top-14 lg:z-10">
+          <section class="bg-surface md:sticky md:top-14 md:z-10">
             <siaf-breadcrumb class="block" [items]="effectiveConfig.breadcrumbs" />
 
             <header class="flex min-h-[72px] flex-col gap-siaf-sm px-siaf-md pb-siaf-xs pt-siaf-sm md:flex-row md:items-start md:justify-between">
