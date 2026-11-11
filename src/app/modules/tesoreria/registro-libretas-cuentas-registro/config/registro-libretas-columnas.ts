@@ -20,15 +20,15 @@ export const COLUMNAS_REGISTRO_LIBRETAS: ReportTableColumn[] = [
       { key: 'tipoCotizacion', label: 'Tipo de cotiz.', panelLabel: 'Tipo de cotización', group: 'Tipo de cambio', hiddenByDefault: true, width: 160 },
       { key: 'tipoCambioCompra', label: 'Compra', group: 'Tipo de cambio', hiddenByDefault: true, align: 'right', width: 110 },
       { key: 'tipoCambioVenta', label: 'Venta', group: 'Tipo de cambio', hiddenByDefault: true, align: 'right', width: 110 },
-      { key: 'saldoInicial', label: 'Saldo inicial', group: 'Imp. m. cuenta', align: 'right', width: 120 },
-      { key: 'debito', label: 'Débito', group: 'Imp. m. cuenta', align: 'right', width: 110 },
-      { key: 'credito', label: 'Crédito', group: 'Imp. m. cuenta', align: 'right', width: 110 },
-      { key: 'saldoDisponible', label: 'Saldo disponible', group: 'Imp. m. cuenta', hiddenByDefault: true, align: 'right', width: 140 },
-      { key: 'saldoInicialMN', label: 'Saldo inicial', group: 'Imp. m. nacional', hiddenByDefault: true, align: 'right', width: 130 },
-      { key: 'debitoMN', label: 'Débito', group: 'Imp. m. nacional', hiddenByDefault: true, align: 'right', width: 120 },
-      { key: 'creditoMN', label: 'Crédito', group: 'Imp. m. nacional', hiddenByDefault: true, align: 'right', width: 130 },
-      { key: 'saldoDisponibleMN', label: 'Saldo disponible', group: 'Imp. m. nacional', hiddenByDefault: true, align: 'right', width: 140 },
-      { key: 'saldoFinalMN', label: 'Saldo final', group: 'Imp. m. nacional', hiddenByDefault: true, align: 'right', width: 140 },
+      { key: 'saldoInicial', label: 'Saldo inicial', group: 'Imp. m. cuenta', align: 'right', width: 150 },
+      { key: 'debito', label: 'Débito', group: 'Imp. m. cuenta', align: 'right', width: 150 },
+      { key: 'credito', label: 'Crédito', group: 'Imp. m. cuenta', align: 'right', width: 150 },
+      { key: 'saldoDisponible', label: 'Saldo disponible', group: 'Imp. m. cuenta', hiddenByDefault: true, align: 'right', width: 180 },
+      { key: 'saldoInicialMN', label: 'Saldo inicial', group: 'Imp. m. nacional', hiddenByDefault: true, align: 'right', width: 150 },
+      { key: 'debitoMN', label: 'Débito', group: 'Imp. m. nacional', hiddenByDefault: true, align: 'right', width: 150 },
+      { key: 'creditoMN', label: 'Crédito', group: 'Imp. m. nacional', hiddenByDefault: true, align: 'right', width: 150 },
+      { key: 'saldoDisponibleMN', label: 'Saldo disponible', group: 'Imp. m. nacional', hiddenByDefault: true, align: 'right', width: 180 },
+      { key: 'saldoFinalMN', label: 'Saldo final', group: 'Imp. m. nacional', hiddenByDefault: true, align: 'right', width: 150 },
       // «Más columnas» del detalle del registro (las mismas de la pestaña Registros): ocultas hasta que se activen.
       { key: 'fechaRegistro', label: 'Fecha de registro', hiddenByDefault: true, width: 170 },
       { key: 'numeroOperacion', label: 'Número de operación', hiddenByDefault: true, width: 170 },
@@ -46,7 +46,7 @@ export const COLUMNAS_REGISTRO_LIBRETAS: ReportTableColumn[] = [
       { key: 'estadoConciliacion', label: 'Estado de conciliación', hiddenByDefault: true, width: 170 },
       { key: 'numeroDocumento', label: 'Número', group: 'Documento', hiddenByDefault: true, width: 150, kind: 'link' },
       { key: 'descripcionDocumento', label: 'Descripción', group: 'Documento', hiddenByDefault: true, width: 300 },
-      { key: 'saldoFinal', label: 'Saldo final', group: 'Imp. m. cuenta', align: 'right', width: 135, fixed: true },
+      { key: 'saldoFinal', label: 'Saldo final', group: 'Imp. m. cuenta', align: 'right', width: 150, fixed: true },
 ];
 
 /** Columnas que solo interesan en la cuenta en dólares (tipo de cambio e importe en moneda nacional): visibles por

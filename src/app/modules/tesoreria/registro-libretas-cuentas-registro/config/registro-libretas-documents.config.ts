@@ -49,9 +49,9 @@ const recordColumns: DocumentsRecordsColumn[] = [
   { key: 'entidad', label: 'Entidad', headerGroup: 'Ámbito institucional', visibility: 'visible', group: 'default', widthClass: 'w-[110px]', sortable: true },
   { key: 'unidadEjecutora', label: 'Unidad ejecutora', headerGroup: 'Ámbito institucional', visibility: 'visible', group: 'default', widthClass: 'w-[190px]', sortable: true },
   { key: 'grupo', label: 'Grupo', headerGroup: 'Ámbito institucional', visibility: 'visible', group: 'default', widthClass: 'w-[160px]', sortable: true },
-  { key: 'saldoInicial', label: 'Saldo inicial', headerGroup: 'Imp. m. cuenta', visibility: 'visible', group: 'default', align: 'right', widthClass: 'w-[160px]', sortable: true, sortType: 'number' },
-  { key: 'debito', label: 'Débito', headerGroup: 'Imp. m. cuenta', visibility: 'visible', group: 'default', align: 'right', widthClass: 'w-[125px]', sortable: true, sortType: 'number' },
-  { key: 'credito', label: 'Crédito', headerGroup: 'Imp. m. cuenta', visibility: 'visible', group: 'default', align: 'right', widthClass: 'w-[125px]', sortable: true, sortType: 'number' },
+  { key: 'saldoInicial', label: 'Saldo inicial', headerGroup: 'Imp. m. cuenta', visibility: 'visible', group: 'default', align: 'right', widthClass: 'w-[150px]', sortable: true, sortType: 'number' },
+  { key: 'debito', label: 'Débito', headerGroup: 'Imp. m. cuenta', visibility: 'visible', group: 'default', align: 'right', widthClass: 'w-[150px]', sortable: true, sortType: 'number' },
+  { key: 'credito', label: 'Crédito', headerGroup: 'Imp. m. cuenta', visibility: 'visible', group: 'default', align: 'right', widthClass: 'w-[150px]', sortable: true, sortType: 'number' },
   { key: 'saldoDisponible', label: 'Saldo disponible', headerGroup: 'Imp. m. cuenta', visibility: 'hidden', group: 'more', align: 'right', widthClass: 'w-[180px]', sortable: true, sortType: 'number' },
   { key: 'status', label: 'Estado de registro', panelLabel: 'Estado de registro', visibility: 'visible', group: 'default', widthClass: 'w-[190px]', kind: 'record-status', borderRight: true, sortable: true },
   { key: 'number', label: 'Número', panelLabel: 'Documento · Número', headerGroup: 'Documento', visibility: 'visible', group: 'default', widthClass: 'w-[150px]', sortable: true },
@@ -71,7 +71,7 @@ const recordColumns: DocumentsRecordsColumn[] = [
   { key: 'documentoCutSigla', label: 'Sigla', headerGroup: 'Documento CUT', panelLabel: 'Documento CUT · Sigla', visibility: 'hidden', group: 'more', widthClass: 'w-[100px]', sortable: true },
   { key: 'descripcionDetallada', label: 'Descripción detallada', visibility: 'hidden', group: 'more', widthClass: 'w-[260px]', sortable: true },
   { key: 'estadoConciliacion', label: 'Estado de conciliación', visibility: 'hidden', group: 'more', widthClass: 'w-[170px]', sortable: true },
-  { key: 'saldoFinal', label: 'Saldo final', headerGroup: 'Imp. m. cuenta', visibility: 'visible', group: 'default', align: 'right', widthClass: 'w-[160px]', fixed: true, sortable: true, sortType: 'number' },
+  { key: 'saldoFinal', label: 'Saldo final', headerGroup: 'Imp. m. cuenta', visibility: 'visible', group: 'default', align: 'right', widthClass: 'w-[150px]', fixed: true, sortable: true, sortType: 'number' },
 ];
 
 const fieldsMenuOptions: DocumentsRecordsMenuOption[] = [
