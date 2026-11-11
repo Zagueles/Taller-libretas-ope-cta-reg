@@ -167,7 +167,7 @@ let siguienteId = 0;
             @switch (nodo.tipo) {
               @case ('grupo') {
                 <tr class="bg-surface [&>td]:border-b [&>td]:border-[var(--sys-color-divider-default)]">
-                  <td [attr.colspan]="indiceInicio > -1 ? Math.max(indiceInicio, 1) : columnasVisibles.length" class="p-0">
+                  <td [attr.colspan]="indiceInicio > -1 ? Math.max(conTotales(nodo) ? indiceInicio : indiceFin, 1) : columnasVisibles.length" class="p-0">
                     <button
                       class="flex w-full items-center gap-siaf-sm px-siaf-md py-siaf-sm text-left text-sm font-bold text-[var(--sys-color-text-neutral-high)] focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sys-color-border-states-focus)]"
                       type="button"
@@ -185,9 +185,12 @@ let siguienteId = 0;
                     </button>
                   </td>
                   @if (indiceInicio > -1) {
-                    <td class="px-siaf-md py-siaf-sm text-right font-bold tabular-nums text-[var(--sys-color-text-neutral-high)]">{{ nodo.totales['inicio'] }}</td>
-                    @if (indiceFin - indiceInicio > 1) {
-                      <td [attr.colspan]="indiceFin - indiceInicio - 1"></td>
+                    <!-- Sin saldos la etiqueta llega hasta la columna del saldo final, que se queda (vacía) para no cortar su sombra fija. -->
+                    @if (conTotales(nodo)) {
+                      <td class="px-siaf-md py-siaf-sm text-right font-bold tabular-nums text-[var(--sys-color-text-neutral-high)]">{{ nodo.totales['inicio'] }}</td>
+                      @if (indiceFin - indiceInicio > 1) {
+                        <td [attr.colspan]="indiceFin - indiceInicio - 1"></td>
+                      }
                     }
                     <td [class]="indiceFin === indiceFija ? claseFija + ' z-[1] bg-surface' : ''" class="px-siaf-md py-siaf-sm text-right font-bold tabular-nums text-[var(--sys-color-text-neutral-high)]">
                       {{ nodo.totales['fin'] }}
@@ -327,6 +330,14 @@ export class GroupedReportTableComponent implements OnChanges, AfterViewInit, On
 
   columnasVisibles: ReportTableColumn[] = [];
   nodos: Nodo[] = [];
+  /**
+   * El encabezado lleva saldos (solo el nivel más interno sin pie). Sin ellos su etiqueta ocupa toda la fila, y no solo las
+   * columnas previas al importe: una línea y hasta donde alcance el espacio.
+   */
+  conTotales(nodo: { totales: Record<string, string> }): boolean {
+    return !!(nodo.totales['inicio'] || nodo.totales['fin']);
+  }
+
   /** Índice, dentro de `columnasVisibles`, de las columnas de `aggregation.runningBalance`; -1 si no hay `aggregation` o no aparecen (quedaron como nivel). */
   indiceInicio = -1;
   indiceFin = -1;
