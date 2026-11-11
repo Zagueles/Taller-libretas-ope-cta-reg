@@ -9,7 +9,7 @@ export const PROCESS_ID = 'conciliacion-diaria-documentos';
 export const REQUEST_SEGMENT = 'solicitud';
 export const REQUEST_ROUTE = `${PROCESS_ROUTE}/${REQUEST_SEGMENT}`;
 
-/** «Crear documento» del proceso: es la única hoja del árbol de creación; ofrece crear o modificar. */
+/** «Crear documento» del proceso (hoy deshabilitado: el proceso está «Próximamente»); ofrece crear o modificar. */
 export const CREATE_CONCILIACION_DIARIA_OPTION: CreateDocumentProcessOption = {
   id: 'conciliacion-diaria',
   label: 'Conciliación diaria',
@@ -58,7 +58,8 @@ export const CONCILIACION_DIARIA_CONFIG: DocumentsRecordsConfig = {
   title: 'Documentos de conciliación diaria',
   processId: PROCESS_ID,
   defaultRequestRoute: PROCESS_ROUTE,
-  createDocumentOptions: [CREATE_CONCILIACION_DIARIA_OPTION],
+  // Sin «Crear documento» mientras el proceso esté «Próximamente»; al habilitarlo: `[CREATE_CONCILIACION_DIARIA_OPTION]`.
+  createDocumentOptions: [],
   breadcrumbs: buildProcessBreadcrumbs(PROCESS_ID, PROCESS_ROUTE),
   documentRows: [],
   recordRows: [],

@@ -24,8 +24,8 @@ export interface ProcessMenuNode {
   actionTypeOptions?: string[];
   /**
    * Marca un nodo como módulo planificado pero aún no implementado.
-   * El menú lo renderiza deshabilitado (texto atenuado) con el tooltip «Próximamente»,
-   * y el click no navega (solo expande si tiene hijos).
+   * El menú lo renderiza deshabilitado (texto atenuado) con el tooltip «Próximamente»;
+   * el click no navega ni expande: sus hijos, si los tiene, no se muestran (solo sirven a las migas de pan).
    */
   comingSoon?: boolean;
   /** Hoja sin pantalla que va sin la flecha inicial (por defecto, una hoja sin `moduleRoute` la lleva, como en el Figma). */
@@ -66,6 +66,9 @@ export const DEFAULT_PROCESS_TREE: ProcessMenuNode[] = [
               {
                 id: 'conciliacion-diaria',
                 label: 'Conciliación diaria',
+                // Aún no se habilita: el menú la muestra deshabilitada («Próximamente») y no ofrece sus hojas ni crear documentos.
+                // Sus hojas se conservan para las migas de pan de las pantallas que ya existen.
+                comingSoon: true,
                 children: [
                   {
                     id: 'conciliacion-diaria-documentos',

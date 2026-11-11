@@ -20,7 +20,7 @@ export { DEFAULT_PROCESS_TREE, findProcessPathById } from '../../shared/utils/pr
  * `ADMIN_MENU_TREE` y otros textos, así que un árbol nuevo es solo otro arreglo de nodos. El campo de búsqueda
  * funciona como paleta de comandos: filtra la navegación en vivo, sin ir al servidor, y expande las ramas
  * con coincidencias, resalta en negrita el texto buscado (sin distinguir tildes ni mayúsculas) y, sin coincidencias, muestra
- * «Sin resultados» con el texto buscado. Los nodos `comingSoon` sin hijos van deshabilitados (texto e ícono atenuados, `aria-disabled`) con el tooltip «Próximamente» al pasar el mouse o enfocarlos; nunca emiten `nodeSelected`.
+ * «Sin resultados» con el texto buscado. Los nodos `comingSoon` van deshabilitados (texto e ícono atenuados, `aria-disabled`) con el tooltip «Próximamente» al pasar el mouse o enfocarlos; nunca emiten `nodeSelected`.
  *
  * @usar
  * - Para el panel Procesos del armazón: `siaf-app-shell` lo abre desde el rail y navega a la `moduleRoute` o
@@ -41,7 +41,7 @@ export { DEFAULT_PROCESS_TREE, findProcessPathById } from '../../shared/utils/pr
  * - **Escribir en el buscador**: filtra el árbol en vivo, sin distinguir tildes ni mayúsculas, y abre las ramas con
  *   coincidencias.
  * - **Enter / Espacio** en un nodo: lo marca y emite `nodeSelected`; si tiene hijos, además los muestra u oculta. Un
- *   nodo `comingSoon` no hace nada (con hijos, solo los muestra u oculta); sigue enfocable para leer su tooltip.
+ *   nodo `comingSoon` no hace nada (tampoco muestra sus hijos); sigue enfocable para leer su tooltip.
  * @accesibilidad
  * - **Pendiente · 1.3.1 Información y relaciones (A)**: es un `<aside>` con `h2` y `h3`, pero la jerarquía solo se ve
  *   (sangría y línea a la izquierda): los nodos son botones en `div` anidados, sin `ul`/`li` ni `role="tree"`, y el
@@ -229,21 +229,15 @@ export class ProcessMenuTreeComponent implements OnChanges, OnInit {
     return this.filterNodes(this.nodes, search);
   }
 
-  /** Un proceso planificado sin pantalla ni hijos: va deshabilitado y su tooltip dice «Próximamente». */
+  /** Un proceso planificado: va deshabilitado y su tooltip dice «Próximamente». Sus hijos, si los tiene, no se ofrecen. */
   noDisponible(node: ProcessMenuNode): boolean {
-    return !!node.comingSoon && !this.hasChildren(node);
+    return !!node.comingSoon;
   }
 
   activate(node: ProcessMenuNode): void {
-    // Los nodos marcados como pendientes solo expanden/colapsan si
-    // tienen hijos. No se selecciona ni se emite navegacion para evitar
-    // que el shell intente abrir una ruta inexistente.
-    if (node.comingSoon) {
-      if (this.hasChildren(node)) {
-        this.toggle(node);
-      }
-      return;
-    }
+    // Los nodos marcados como pendientes ni expanden ni se seleccionan ni emiten navegación:
+    // así el shell no intenta abrir una ruta que todavía no se habilita.
+    if (node.comingSoon) return;
 
     this.selectedId = node.id;
 
@@ -254,8 +248,9 @@ export class ProcessMenuTreeComponent implements OnChanges, OnInit {
     this.nodeSelected.emit(node);
   }
 
+  /** Un nodo pendiente se trata como hoja: sus hijos no se muestran. */
   hasChildren(node: ProcessMenuNode): boolean {
-    return Boolean(node.children?.length);
+    return !node.comingSoon && Boolean(node.children?.length);
   }
 
   isExpanded(node: ProcessMenuNode): boolean {
@@ -329,7 +324,7 @@ export class ProcessMenuTreeComponent implements OnChanges, OnInit {
     const result: ProcessMenuNode[] = [];
 
     for (const node of nodes) {
-      const children = node.children ? this.filterNodes(node.children, search) : [];
+      const children = node.children && !node.comingSoon ? this.filterNodes(node.children, search) : [];
       const matches = this.normalize(node.label).includes(search);
 
       if (!matches && children.length === 0) {

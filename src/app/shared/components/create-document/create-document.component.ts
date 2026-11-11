@@ -487,7 +487,8 @@ export class CreateDocumentComponent implements OnChanges {
 }
 
 function collectProcessOptions(nodes: ProcessMenuNode[]): CreateDocumentProcessOption[] {
-  return nodes.flatMap((node) => {
+  // Los procesos «Próximamente» (y lo que cuelga de ellos) no ofrecen crear documentos.
+  return nodes.filter((node) => !node.comingSoon).flatMap((node) => {
     const children = node.children ? collectProcessOptions(node.children) : [];
 
     if (node.children?.length) {
