@@ -394,7 +394,7 @@ describe('QueryReportPageComponent — aviso al agregar un favorito', () => {
     fixture.detectChanges();
     const aviso = (fixture.nativeElement as HTMLElement).querySelector('siaf-snackbar')!;
     expect(aviso.textContent).toContain('OPERACIONES MINCETUR');
-    expect(aviso.textContent).toContain('se agregó a favoritos.');
+    expect(aviso.textContent).toContain('se agregó.');
 
     Array.from(aviso.querySelectorAll('button')).find((b) => b.textContent?.includes('Ver favoritos'))!.click();
     fixture.detectChanges();
