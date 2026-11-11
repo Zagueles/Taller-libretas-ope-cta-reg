@@ -146,10 +146,9 @@ describe('ProcessMenuTreeComponent — proceso pendiente con hojas', () => {
   });
 
   it('en el árbol del taller, la Conciliación diaria está pendiente pero sus hojas siguen resolviendo las migas de pan', () => {
-    const [raiz, , , proceso] = findProcessPathById('conciliacion-diaria-documentos', DEFAULT_PROCESS_TREE);
-    expect(raiz).toBeDefined();
+    const ruta = findProcessPathById('conciliacion-diaria-documentos', DEFAULT_PROCESS_TREE);
+    expect(ruta.map((n) => n.id)).toEqual(['gestion-tesoreria', 'gestion-liquidez', 'conciliacion-bancaria', 'conciliacion-diaria', 'conciliacion-diaria-documentos']);
     expect(findProcessPathById('conciliacion-diaria', DEFAULT_PROCESS_TREE).at(-1)?.comingSoon).toBeTrue();
-    expect(proceso?.id).toBe('conciliacion-diaria-documentos');
     expect(findProcessPathById('registro-libretas-cuentas-registro', DEFAULT_PROCESS_TREE).at(-1)?.comingSoon).toBeFalsy();
   });
 });
