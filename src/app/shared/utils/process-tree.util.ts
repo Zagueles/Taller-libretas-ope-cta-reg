@@ -24,7 +24,7 @@ export interface ProcessMenuNode {
   actionTypeOptions?: string[];
   /**
    * Marca un nodo como módulo planificado pero aún no implementado.
-   * El menú lo renderiza deshabilitado (texto atenuado) con el tooltip «Próximamente»;
+   * El menú lo renderiza deshabilitado (texto atenuado) con el tooltip «No disponible»;
    * el click no navega ni expande: sus hijos, si los tiene, no se muestran (solo sirven a las migas de pan).
    */
   comingSoon?: boolean;
@@ -37,7 +37,7 @@ export interface ProcessMenuNode {
  * Árbol de procesos del taller, calcado del menú de procesos de Figma (nodo 5839:15712, archivo
  * «CEL-005-02.01.01.09 Registro de operaciones en las libretas de las cuentas de registro»). Solo
  * «Registro de operaciones en las libretas de las cuentas de registro» está implementado (con datos
- * simulados); el resto son ejemplos de cómo se ve un proceso planificado («Próximamente»). Para sumar
+ * simulados); el resto son ejemplos de cómo se ve un proceso planificado («No disponible»). Para sumar
  * un proceso: una hoja con `moduleRoute` (Documentos y registros) y otra para sus consultas, y sus
  * rutas en `app.routes.ts`.
  *
@@ -66,7 +66,7 @@ export const DEFAULT_PROCESS_TREE: ProcessMenuNode[] = [
               {
                 id: 'conciliacion-diaria',
                 label: 'Conciliación diaria',
-                // Aún no se habilita: el menú la muestra deshabilitada («Próximamente») y no ofrece sus hojas ni crear documentos.
+                // Aún no se habilita: el menú la muestra deshabilitada («No disponible») y no ofrece sus hojas ni crear documentos.
                 // Sus hojas se conservan para las migas de pan de las pantallas que ya existen.
                 comingSoon: true,
                 children: [
@@ -153,7 +153,7 @@ export function findProcessPathById(id: string, nodes: readonly ProcessMenuNode[
 /**
  * Árbol del menú "Ajustes" (módulo de administración). Lo pinta el mismo `siaf-process-menu-tree`
  * que el menú de procesos, con otros textos. En el taller no hay módulo de administración: las hojas
- * van como «Próximamente» y no navegan.
+ * van como «No disponible» y no navegan.
  */
 export const ADMIN_MENU_TREE: ProcessMenuNode[] = [
   {

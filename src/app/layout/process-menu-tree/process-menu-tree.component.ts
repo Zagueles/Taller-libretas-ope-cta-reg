@@ -20,7 +20,7 @@ export { DEFAULT_PROCESS_TREE, findProcessPathById } from '../../shared/utils/pr
  * `ADMIN_MENU_TREE` y otros textos, así que un árbol nuevo es solo otro arreglo de nodos. El campo de búsqueda
  * funciona como paleta de comandos: filtra la navegación en vivo, sin ir al servidor, y expande las ramas
  * con coincidencias, resalta en negrita el texto buscado (sin distinguir tildes ni mayúsculas) y, sin coincidencias, muestra
- * «Sin resultados» con el texto buscado. Los nodos `comingSoon` van deshabilitados (texto e ícono atenuados, `aria-disabled`) con el tooltip «Próximamente» al pasar el mouse o enfocarlos; nunca emiten `nodeSelected`.
+ * «Sin resultados» con el texto buscado. Los nodos `comingSoon` van deshabilitados (texto e ícono atenuados, `aria-disabled`) con el tooltip «No disponible» al pasar el mouse o enfocarlos; nunca emiten `nodeSelected`.
  *
  * @usar
  * - Para el panel Procesos del armazón: `siaf-app-shell` lo abre desde el rail y navega a la `moduleRoute` o
@@ -132,7 +132,7 @@ export { DEFAULT_PROCESS_TREE, findProcessPathById } from '../../shared/utils/pr
             [class.cursor-not-allowed]="noDisponible(node)"
             [attr.aria-expanded]="hasChildren(node) ? isExpanded(node) : null"
             [attr.aria-disabled]="noDisponible(node) ? 'true' : null"
-            [siafTooltip]="noDisponible(node) ? 'Próximamente' : ''"
+            [siafTooltip]="noDisponible(node) ? 'No disponible' : ''"
             [tooltipMode]="noDisponible(node) ? 'always' : 'truncated'"
             (click)="activate(node)"
           >
@@ -146,7 +146,7 @@ export { DEFAULT_PROCESS_TREE, findProcessPathById } from '../../shared/utils/pr
                 [class.-rotate-90]="!isExpanded(node)"
               />
             } @else if (!node.moduleRoute && !node.hideIcon) {
-              <!-- Los nodos «Próximamente» (sin hijos ni pantalla) muestran la misma flecha que Figma, solo
+              <!-- Los nodos «No disponible» (sin hijos ni pantalla) muestran la misma flecha que Figma, solo
                    decorativa. -->
               <siaf-icon
                 class="h-5 shrink-0 leading-none"
@@ -226,7 +226,7 @@ export class ProcessMenuTreeComponent implements OnChanges, OnInit {
     return this.filterNodes(this.nodes, search);
   }
 
-  /** Un proceso planificado: va deshabilitado y su tooltip dice «Próximamente». Sus hijos, si los tiene, no se ofrecen. */
+  /** Un proceso planificado: va deshabilitado y su tooltip dice «No disponible». Sus hijos, si los tiene, no se ofrecen. */
   noDisponible(node: ProcessMenuNode): boolean {
     return !!node.comingSoon;
   }

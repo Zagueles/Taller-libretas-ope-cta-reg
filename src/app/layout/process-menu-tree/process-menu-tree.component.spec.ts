@@ -63,7 +63,7 @@ describe('ProcessMenuTreeComponent — búsqueda', () => {
   });
 });
 
-describe('ProcessMenuTreeComponent — procesos «Próximamente»', () => {
+describe('ProcessMenuTreeComponent — procesos «No disponible»', () => {
   let fixture: ComponentFixture<ProcessMenuTreeComponent>;
   const el = (): HTMLElement => fixture.nativeElement;
   const boton = (texto: string): HTMLButtonElement => Array.from(el().querySelectorAll<HTMLButtonElement>('button')).find((b) => b.textContent!.includes(texto))!;
@@ -86,10 +86,10 @@ describe('ProcessMenuTreeComponent — procesos «Próximamente»', () => {
     expect(boton('Documentos de conciliación').getAttribute('aria-disabled')).toBeNull();
   });
 
-  it('al pasar el mouse por un proceso pendiente aparece «Próximamente»', () => {
+  it('al pasar el mouse por un proceso pendiente aparece «No disponible»', () => {
     boton('Gestión de pagos').dispatchEvent(new Event('mouseenter'));
     fixture.detectChanges();
-    expect(document.body.textContent).toContain('Próximamente');
+    expect(document.body.textContent).toContain('No disponible');
     boton('Gestión de pagos').dispatchEvent(new Event('mouseleave'));
   });
 

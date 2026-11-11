@@ -43,7 +43,7 @@ verificación es `123456`.
 
 1. **Login** como Carla (Visualizador de consultas). El escritorio virtual muestra la bandeja y los contadores.
 2. **Procesos → Gestión de tesorería → Gestión de liquidez → Conciliación bancaria**: los procesos todavía no habilitados van
-   deshabilitados con el tooltip «Próximamente».
+   deshabilitados con el tooltip «No disponible».
 3. **Registro de operaciones en las libretas de las cuentas de registro**: Documentos (con el historial de cada uno) y Registros.
 4. **Consultas y reportes**: elegir el rango de fechas de apertura y consultar. Probar los filtros, la **vista de
    gráficas** (KPI, barras, dona y línea) y **Exportar** a Excel, CSV o PDF.
