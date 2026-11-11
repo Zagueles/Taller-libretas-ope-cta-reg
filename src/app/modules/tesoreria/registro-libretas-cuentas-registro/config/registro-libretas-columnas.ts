@@ -50,5 +50,6 @@ export const COLUMNAS_REGISTRO_LIBRETAS: ReportTableColumn[] = [
 ];
 
 /** Columnas que solo interesan en la cuenta en dólares (tipo de cambio e importe en moneda nacional): visibles por
- *  defecto solo en esa cuenta (Figma nodo 6094:125648); en soles quedan disponibles en «Columnas visibles». */
-export const COLUMNAS_MONEDA_EXTRANJERA: ReadonlySet<string> = new Set(['tipoCotizacion', 'tipoCambioCompra', 'tipoCambioVenta', 'saldoInicialMN', 'debitoMN', 'creditoMN', 'saldoDisponibleMN', 'saldoFinalMN']);
+ *  defecto solo en esa cuenta (Figma nodo 6094:125648); en soles quedan disponibles en «Columnas visibles». «Saldo disponible» (en
+ *  ambas monedas) no está: nunca se ve de fábrica y solo se activa en «Columnas visibles». */
+export const COLUMNAS_MONEDA_EXTRANJERA: ReadonlySet<string> = new Set(['tipoCotizacion', 'tipoCambioCompra', 'tipoCambioVenta', 'saldoInicialMN', 'debitoMN', 'creditoMN', 'saldoFinalMN']);
