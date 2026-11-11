@@ -153,3 +153,16 @@ describe('ProcessMenuTreeComponent — proceso pendiente con hojas', () => {
   });
 });
 
+describe('ProcessMenuTreeComponent — buscador', () => {
+  it('la lupa va como ícono al inicio del campo, sin botón a la derecha', async () => {
+    await TestBed.configureTestingModule({ imports: [ProcessMenuTreeComponent] }).compileComponents();
+    const fixture = TestBed.createComponent(ProcessMenuTreeComponent);
+    fixture.detectChanges();
+    const campo = fixture.nativeElement.querySelector('siaf-input label') as HTMLElement;
+    const lupa = campo.querySelector('siaf-icon')!;
+    expect(lupa.textContent!.trim()).toBe('search');
+    expect(lupa.compareDocumentPosition(campo.querySelector('input')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(campo.querySelector('button')).toBeNull();
+  });
+});
+

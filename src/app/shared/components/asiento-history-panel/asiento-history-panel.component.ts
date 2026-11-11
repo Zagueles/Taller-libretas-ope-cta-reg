@@ -171,11 +171,9 @@ type MovimientoRow = {
                           <siaf-input
                             label="Buscar"
                             [value]="filtro()"
-                            trailingIcon="search"
-                            trailingButtonLabel="Buscar"
+                            leadingIcon="search"
                             (valueChange)="onFiltroTyped($any($event))"
                             (keydown.enter)="onFiltroSubmit()"
-                            (trailingAction)="onFiltroSubmit()"
                           />
 
                           <div class="siaf-table-scroll min-w-0">

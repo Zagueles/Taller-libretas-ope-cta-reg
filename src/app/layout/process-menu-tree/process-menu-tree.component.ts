@@ -26,8 +26,7 @@ export { DEFAULT_PROCESS_TREE, findProcessPathById } from '../../shared/utils/pr
  * - Para el panel Procesos del armazón: `siaf-app-shell` lo abre desde el rail y navega a la `moduleRoute` o
  *   `createRoute` del nodo emitido (plan de cuentas contables, catálogo de eventos, asientos de ajuste, apertura
  *   contable…).
- * - Para el menú Ajustes: el mismo componente con `ADMIN_MENU_TREE` y sus textos (`title`, `subtitle`, `placeholder`,
- *   `searchLabel`), con gestión de usuarios, entidades y auditoría.
+ * - Para el menú Ajustes: el mismo componente con `ADMIN_MENU_TREE` y sus textos (`title`, `subtitle` y `placeholder`), con gestión de usuarios, entidades y auditoría.
  * - Para cualquier menú jerárquico nuevo del armazón: basta otro arreglo de `ProcessMenuNode`.
  * @evitar
  * - Para envolverlo o copiarlo en otro componente de menú: por eso se retiró `siaf-admin-menu`; basta pasarle otros
@@ -36,8 +35,8 @@ export { DEFAULT_PROCESS_TREE, findProcessPathById } from '../../shared/utils/pr
  * - Para buscar registros en el servidor: usar `siaf-form-table-search` (en Documentos y registros y la bandeja, su
  *   variante `siaf-records-search-toolbar`); este buscador solo filtra la navegación en memoria.
  * @teclado
- * - **Tab**: pasa por el buscador y su lupa, y luego por los nodos visibles en orden. La lupa no hace nada: el filtro
- *   se aplica al escribir.
+ * - **Tab**: pasa por el buscador y luego por los nodos visibles en orden. La lupa va al inicio del campo y es decorativa: el
+ *   filtro se aplica al escribir.
  * - **Escribir en el buscador**: filtra el árbol en vivo, sin distinguir tildes ni mayúsculas, y abre las ramas con
  *   coincidencias.
  * - **Enter / Espacio** en un nodo: lo marca y emite `nodeSelected`; si tiene hijos, además los muestra u oculta. Un
@@ -91,8 +90,7 @@ export { DEFAULT_PROCESS_TREE, findProcessPathById } from '../../shared/utils/pr
           class="block w-full"
           [label]="placeholder"
           [value]="query"
-          trailingIcon="search"
-          [trailingButtonLabel]="searchLabel"
+          leadingIcon="search"
           (valueChange)="onQuery($any($event))"
         />
 
@@ -194,7 +192,6 @@ export class ProcessMenuTreeComponent implements OnChanges, OnInit {
   @Input() title = 'Procesos';
   @Input() subtitle = 'Seleccionar proceso o procedimiento';
   @Input() placeholder = 'Buscar proceso o procedimiento';
-  @Input() searchLabel = 'Buscar proceso o procedimiento';
   @Input() nodes: ProcessMenuNode[] = DEFAULT_PROCESS_TREE;
 
   /** Muestra la flecha para regresar junto al título (cuando el árbol se abre desde otro formulario). */

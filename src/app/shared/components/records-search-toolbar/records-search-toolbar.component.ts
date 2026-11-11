@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, OnD
 import { TextFieldComponent } from '../../ui/text-field/text-field.component';
 
 /**
- * Variante de `siaf-form-table-search` para Documentos y registros: el mismo campo con lupa a todo el ancho, pero sin
+ * Variante de `siaf-form-table-search` para Documentos y registros: el mismo campo a todo el ancho, con la lupa como ícono al inicio, pero sin
  * los botones fijos Filtrar y Más opciones; las acciones de la derecha se proyectan con el atributo `actions`. En
  * Documentos y registros son los menús Campos, Favorito y Más opciones (`siaf-icon-dropdown-menu`). Siempre lleva sus
  * acciones: no hay variante sin ellas. En pantallas angostas las acciones bajan debajo del campo.
@@ -28,13 +28,12 @@ import { TextFieldComponent } from '../../ui/text-field/text-field.component';
  * - Para un campo de formulario con etiqueta y validación: `siaf-input`.
  * - Para filtros por opciones o por condiciones: `siaf-filter-pill` y `siaf-custom-filter` debajo de la barra, no
  *   como acciones.
- * - Rehacer el campo con la lupa y los menús a mano: la bandeja lo hacía hasta 2026-09 y quedaba distinta.
+ * - Rehacer el campo (lupa al inicio) y los menús a mano: la bandeja lo hacía hasta 2026-09 y quedaba distinta.
  * @teclado
- * - **Tab**: recorre el campo, la lupa y después las acciones proyectadas.
+ * - **Tab**: recorre el campo y después las acciones proyectadas.
  * - **Enter**: en el campo, confirma la búsqueda y emite `valueChange` y `searchSubmit` con lo escrito; escribir no
  *   busca.
- * - **Enter / Espacio**: en la lupa confirman igual. Las acciones siguen su componente (p. ej.
- *   `siaf-icon-dropdown-menu`).
+ * - Las acciones siguen su componente (p. ej. `siaf-icon-dropdown-menu`).
  * @accesibilidad
  * - **Pendiente · 4.1.2 Nombre, función y valor (A)**: el input `ariaLabel` no se usa en la plantilla, pese a lo que
  *   dice su comentario: el nombre del campo sale de `placeholder`, hoy «Buscar» en todas las pantallas. Cada acción
@@ -42,10 +41,9 @@ import { TextFieldComponent } from '../../ui/text-field/text-field.component';
  * - **Pendiente · 4.1.3 Mensajes de estado (AA)**: el resultado de la búsqueda no se anuncia; la pantalla debe
  *   anunciar el total (p. ej. con `role="status"`).
  * - **Pendiente · 1.4.11 Contraste no textual (AA)**: el borde del campo sin foco es `border-states-enabled` (2.44:1 /
- *   2.59:1). El anillo de foco de la lupa ya es el azul del kit (`border-states-focus`, 5.35:1 / 10.15:1).
- * - **2.4.7 Foco visible (AA)**: el campo pasa a un borde de 2 px `border-states-focus` (5.35:1 / 10.15:1) y la lupa
- *   muestra un anillo de 2 px.
- * - **2.5.8 Tamaño del objetivo (AA)**: la lupa mide 24 px; las acciones, lo que defina su componente.
+ *   2.59:1). La lupa va al inicio del campo y es decorativa: no recibe foco.
+ * - **2.4.7 Foco visible (AA)**: el campo pasa a un borde de 2 px `border-states-focus` (5.35:1 / 10.15:1).
+ * - **2.5.8 Tamaño del objetivo (AA)**: las acciones miden lo que defina su componente.
  */
 @Component({
   selector: 'siaf-records-search-toolbar',
@@ -56,17 +54,15 @@ import { TextFieldComponent } from '../../ui/text-field/text-field.component';
       <!-- El campo es el siaf-input del design system: etiqueta flotante y
            borde de éxito al completar, igual que el resto de inputs de la app.
            El tecleo solo registra el texto; la búsqueda se emite con Enter o
-           con la lupa (trailingAction). -->
+           con Enter; la lupa va al inicio (leadingIcon). -->
       <siaf-input
         class="min-w-0 flex-1"
         [label]="placeholder"
         [value]="value"
         [disabled]="disabled"
-        trailingIcon="search"
-        trailingButtonLabel="Buscar"
+        leadingIcon="search"
         (valueChange)="onTyped($event)"
         (keydown.enter)="onSubmit($event)"
-        (trailingAction)="onLupa()"
       />
       <div class="flex shrink-0 items-center justify-end gap-siaf-xs">
         <ng-content select="[actions]" />
@@ -95,12 +91,12 @@ export class RecordsSearchToolbarComponent implements OnChanges, OnDestroy {
   @Input() disabled = false;
   /**
    * Búsqueda en vivo desde N caracteres (RF-07): al llegar a N, la búsqueda sale sola (tras una pausa breve al teclear) y con
-   * menos de N se quita. Con 0, que es lo habitual, solo se busca con Enter o la lupa.
+   * menos de N se quita. Con 0, que es lo habitual, solo se busca con Enter.
    */
   @Input() minChars = 0;
 
   /**
-   * Emite al confirmar la búsqueda (Enter o clic en la lupa). La búsqueda ya
+   * Emite al confirmar la búsqueda (Enter). La búsqueda ya
    * no se dispara por tecleo: con la búsqueda en el servidor, cada consulta
    * es un viaje HTTP y disparar una por letra sería puro desperdicio.
    *
@@ -132,12 +128,6 @@ export class RecordsSearchToolbarComponent implements OnChanges, OnDestroy {
     // Ambos eventos se emiten al confirmar: `searchSubmit` para quien
     // distingue el submit, `valueChange` para los consumidores existentes —
     // que así pasan a filtrar con Enter sin cambiar una línea.
-    this.valueChange.emit(texto);
-    this.searchSubmit.emit(texto);
-  }
-
-  onLupa(): void {
-    const texto = this.efectivo(this.lastTyped ?? this.value);
     this.valueChange.emit(texto);
     this.searchSubmit.emit(texto);
   }

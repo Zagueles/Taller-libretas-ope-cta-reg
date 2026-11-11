@@ -6,7 +6,7 @@ import { IconComponent } from '../../ui/icon/icon.component';
 import { TextFieldComponent } from '../../ui/text-field/text-field.component';
 
 /**
- * Buscador de tabla: un `siaf-input` con lupa a todo el ancho y, a la derecha, dos botones de ícono: Filtrar y Más
+ * Buscador de tabla: un `siaf-input` a todo el ancho, con la lupa como ícono al inicio, y, a la derecha, dos botones de ícono: Filtrar y Más
  * opciones, que emiten `filter` y `more`.
  *
  * Con `variant="reports"` es el buscador de Consultas y reportes (Figma «Guía de Estructura de Pantallas», nodo
@@ -15,7 +15,7 @@ import { TextFieldComponent } from '../../ui/text-field/text-field.component';
  * Con `moreItems`, «Más opciones» abre un menú (como el de Documentos y registros) y emite `moreSelected` con el valor
  * elegido, en vez de emitir `more` directo: la vista de un documento lo usa para «Ocultar o mostrar columnas».
  *
- * Escribir solo registra el texto: la búsqueda sale por `valueChange` al pulsar Enter o la lupa, y lo tecleado se
+ * Escribir solo registra el texto: la búsqueda sale por `valueChange` al pulsar Enter, y lo tecleado se
  * descarta si el padre reescribe `value`.
  *
  * Tiene además otra variante, como componente aparte, para Documentos y registros y la Bandeja de Documentos:
@@ -30,7 +30,7 @@ import { TextFieldComponent } from '../../ui/text-field/text-field.component';
  * - En el detalle de Contabilización y en los listados de Admin (usuarios, entidades, unidades y correlativos).
  * - En Apertura contable: cuentas contables del detalle anual, aperturas mensuales de la configuración e historial de
  *   la configuración.
- * - Cuando la búsqueda debe confirmarse con Enter o la lupa y no a cada tecla (búsqueda en servidor o muchas filas).
+ * - Cuando la búsqueda debe confirmarse con Enter y no a cada tecla (búsqueda en servidor o muchas filas).
  * @evitar
  * - En las pestañas Documentos / Registros y en la Bandeja de Documentos, con menús a la derecha:
  *   `siaf-records-search-toolbar`, que los proyecta.
@@ -38,10 +38,9 @@ import { TextFieldComponent } from '../../ui/text-field/text-field.component';
  *   se pintan y no hacen nada (hoy ninguna consulta escucha Filtrar ni Columnas).
  * - Para filtrar por opciones cerradas o por condiciones: `siaf-filter-pill` o `siaf-custom-filter` junto al buscador.
  * @teclado
- * - **Tab**: recorre el campo, la lupa, Filtrar y Más opciones (o Columnas); con `disabled` quedan todos fuera.
+ * - **Tab**: recorre el campo, Filtrar y Más opciones (o Columnas); con `disabled` quedan todos fuera.
  * - **Enter**: en el campo, confirma la búsqueda y emite `valueChange` con lo escrito; escribir no busca.
- * - **Enter / Espacio**: en la lupa confirman igual; en Filtrar, Más opciones y Columnas emiten `filter`, `more` y
- *   `columns`.
+ * - **Enter / Espacio**: en Filtrar, Más opciones y Columnas emiten `filter`, `more` y `columns`.
  * @accesibilidad
  * - **Pendiente · 4.1.2 Nombre, función y valor (A)**: el input `ariaLabel` no se usa en la plantilla; el nombre del
  *   campo sale de `placeholder` («Buscar» por defecto), así que «Buscar cuentas contables» o «Buscar en pedidos» no
@@ -50,11 +49,11 @@ import { TextFieldComponent } from '../../ui/text-field/text-field.component';
  * - **Pendiente · 4.1.3 Mensajes de estado (AA)**: ni el buscador ni la grilla anuncian el resultado; la pantalla debe
  *   anunciar el total (p. ej. con `role="status"`).
  * - **Pendiente · 1.4.11 Contraste no textual (AA)**: el borde del campo sin foco es `border-states-enabled` (2.44:1 /
- *   2.59:1). El anillo de foco de la lupa y de los botones ya es el azul del kit (`border-states-focus`, 5.35:1 /
- *   10.15:1) y los íconos cumplen (`text-neutral-high`; la lupa, `text-neutral-medium`).
- * - **2.4.7 Foco visible (AA)**: el campo pasa a un borde de 2 px `border-states-focus` (5.35:1 / 10.15:1); la lupa y
- *   los botones muestran un anillo de 2 px separado 2 px.
- * - **2.5.8 Tamaño del objetivo (AA)**: Filtrar, Más opciones y Columnas miden 40 px; la lupa, 24 px.
+ *   2.59:1). El anillo de foco de los botones ya es el azul del kit (`border-states-focus`, 5.35:1 /
+ *   10.15:1) y los íconos cumplen (`text-neutral-high`; la lupa del campo, `text-neutral-medium`).
+ * - **2.4.7 Foco visible (AA)**: el campo pasa a un borde de 2 px `border-states-focus` (5.35:1 / 10.15:1); los
+ *   botones muestran un anillo de 2 px separado 2 px.
+ * - **2.5.8 Tamaño del objetivo (AA)**: Filtrar, Más opciones y Columnas miden 40 px.
  */
 @Component({
   selector: 'siaf-form-table-search',
@@ -63,17 +62,15 @@ import { TextFieldComponent } from '../../ui/text-field/text-field.component';
   template: `
     <div class="flex w-full items-start gap-siaf-md">
       <!-- Campo del design system: etiqueta flotante y borde de éxito, igual
-           que el resto de inputs. Enter o la lupa (trailingAction) confirman. -->
+           que el resto de inputs. La lupa va al inicio (leadingIcon); Enter confirma. -->
       <siaf-input
         class="min-w-0 flex-1"
         [label]="placeholder"
         [value]="value"
         [disabled]="disabled"
-        trailingIcon="search"
-        trailingButtonLabel="Buscar"
+        leadingIcon="search"
         (valueChange)="onTyped($event)"
         (keydown.enter)="onSubmit($event)"
-        (trailingAction)="onLupa()"
       />
 
       <div class="flex shrink-0 items-start gap-siaf-xs">
@@ -131,7 +128,7 @@ export class FormTableSearchComponent implements OnChanges, OnDestroy {
   /** Nombre accesible del botón Columnas de la variante `reports`. */
   @Input() columnsLabel = 'Ocultar o mostrar columnas';
   @Input() disabled = false;
-  /** Búsqueda en vivo desde N caracteres (RF-07): sale sola tras una pausa breve al teclear y con menos de N se quita. Con 0, solo Enter o la lupa. */
+  /** Búsqueda en vivo desde N caracteres (RF-07): sale sola tras una pausa breve al teclear y con menos de N se quita. Con 0, solo Enter. */
   @Input() minChars = 0;
   /** Opciones del menú de «Más opciones»; vacío = el botón emite `more` directo. */
   @Input() moreItems: IconDropdownMenuItem[] = [];
@@ -146,7 +143,7 @@ export class FormTableSearchComponent implements OnChanges, OnDestroy {
   /** Botón Columnas de la variante `reports`. */
   @Output() columns = new EventEmitter<void>();
 
-  /** Último texto tecleado; se emite recién al confirmar (Enter o lupa). */
+  /** Último texto tecleado; se emite recién al confirmar (Enter). */
   private lastTyped: string | null = null;
 
   /** El siaf-input interno emite al tipear; aquí solo se registra el texto. */
@@ -176,13 +173,9 @@ export class FormTableSearchComponent implements OnChanges, OnDestroy {
 
   onSubmit(event: Event): void {
     event.preventDefault();
-    // La búsqueda se dispara con Enter o la lupa, no por tecleo: los 18
+    // La búsqueda se dispara con Enter, no por tecleo: los 18
     // consumidores (paneles de selección, tablas de solicitudes, listados
     // admin) pasan a ese comportamiento sin cambiar una línea.
-    this.valueChange.emit(this.efectivo(this.lastTyped ?? this.value));
-  }
-
-  onLupa(): void {
     this.valueChange.emit(this.efectivo(this.lastTyped ?? this.value));
   }
 }

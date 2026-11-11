@@ -26,7 +26,7 @@ describe('FormTableSearchComponent', () => {
     return fixture.debugElement.query(By.css('input')).nativeElement as HTMLInputElement;
   }
 
-  it('tipear NO emite: la búsqueda se confirma con Enter o la lupa', () => {
+  it('tipear NO emite: la búsqueda se confirma con Enter', () => {
     input().value = '1.1.5';
     input().dispatchEvent(new Event('input'));
 
@@ -41,14 +41,14 @@ describe('FormTableSearchComponent', () => {
     expect(emitted).toBe('1.1.5');
   });
 
-  it('la lupa emite igual que Enter', () => {
-    input().value = 'provisiones';
-    input().dispatchEvent(new Event('input'));
-
-    const lupa = fixture.debugElement.query(By.css('button[aria-label="Buscar"]')).nativeElement as HTMLButtonElement;
-    lupa.click();
-
-    expect(emitted).toBe('provisiones');
+  it('la lupa es el ícono al inicio del campo y no hay botón de buscar a la derecha', () => {
+    const campo = fixture.nativeElement as HTMLElement;
+    const lupa = campo.querySelector('label span.relative > siaf-icon, label siaf-icon')!;
+    expect(lupa.textContent!.trim()).toBe('search');
+    // Va antes del input y no es un botón.
+    expect(lupa.compareDocumentPosition(input()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(lupa.closest('button')).toBeNull();
+    expect(campo.querySelector('button[aria-label="Buscar"]')).toBeNull();
   });
 
   it('confirmar sin haber tecleado emite el value del padre', () => {
@@ -93,7 +93,7 @@ describe('FormTableSearchComponent', () => {
     fixture.detectChanges();
 
     const botones = Array.from(fixture.nativeElement.querySelectorAll('button[aria-label]')) as HTMLButtonElement[];
-    expect(botones.map((b) => b.getAttribute('aria-label'))).toEqual(['Buscar', 'Filtrar', 'Ocultar o mostrar columnas']);
+    expect(botones.map((b) => b.getAttribute('aria-label'))).toEqual(['Filtrar', 'Ocultar o mostrar columnas']);
     const segundo = fixture.nativeElement.querySelector('button[data-accion="columns"]') as HTMLButtonElement;
     expect(iconoDe(segundo)).toBe('view_column');
     segundo.click();

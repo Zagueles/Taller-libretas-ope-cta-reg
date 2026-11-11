@@ -57,7 +57,6 @@ type PanelArmazon = 'movil' | 'Proceso' | 'Bandeja' | 'Ajustes' | null;
                 title="Ajustes"
                 subtitle="Seleccionar configuracion"
                 placeholder="Buscar configuracion"
-                searchLabel="Buscar configuracion"
                 [nodes]="arbolAjustes"
               />
             </div>
@@ -158,7 +157,6 @@ export class EjemplosArmazonComponent {
                   title="Ajustes"
                   subtitle="Seleccionar configuracion"
                   placeholder="Buscar configuracion"
-                  searchLabel="Buscar configuracion"
                   [nodes]="arbolAjustes"
                   (nodeSelected)="elegirNodo($event)"
                 />

@@ -84,7 +84,6 @@ import { ADMIN_MENU_TREE } from '../../shared/utils/process-tree.util';
             title="Ajustes"
             subtitle="Seleccionar configuracion"
             placeholder="Buscar configuracion"
-            searchLabel="Buscar configuracion"
             [nodes]="adminMenuTree"
             (nodeSelected)="onAdminNodeSelected($event)"
           />

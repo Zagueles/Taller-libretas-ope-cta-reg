@@ -26,7 +26,7 @@ describe('RecordsSearchToolbarComponent', () => {
     expect(input.placeholder).toBe('Filtrar por documento');
   });
 
-  it('tipear NO emite: la búsqueda se dispara con Enter o la lupa', () => {
+  it('tipear NO emite: la búsqueda se dispara con Enter', () => {
     let emitted: string | undefined;
     component.valueChange.subscribe(v => (emitted = v));
 
@@ -75,18 +75,14 @@ describe('RecordsSearchToolbarComponent', () => {
     expect(emisiones).toEqual([]);
   });
 
-  it('la lupa dispara la búsqueda igual que Enter', () => {
-    let search: string | undefined;
-    component.searchSubmit.subscribe(v => (search = v));
-
+  it('la lupa es el ícono al inicio del campo y no hay botón de buscar', () => {
+    const campo = fixture.nativeElement as HTMLElement;
+    const lupa = campo.querySelector('label siaf-icon')!;
     const input = fixture.debugElement.query(By.css('input')).nativeElement as HTMLInputElement;
-    input.value = 'AA-093';
-    input.dispatchEvent(new Event('input'));
-
-    const lupa = fixture.debugElement.query(By.css('button[aria-label="Buscar"]')).nativeElement as HTMLButtonElement;
-    lupa.click();
-
-    expect(search).toBe('AA-093');
+    expect(lupa.textContent!.trim()).toBe('search');
+    expect(lupa.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(lupa.closest('button')).toBeNull();
+    expect(campo.querySelector('button[aria-label="Buscar"]')).toBeNull();
   });
 
   it('si el padre reescribe value, lo tecleado pendiente deja de valer', () => {
