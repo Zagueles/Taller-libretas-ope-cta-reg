@@ -603,7 +603,7 @@ let siguienteId = 0;
     <siaf-advanced-filters-panel
       [open]="panelAvanzadoAbierto()"
       [fields]="configuracion().advancedFilterFields ?? []"
-      [valueOptions]="valoresAvanzados()"
+      [rows]="filasParaAvanzados()"
       [value]="avanzados()"
       (closed)="panelAvanzadoAbierto.set(false)"
       (applied)="aplicarAvanzados($event)"
@@ -756,26 +756,15 @@ export class QueryReportPageComponent {
     tipoResultado: this.avanzados().resultType,
   }));
 
-  /** Valores a elegir en «Valor» de cada campo de «Filtros avanzados»: los distintos que trae el resultado (hasta 300). */
-  readonly valoresAvanzados = computed<Record<string, TextFieldOption[]>>(() => {
-    const filas = this.resultado()?.rows ?? [];
-    const salida: Record<string, TextFieldOption[]> = {};
-    for (const campo of this.configuracion().advancedFilterFields ?? []) {
-      if (campo.type === 'date') continue;
-      const valores = [...new Set(filas.map((f) => String(f[campo.key] ?? '')).filter(Boolean))];
-      if (valores.length && valores.length <= 300) {
-        salida[campo.key] = valores.sort((a, b) => a.localeCompare(b, 'es', { numeric: true })).map((v) => ({ label: v, value: v }));
-      }
-    }
-    return salida;
-  });
+  /** Las filas tras los filtros de la barra (chips y búsqueda), sin las condiciones avanzadas: de ahí salen los valores a elegir en «Filtros avanzados». */
+  readonly filasParaAvanzados = computed<QueryReportRow[]>(() => this.aplicarFiltros(this.resultado()?.rows ?? [], false));
 
   readonly filasFiltradas = computed<QueryReportRow[]>(() => this.aplicarFiltros(this.resultado()?.rows ?? []));
 
-  private aplicarFiltros(filas: QueryReportRow[]): QueryReportRow[] {
+  private aplicarFiltros(filas: QueryReportRow[], conAvanzados = true): QueryReportRow[] {
     const termino = normalizar(this.busqueda().trim());
     const filtros = Object.entries(this.filtros()).filter(([, valor]) => !!valor);
-    const condiciones = this.avanzados().conditions;
+    const condiciones = conAvanzados ? this.avanzados().conditions : [];
     const columnas = this.configuracion().columns;
     return filas.filter(
       (fila) =>

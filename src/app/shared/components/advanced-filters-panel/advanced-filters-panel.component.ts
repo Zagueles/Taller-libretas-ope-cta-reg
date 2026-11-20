@@ -1,11 +1,13 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, computed, signal } from '@angular/core';
 
+import { cumpleCondicion } from '../query-report-page/query-report-conditions';
 import type {
   QueryReportAdvancedFilterField,
   QueryReportAdvancedFilters,
   QueryReportCondition,
   QueryReportConditionOperator,
   QueryReportResultType,
+  QueryReportRow,
 } from '../../types/query-report.types';
 import { ButtonComponent } from '../../ui/button/button.component';
 import { DateTimePickerComponent } from '../../ui/date-time-picker/date-time-picker.component';
@@ -52,6 +54,8 @@ export const MAX_NIVELES = 3;
  * - Los niveles son hasta 3. Los campos con `hierarchy` (Entidad ▶ Unidad ejecutora) mantienen el orden del
  *   clasificador: el select no ofrece un campo que rompería el orden y el arrastre no los intercambia. El ícono de
  *   arrastre se apaga en un nivel con jerarquía que no puede subir (Entidad; Unidad ejecutora justo debajo de Entidad). `groupableIn` limita un campo a Agrupado o a Agregado.
+ * - «Valor» de cada condición es una lista (también en las fechas) con lo que queda en `rows`, las filas tras los filtros de la
+ *   pantalla, y tras las demás condiciones: si ya se filtró la entidad MEF, solo se ofrece MEF.
  * @evitar
  * - Para los criterios que arman la consulta (fechas, cuenta, entidad): eso es «Parámetros de consulta»
  *   (`siaf-query-parameters-panel`).
@@ -145,7 +149,7 @@ export const MAX_NIVELES = 3;
                       </div>
 
                       @if (condicion.operator !== 'empty' && condicion.operator !== 'notEmpty') {
-                        @if (esCampoFecha(condicion.field)) {
+                        @if (esCampoFecha(condicion.field) && !rows) {
                           <siaf-date-time-picker
                             [label]="condicion.operator === 'between' ? 'Valor desde' : 'Valor'"
                             [maxDate]="sinFuturo(condicion.field) ? hoy : ''"
@@ -164,12 +168,12 @@ export const MAX_NIVELES = 3;
                           }
                         } @else {
                           <!-- Con valores conocidos del campo: lista de selección; si no, texto libre. -->
-                          @if (opcionesValor(condicion.field).length) {
+                          @if (opcionesValor(condicion).length) {
                             <siaf-input
                               type="select"
                               [autoSuccess]="false"
                               [label]="condicion.operator === 'between' ? 'Valor desde' : 'Valor'"
-                              [options]="opcionesValor(condicion.field)"
+                              [options]="opcionesValor(condicion)"
                               [value]="condicion.value ?? ''"
                               (valueChange)="cambiarCondicion(condicion.id, { value: $any($event) })"
                             />
@@ -178,7 +182,7 @@ export const MAX_NIVELES = 3;
                                 type="select"
                                   [autoSuccess]="false"
                                 label="Valor hasta"
-                                [options]="opcionesValor(condicion.field)"
+                                [options]="opcionesValor(condicion)"
                                 [value]="condicion.valueTo ?? ''"
                                 (valueChange)="cambiarCondicion(condicion.id, { valueTo: $any($event) })"
                               />
@@ -392,8 +396,32 @@ export class AdvancedFiltersPanelComponent implements OnChanges {
   /** Valores que el campo tiene en el resultado (los entrega la pantalla); vacío = texto libre. */
   @Input() valueOptions: Record<string, TextFieldOption[]> = {};
 
-  opcionesValor(clave: string): TextFieldOption[] {
-    return this.valueOptions[clave] ?? [];
+  /**
+   * Filas que ya dejaron los filtros de la pantalla (los chips y la búsqueda). Con ellas, «Valor» solo ofrece lo que
+   * todavía existe: si ya se filtró la entidad MEF, la condición de Entidad solo muestra MEF. Sin ellas se usa `valueOptions`.
+   */
+  @Input() rows: readonly QueryReportRow[] | null = null;
+
+  /**
+   * Valores a elegir en «Valor» de la condición: los distintos que quedan en las filas tras los filtros de la pantalla y las
+   * demás condiciones del borrador (la propia no cuenta, para poder cambiar su valor). Las fechas también se eligen de una lista.
+   */
+  opcionesValor(condicion: QueryReportCondition): TextFieldOption[] {
+    const clave = condicion.field;
+    if (!this.rows) return this.valueOptions[clave] ?? [];
+    const otras = this.condiciones().filter(
+      (c) => c.id !== condicion.id && c.field && c.operator && (c.operator === 'empty' || c.operator === 'notEmpty' || !!c.value),
+    );
+    const campoFecha = this.esCampoFecha(clave);
+    const valores = new Set<string>();
+    for (const fila of this.rows) {
+      const valor = String(fila[clave] ?? '');
+      if (valor && otras.every((c) => cumpleCondicion(fila, c))) valores.add(valor);
+    }
+    if (!campoFecha && valores.size > 300) return [];
+    return [...valores]
+      .sort((a, b) => a.localeCompare(b, 'es', { numeric: true }))
+      .map((v) => ({ label: campoFecha ? v.slice(0, 10).split('-').reverse().join('/') : v, value: v }));
   }
 
   /** Hoy (aaaa-mm-dd), el tope de los campos de fecha con `noFuture`. */

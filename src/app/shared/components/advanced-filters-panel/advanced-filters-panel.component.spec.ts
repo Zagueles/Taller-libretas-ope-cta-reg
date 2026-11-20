@@ -103,4 +103,48 @@ describe('AdvancedFiltersPanelComponent', () => {
     panel.cambiarNivel(1, 'entidad');
     expect(panel.niveles()).toEqual(['ue', 'ff']);
   });
+
+  describe('valores de la condición según lo ya filtrado', () => {
+    const FILAS = [
+      { fecha: '2026-06-28', entidad: 'MEF', ue: 'A', tipo: 'X' },
+      { fecha: '2026-06-29', entidad: 'MEF', ue: 'B', tipo: 'Y' },
+      { fecha: '2026-06-30', entidad: 'IPD', ue: 'C', tipo: 'X' },
+    ];
+
+    it('con las filas que dejaron los filtros de la pantalla, solo ofrece lo que queda (solo MEF)', () => {
+      fixture.componentRef.setInput('rows', FILAS.filter((f) => f.entidad === 'MEF'));
+      fixture.detectChanges();
+      panel.agregarCondicion();
+      const condicion = panel.condiciones()[0];
+      panel.cambiarCondicion(condicion.id, { field: 'entidad' });
+      expect(panel.opcionesValor(panel.condiciones()[0]).map((o) => o.value)).toEqual(['MEF']);
+    });
+
+    it('otra condición del borrador también recorta los valores, pero no los de su propio campo', () => {
+      fixture.componentRef.setInput('rows', FILAS);
+      fixture.detectChanges();
+      panel.agregarCondicion();
+      panel.agregarCondicion();
+      const [uno, dos] = panel.condiciones();
+      panel.cambiarCondicion(uno.id, { field: 'entidad', operator: '=', value: 'MEF' });
+      panel.cambiarCondicion(dos.id, { field: 'tipo' });
+      expect(panel.opcionesValor(panel.condiciones()[1]).map((o) => o.value)).toEqual(['X', 'Y']);
+      panel.cambiarCondicion(dos.id, { field: 'ue', operator: '=', value: 'B' });
+      expect(panel.opcionesValor(panel.condiciones()[0]).map((o) => o.value)).toEqual(['MEF']);
+      expect(panel.opcionesValor({ id: 'x', field: 'tipo', operator: '=' }).map((o) => o.value)).toEqual(['Y']);
+    });
+
+    it('la fecha también se elige de una lista, con las fechas que quedan en dd/mm/aaaa', () => {
+      fixture.componentRef.setInput('rows', FILAS.filter((f) => f.entidad === 'MEF'));
+      fixture.detectChanges();
+      panel.agregarCondicion();
+      panel.cambiarCondicion(panel.condiciones()[0].id, { field: 'fecha', operator: '=' });
+      fixture.detectChanges();
+      expect(panel.opcionesValor(panel.condiciones()[0])).toEqual([
+        { label: '28/06/2026', value: '2026-06-28' },
+        { label: '29/06/2026', value: '2026-06-29' },
+      ]);
+      expect(fixture.nativeElement.querySelector('siaf-date-time-picker')).toBeNull();
+    });
+  });
 });

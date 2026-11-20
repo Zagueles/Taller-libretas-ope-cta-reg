@@ -876,6 +876,13 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "descripcion": null
       },
       {
+        "nombre": "rows",
+        "tipo": "readonly ReportTableRow[] | null",
+        "porDefecto": "null",
+        "requerida": false,
+        "descripcion": "Filas que ya dejaron los filtros de la pantalla (los chips y la búsqueda). Con ellas, «Valor» solo ofrece lo que todavía existe: si ya se filtró la entidad MEF, la condición de Entidad solo muestra MEF. Sin ellas se usa `valueOptions`."
+      },
+      {
         "nombre": "value",
         "tipo": "QueryReportAdvancedFilters | null",
         "porDefecto": "null",
@@ -902,7 +909,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "descripcion": null
       }
     ],
-    "usar": "- Desde el ícono de filtro de `siaf-form-table-search` en `siaf-query-report-page`, con `advancedFilterFields` de su\n  configuración.\n- Los niveles son hasta 3. Los campos con `hierarchy` (Entidad ▶ Unidad ejecutora) mantienen el orden del\n  clasificador: el select no ofrece un campo que rompería el orden y el arrastre no los intercambia. El ícono de\n  arrastre se apaga en un nivel con jerarquía que no puede subir (Entidad; Unidad ejecutora justo debajo de Entidad). `groupableIn` limita un campo a Agrupado o a Agregado.",
+    "usar": "- Desde el ícono de filtro de `siaf-form-table-search` en `siaf-query-report-page`, con `advancedFilterFields` de su\n  configuración.\n- Los niveles son hasta 3. Los campos con `hierarchy` (Entidad ▶ Unidad ejecutora) mantienen el orden del\n  clasificador: el select no ofrece un campo que rompería el orden y el arrastre no los intercambia. El ícono de\n  arrastre se apaga en un nivel con jerarquía que no puede subir (Entidad; Unidad ejecutora justo debajo de Entidad). `groupableIn` limita un campo a Agrupado o a Agregado.\n- «Valor» de cada condición es una lista (también en las fechas) con lo que queda en `rows`, las filas tras los filtros de la\n  pantalla, y tras las demás condiciones: si ya se filtró la entidad MEF, solo se ofrece MEF.",
     "evitar": "- Para los criterios que arman la consulta (fechas, cuenta, entidad): eso es «Parámetros de consulta»\n  (`siaf-query-parameters-panel`).\n- Para un filtro de una sola columna con opciones fijas: usar `siaf-filter-pill`.",
     "teclado": "- **Tab**: recorre cada condición (Campo, Condición, Valor y su ✕), «Agregar condición», los radios de tipo de\n  resultado, cada nivel (Campo y su ✕), «Agregar nivel», «Limpiar todo» y «Aplicar».\n- **Escape**: cierra sin aplicar, como el panel de parámetros.",
     "accesibilidad": "- **4.1.2 Nombre, función y valor (A)**: `role=\"dialog\"` con `aria-modal` y `aria-labelledby`, igual que\n  `siaf-query-parameters-panel`.\n- **Pendiente**: los niveles no tienen reordenamiento por teclado; el ícono de arrastre del Figma es solo visual.",
