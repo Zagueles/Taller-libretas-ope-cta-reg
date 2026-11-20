@@ -6535,7 +6535,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     "capa": "components",
     "importacion": "@siaf/shared/components/filter-pill/filter-pill.component",
     "archivo": "src/app/shared/components/filter-pill/filter-pill.component.ts",
-    "descripcion": "Píldora dropdown de filtro, dibujada con `siaf-tag` en variante `filter` (Figma «Filter tags»), con dos estados:\n\n1. **Sin valor** — tag sin elegir con `Label ▾`. Al pulsarlo abre el menú.\n2. **Con valor** — tag elegido con `✓ Label: valor ✕`. La × limpia; pulsar el tag vuelve a abrir el menú.\n\nLa × es un botón al lado del tag, dentro del mismo borde (no un control dentro del botón).\n\nReemplaza el patrón inline repetido 4 veces en\n`siaf-documents-records-page` (filtros Estado, Tipo de acción,\nEs imputable, Naturaleza) y es el que vamos a usar en las\npróximas pantallas de \"Consultas y reportes …\".\n\nLas opciones se muestran con `siaf-menu` compact (220 px). Abierto con el\nteclado, el foco entra en la primera opción; Escape o pulsar fuera cierra.",
+    "descripcion": "Píldora dropdown de filtro, dibujada con `siaf-tag` en variante `filter` (Figma «Filter tags»), con dos estados:\n\n1. **Sin valor** — tag sin elegir con `Label ▾`. Al pulsarlo abre el menú.\n2. **Con valor** — tag elegido con `✓ Label: valor ✕`. La × limpia; pulsar el tag vuelve a abrir el menú.\n\nLa × es un botón al lado del tag, dentro del mismo borde (no un control dentro del botón).\n\nReemplaza el patrón inline repetido 4 veces en\n`siaf-documents-records-page` (filtros Estado, Tipo de acción,\nEs imputable, Naturaleza) y es el que vamos a usar en las\npróximas pantallas de \"Consultas y reportes …\".\n\nLa píldora con valor mide como máximo 320 px: un valor largo se corta con «…» y su tooltip lo muestra completo.\nLas opciones se muestran con `siaf-menu` compact (220 px). Abierto con el\nteclado, el foco entra en la primera opción; Escape o pulsar fuera cierra.",
     "usaSesion": false,
     "proyectaContenido": false,
     "entradas": [
@@ -6582,6 +6582,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
     "tokens": [],
     "usa": [
       "[siafFoco]",
+      "[siafTooltip]",
       "siaf-menu",
       "siaf-tag"
     ],
@@ -8439,7 +8440,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         "tipo": "string | null",
         "porDefecto": "null",
         "requerida": false,
-        "descripcion": "Opción marcada con `leading=\"radio\"`."
+        "descripcion": "Opción marcada con `leading=\"radio\"`; con `none` o `icon`, la que se ve en estado «seleccionado» (p. ej. el valor de un filtro rápido)."
       },
       {
         "nombre": "selectedValues",
@@ -8501,6 +8502,7 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       ],
       "atributos": [
         "aria-checked",
+        "aria-current",
         "aria-disabled",
         "aria-expanded",
         "aria-haspopup",
@@ -8528,6 +8530,12 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
         ]
       },
       {
+        "token": "--sys-color-bg-states-light-selected",
+        "via": [
+          "var()"
+        ]
+      },
+      {
         "token": "--sys-color-bg-surfaces-surface-highest",
         "via": [
           "var()"
@@ -8541,6 +8549,12 @@ export const MANIFIESTO_UI_KIT: readonly FichaComponente[] = [
       },
       {
         "token": "--sys-color-icon-states-enabled",
+        "via": [
+          "var()"
+        ]
+      },
+      {
+        "token": "--sys-color-text-neutral-activated",
         "via": [
           "var()"
         ]

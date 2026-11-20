@@ -32,6 +32,7 @@ import { TableSkeletonComponent } from '../../ui/table-skeleton/table-skeleton.c
 import { SnackbarComponent } from '../../ui/snackbar/snackbar.component';
 import { TabsComponent } from '../../ui/tabs/tabs.component';
 import { TagComponent } from '../../ui/tag/tag.component';
+import type { FilterPillOption } from '../filter-pill/filter-pill.component';
 import type { TextFieldOption } from '../../ui/text-field/text-field.component';
 import { AdvancedFiltersPanelComponent } from '../advanced-filters-panel/advanced-filters-panel.component';
 import { ColumnasPanelGrupo, ReportColumnsPanelComponent } from '../report-columns-panel/report-columns-panel.component';
@@ -537,7 +538,7 @@ let siguienteId = 0;
                     @for (filtro of configuracion().presetFilters ?? []; track filtro.key) {
                       <siaf-filter-pill
                         [label]="filtro.label"
-                        [options]="filtro.options"
+                        [options]="opcionesFiltros()[filtro.key] ?? filtro.options"
                         [selectedValue]="filtros()[filtro.key] || ''"
                         (selectedValueChange)="filtrar(filtro.key, $event)"
                       />
@@ -758,6 +759,24 @@ export class QueryReportPageComponent {
 
   /** Las filas tras los filtros de la barra (chips y búsqueda), sin las condiciones avanzadas: de ahí salen los valores a elegir en «Filtros avanzados». */
   readonly filasParaAvanzados = computed<QueryReportRow[]>(() => this.aplicarFiltros(this.resultado()?.rows ?? [], false));
+
+  /**
+   * Opciones de cada filtro rápido según los otros: con Entidad = MINCETUR, «Cuenta de registro» solo ofrece las de MINCETUR
+   * (y al revés). Salen de las filas del resultado que cumplen los demás filtros; la opción elegida nunca desaparece. Si el
+   * resultado no trae el campo del filtro, se dejan las opciones configuradas.
+   */
+  readonly opcionesFiltros = computed<Record<string, FilterPillOption[]>>(() => {
+    const filtros = this.filtros();
+    const filas = this.resultado()?.rows ?? [];
+    const salida: Record<string, FilterPillOption[]> = {};
+    for (const filtro of this.configuracion().presetFilters ?? []) {
+      const otros = Object.entries(filtros).filter(([clave, valor]) => clave !== filtro.key && !!valor);
+      if (!otros.length || !filas.some((f) => f[filtro.key] !== undefined)) continue;
+      const presentes = new Set(filas.filter((f) => otros.every(([clave, valor]) => f[clave] === valor)).map((f) => f[filtro.key]));
+      salida[filtro.key] = filtro.options.filter((o) => presentes.has(o.value) || o.value === filtros[filtro.key]);
+    }
+    return salida;
+  });
 
   readonly filasFiltradas = computed<QueryReportRow[]>(() => this.aplicarFiltros(this.resultado()?.rows ?? []));
 

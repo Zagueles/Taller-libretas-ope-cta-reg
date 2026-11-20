@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, HostListe
 import { FocoDirective } from '../../ui/foco/foco.directive';
 import { MenuComponent, MenuItem } from '../../ui/menu/menu.component';
 import { TagComponent } from '../../ui/tag/tag.component';
+import { TooltipDirective } from '../../ui/tooltip/tooltip.directive';
 
 export interface FilterPillOption {
   label: string;
@@ -22,6 +23,7 @@ export interface FilterPillOption {
  * Es imputable, Naturaleza) y es el que vamos a usar en las
  * próximas pantallas de "Consultas y reportes …".
  *
+ * La píldora con valor mide como máximo 320 px: un valor largo se corta con «…» y su tooltip lo muestra completo.
  * Las opciones se muestran con `siaf-menu` compact (220 px). Abierto con el
  * teclado, el foco entra en la primera opción; Escape o pulsar fuera cierra.
  *
@@ -60,12 +62,15 @@ export interface FilterPillOption {
 @Component({
   selector: 'siaf-filter-pill',
   standalone: true,
-  imports: [FocoDirective, MenuComponent, TagComponent],
+  imports: [FocoDirective, MenuComponent, TagComponent, TooltipDirective],
   template: `
-    <div class="relative inline-flex">
+    <div class="relative inline-flex max-w-[320px]">
       <!-- Figma «Filter tags»: siaf-tag filter. Con valor, la × (botón aparte) reemplaza a la flecha. -->
       <siaf-tag
+        class="min-w-0 max-w-full"
         variant="filter"
+        [siafTooltip]="textoCompleto"
+        tooltipMode="always"
         [selected]="!!selectedValue"
         [expanded]="menuOpen()"
         [removable]="!!selectedValue"
@@ -83,7 +88,7 @@ export interface FilterPillOption {
         ></button>
         <!-- Las opciones son siaf-menu compact: su diseño (Figma UI KIT «menus») se cambia en un solo lugar. -->
         <div class="absolute left-0 top-10 z-30" siafFoco [siafFocoAtrapar]="false" (siafFocoSalida)="closeMenu()" (click)="$event.stopPropagation()">
-          <siaf-menu density="compact" [width]="220" [ariaLabel]="label" [items]="menuItems" (selected)="select($event)" (closed)="closeMenu()" />
+          <siaf-menu density="compact" [width]="220" [selectedValue]="selectedValue" [ariaLabel]="label" [items]="menuItems" (selected)="select($event)" (closed)="closeMenu()" />
         </div>
       }
     </div>
@@ -111,6 +116,12 @@ export class FilterPillComponent {
 
   get resolvedOptions(): FilterPillOption[] {
     return this.options.map(o => (typeof o === 'string' ? { label: o, value: o } : o));
+  }
+
+  /** Texto de la píldora con valor: el chip mide como máximo 320 px y lo que no cabe se corta con «…»; entonces el tooltip lo muestra completo. */
+  get textoCompleto(): string {
+    const texto = `${this.label}: ${this.selectedLabel}`;
+    return this.selectedValue && texto.length > 34 ? texto : '';
   }
 
   /** Devuelve la `label` de la opción seleccionada (o el value si no se encuentra). */

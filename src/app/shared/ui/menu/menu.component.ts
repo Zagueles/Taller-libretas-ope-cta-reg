@@ -121,6 +121,9 @@ export type MenuDensity = 'standard' | 'compact';
           [attr.aria-haspopup]="item.children?.length || item.hasChildren ? 'menu' : null"
           [attr.aria-expanded]="item.children?.length ? submenu()?.item === item : null"
           [class.bg-[var(--sys-color-bg-states-light-hover)]]="submenu()?.item === item"
+          [class.bg-[var(--sys-color-bg-states-light-selected)]]="estaSeleccionada(item)"
+          [style.color]="estaSeleccionada(item) ? 'var(--sys-color-text-neutral-activated)' : null"
+          [attr.aria-current]="estaSeleccionada(item) ? 'true' : null"
           (mouseenter)="alPasar(item, $event)"
           (focus)="enfocada.set(i)"
           (click)="elegir(item, $event)"
@@ -182,7 +185,7 @@ export class MenuComponent {
   /** Alto máximo en px; por encima aparece el scroll. */
   @Input() maxHeight: number | null = null;
   @Input() ariaLabel = '';
-  /** Opción marcada con `leading="radio"`. */
+  /** Opción marcada con `leading="radio"`; con `none` o `icon`, la que se ve en estado «seleccionado» (p. ej. el valor de un filtro rápido). */
   @Input() selectedValue: string | null = null;
   /** Opciones marcadas con `leading="checkbox"`. */
   @Input() selectedValues: string[] = [];
@@ -223,6 +226,11 @@ export class MenuComponent {
 
   valorDe(item: MenuItem): string {
     return item.value ?? item.label;
+  }
+
+  /** Sin radio ni checkbox, `selectedValue` deja la opción elegida con el estado «seleccionado» (fondo y texto resaltados). */
+  estaSeleccionada(item: MenuItem): boolean {
+    return (this.leading === 'none' || this.leading === 'icon') && !!this.selectedValue && this.selectedValue === this.valorDe(item);
   }
 
   estaMarcado(item: MenuItem): boolean {

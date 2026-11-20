@@ -160,6 +160,35 @@ describe('QueryReportPageComponent', () => {
     expect(el().querySelector('[data-anuncio-filas]')?.textContent?.trim()).toBe('1 fila en el resultado');
   });
 
+  it('un filtro rápido recorta las opciones de los otros: con la entidad elegida, solo salen sus cuentas', () => {
+    const opciones = (valores: string[]) => valores.map((v) => ({ label: v, value: v }));
+    fixture.componentRef.setInput('config', {
+      ...CONFIG,
+      presetFilters: [
+        { key: 'cuenta', label: 'Cuenta de registro', options: opciones(['C1', 'C2', 'C3']) },
+        { key: 'entidad', label: 'Entidad', options: opciones(['MEF', 'MINCETUR']) },
+      ],
+    });
+    fixture.componentRef.setInput('result', {
+      ...RESULTADO,
+      rows: [
+        { entidad: 'MEF', cuenta: 'C1' },
+        { entidad: 'MEF', cuenta: 'C2' },
+        { entidad: 'MINCETUR', cuenta: 'C3' },
+      ],
+    });
+    fixture.detectChanges();
+    expect(pagina.opcionesFiltros()).toEqual({});
+
+    pagina.filtrar('entidad', 'MINCETUR');
+    expect(pagina.opcionesFiltros()['cuenta'].map((o) => o.value)).toEqual(['C3']);
+    // La propia opción elegida no se recorta, y las del otro filtro se acotan por la cuenta.
+    expect(pagina.opcionesFiltros()['entidad']).toBeUndefined();
+    pagina.filtrar('entidad', '');
+    pagina.filtrar('cuenta', 'C1');
+    expect(pagina.opcionesFiltros()['entidad'].map((o) => o.value)).toEqual(['MEF']);
+  });
+
   it('una consulta nueva limpia la búsqueda y los filtros', () => {
     consultar();
     pagina.buscar('ipd');

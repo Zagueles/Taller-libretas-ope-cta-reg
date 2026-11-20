@@ -43,6 +43,30 @@ describe('FilterPillComponent', () => {
     expect(button.textContent).toContain('Estado: Aprobado');
   });
 
+  it('con un valor elegido, al abrir el menú su opción aparece en estado seleccionado y las demás no', () => {
+    render({ label: 'Entidad', selectedValue: 'MEF', options: ['MEF', 'IPD', 'MINCETUR'] });
+    component.toggleMenu();
+    fixture.detectChanges();
+
+    const opciones = fixture.debugElement.queryAll(By.css('[role="menuitem"]')).map((d) => d.nativeElement as HTMLElement);
+    expect(opciones.map((o) => o.getAttribute('aria-current'))).toEqual(['true', null, null]);
+    expect(opciones[0].className).toContain('bg-[var(--sys-color-bg-states-light-selected)]');
+    expect(opciones[1].className).not.toContain('bg-[var(--sys-color-bg-states-light-selected)]');
+  });
+
+  it('un valor largo limita el ancho de la píldora (320 px) y ofrece el texto completo en el tooltip', () => {
+    const largo = 'Recaudación Impuesto a los Juegos y Apuestas Deportivas a Distancia – MINCETUR';
+    render({ label: 'Cuenta de registro', selectedValue: largo, options: [largo] });
+    const contenedor = fixture.debugElement.query(By.css('div.relative')).nativeElement as HTMLElement;
+    expect(contenedor.className).toContain('max-w-[320px]');
+    expect(component.textoCompleto).toBe(`Cuenta de registro: ${largo}`);
+  });
+
+  it('un valor corto no repite su texto en el tooltip', () => {
+    render({ label: 'Entidad', selectedValue: 'MEF', options: ['MEF'] });
+    expect(component.textoCompleto).toBe('');
+  });
+
   it('toggle abre y cierra el menú', () => {
     render({ label: 'Estado', options: ['Aprobado'] });
 
